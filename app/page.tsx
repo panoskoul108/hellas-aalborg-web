@@ -11,10 +11,13 @@ const translations = {
     title2: 'i hjertet af Aalborg',
     desc: 'Oplev den autentiske græske stemning. Vi bringer opskrifterne direkte fra Grækenland til dig. Velkommen!',
     btnTakeaway: 'Se Vores Menu',
-    menuTitle: 'Vores Græske Menu',
-    menuDesc: 'Frisklavet takeaway, præcis som du får det i Grækenland. God appetit!',
+    menuTitle: 'Vores Menu',
+    menuDesc: 'Vælg mellem vores fordelagtige Takeaway-priser for afhentning, eller få det leveret via Wolt.',
     popular: 'Vores Favorit',
     takeawayLabel: 'Takeaway',
+    deliveryLabel: 'Wolt Pris',
+    tabTakeaway: 'Menu Takeaway',
+    tabDelivery: 'Menu Wolt (Delivery)',
     aboutTitle: 'Græsk Hjerte, Dansk Hygge',
     aboutDesc: 'Hos Hellas Aalborg forener vi den varme græske gæstfrihed med nordisk kvalitet. Vores gyros laves efter originale familieopskrifter med kød af højeste kvalitet og håndlavet tzatziki.',
     hoursTitle: 'Åbningstider',
@@ -33,10 +36,13 @@ const translations = {
     title2: 'in the heart of Aalborg',
     desc: 'Experience the true Greek vibe. We bring original recipes straight from Greece to you. Welcome!',
     btnTakeaway: 'See Our Menu',
-    menuTitle: 'Our Greek Menu',
-    menuDesc: 'Freshly made takeaway, exactly how you find it in Greece. Enjoy!',
+    menuTitle: 'Our Menu',
+    menuDesc: 'Choose our great Takeaway prices for pick-up, or get it delivered via Wolt.',
     popular: 'Our Favorite',
     takeawayLabel: 'Takeaway',
+    deliveryLabel: 'Wolt Price',
+    tabTakeaway: 'Takeaway Menu',
+    tabDelivery: 'Wolt Menu (Delivery)',
     aboutTitle: 'Greek Heart, Danish Hygge',
     aboutDesc: 'At Hellas Aalborg, we combine warm Greek hospitality with Nordic quality. Our gyros are made using original family recipes, premium meat, and handmade tzatziki.',
     hoursTitle: 'Opening Hours',
@@ -55,10 +61,13 @@ const translations = {
     title2: 'στην καρδιά του Aalborg',
     desc: 'Ζήστε την πραγματική ελληνική ατμόσφαιρα. Φέραμε τις αυθεντικές συνταγές απευθείας στο Aalborg. Καλώς ήρθατε!',
     btnTakeaway: 'Δείτε το Μενού',
-    menuTitle: 'Το Ελληνικό μας Μενού',
-    menuDesc: 'Φρέσκο takeaway, ακριβώς όπως το απολαμβάνετε στην Ελλάδα. Καλή όρεξη!',
+    menuTitle: 'Το Μενού μας',
+    menuDesc: 'Επιλέξτε τις χαμηλότερες τιμές μας για παραλαβή από το κατάστημα, ή παραγγείλετε μέσω Wolt.',
     popular: 'Αγαπημένο',
     takeawayLabel: 'Takeaway',
+    deliveryLabel: 'Τιμή Wolt',
+    tabTakeaway: 'Μενού Καταστήματος (Takeaway)',
+    tabDelivery: 'Μενού Wolt (Delivery)',
     aboutTitle: 'Ελληνική Ψυχή, Δανέζικη Ποιότητα',
     aboutDesc: 'Στο Hellas Aalborg ενώνουμε τη ζεστή ελληνική φιλοξενία με την ποιότητα του Βορρά. Ο γύρος μας φτιάχνεται με αυθεντικές οικογενειακές συνταγές, εκλεκτά κρέατα και χειροποίητο τζατζίκι.',
     hoursTitle: 'Ωράριο Λειτουργίας',
@@ -70,13 +79,15 @@ const translations = {
   }
 };
 
+// Τα δεδομένα πλέον έχουν ΔΥΟ τιμές: priceTakeaway και priceDelivery
 const menuItems = [
   {
     id: 1,
     category: 'GYROS PITA',
     title: { da: 'Gyros Pita', en: 'Gyros Pita', el: 'Πίτα Γύρος' },
     desc: { da: 'Pita med gyros, tomat, løg, tzatziki og pommes frites.', en: 'Pita with gyros, tomato, onion, tzatziki, and fries.', el: 'Πίτα με γύρο, ντομάτα, κρεμμύδι, τζατζίκι και πατάτες.' },
-    price: '74 DKK',
+    priceTakeaway: '74 DKK',
+    priceDelivery: '94 DKK',
     popular: true
   },
   {
@@ -84,7 +95,8 @@ const menuItems = [
     category: 'GYROS PITA',
     title: { da: 'Pita med Picante Sauce Fetas', en: 'Pita with Picante Feta Sauce', el: 'Πίτα με Picante Sauce Φέτας' },
     desc: { da: 'Pita med gyros, tomat, løg, pommes frites og picante sauce feta.', en: 'Pita with gyros, tomato, onion, fries, and picante feta sauce.', el: 'Πίτα με γύρο, ντομάτα, κρεμμύδι, πατάτες και picante sauce φέτας.' },
-    price: '74 DKK',
+    priceTakeaway: '74 DKK',
+    priceDelivery: '94 DKK',
     popular: false
   },
   {
@@ -92,7 +104,8 @@ const menuItems = [
     category: 'PITA CLUB',
     title: { da: 'Pita Club', en: 'Pita Club', el: 'Pita Club' },
     desc: { da: 'Tre pitabrød sauce, serveret lagvis med saftig gyros, tomat, ost, bacon og frisk agurk mellem pitaerne.', en: 'Three pita breads layered with juicy gyros, tomato, cheese, bacon, and fresh cucumber.', el: 'Τρεις πίτες σε στρώσεις με ζουμερό γύρο, ντομάτα, τυρί, μπέικον και φρέσκο αγγούρι.' },
-    price: '120 DKK',
+    priceTakeaway: '120 DKK',
+    priceDelivery: '149 DKK',
     popular: true
   },
   {
@@ -100,7 +113,8 @@ const menuItems = [
     category: 'DOBBELT INDBAGT PITA',
     title: { da: 'Skepasti', en: 'Skepasti (Double Pita)', el: 'Σκεπαστή' },
     desc: { da: 'To indbagte pitaer, serveret lagvis med gyros, hjemmelavet tzatziki, sauce, frisk tomat og løg imellem.', en: 'Two baked pitas layered with gyros, tzatziki, sauce, tomato, and onions.', el: 'Δύο ψημένες πίτες γεμιστές με γύρο, τζατζίκι, σως, ντομάτα και κρεμμύδι.' },
-    price: '89 DKK',
+    priceTakeaway: '89 DKK',
+    priceDelivery: '109 DKK',
     popular: true
   },
   {
@@ -108,7 +122,8 @@ const menuItems = [
     category: 'PORTIONER',
     title: { da: 'Svinekødsgyros', en: 'Pork Gyros Portion', el: 'Μερίδα Γύρος Χοιρινός' },
     desc: { da: 'Hjemmelavet svinekødsgyros portion, serveres med pommes frites, tzatziki og pita.', en: 'Homemade pork gyros portion, served with fries, tzatziki, and pita.', el: 'Μερίδα γύρος χοιρινός, σερβίρεται με πατάτες, τζατζίκι και πίτα.' },
-    price: '114 DKK',
+    priceTakeaway: '114 DKK',
+    priceDelivery: '139 DKK',
     popular: false
   },
   {
@@ -116,23 +131,25 @@ const menuItems = [
     category: 'NYHED',
     title: { da: 'Halloumi Pita', en: 'Halloumi Pita', el: 'Πίτα Χαλούμι' },
     desc: { da: 'Pita med grillet halloumi, tzatziki, tomat, løg og pommes frites.', en: 'Pita with grilled halloumi, tzatziki, tomato, onion, and fries.', el: 'Πίτα με ψητό χαλούμι, τζατζίκι, ντομάτα, κρεμμύδι και πατάτες.' },
-    price: '79 DKK',
+    priceTakeaway: '79 DKK',
+    priceDelivery: '99 DKK',
     popular: true
   }
 ];
 
 export default function Home() {
   const [lang, setLang] = useState('da'); 
+  // State για να ελέγχουμε ποιο μενού βλέπει ο χρήστης ('takeaway' ή 'wolt')
+  const [menuType, setMenuType] = useState('takeaway');
+  
   const t = translations[lang as keyof typeof translations];
 
   return (
-    // DARK MODE BACKGROUND: Ένα πολύ βαθύ γκρι/μπλε (#0F172A)
     <div className="min-h-screen font-sans bg-[#0F172A] text-gray-200 flex flex-col">
       
       {/* --- NAVIGATION BAR --- */}
       <nav className="flex items-center justify-between px-6 py-5 bg-[#1E293B] shadow-md sticky top-0 z-50 border-b border-[#334155]">
         <div className="flex items-center gap-2">
-          {/* Logo με λευκό και το Ελληνικό Μπλε φωτισμένο */}
           <span className="text-2xl font-black tracking-tight text-white">
             Hellas<span className="text-[#38BDF8] font-medium">Aalborg</span>
           </span>
@@ -168,11 +185,12 @@ export default function Home() {
       {/* --- HERO SECTION --- */}
       <header className="relative bg-[#090E17] h-[75vh] flex items-center justify-center text-center overflow-hidden border-b-[4px] border-[#38BDF8]">
         <div className="absolute inset-0 opacity-50">
-         <img 
-  src="https://images.unsplash.com/photo-1628840042765-356cda07504e?q=80&w=2080&auto=format&fit=crop" 
-  alt="Authentic Greek Pita Gyros" 
-  className="w-full h-full object-cover"
-/>
+          {/* Νέα φωτογραφία με αληθινό ελληνικό γύρο/σουβλάκι! */}
+          <img 
+            src="https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=2070&auto=format&fit=crop" 
+            alt="Authentic Greek Gyros" 
+            className="w-full h-full object-cover"
+          />
         </div>
         
         <div className="relative z-10 px-4 flex flex-col items-center">
@@ -210,23 +228,49 @@ export default function Home() {
         </div>
       </section>
 
-      {/* --- MENU SECTION --- */}
+      {/* --- MENU SECTION (WITH TABS) --- */}
       <section id="menu" className="py-20 px-4 md:px-8 max-w-6xl mx-auto flex-grow">
-        <div className="text-center mb-16">
+        <div className="text-center mb-12">
           <h2 className="text-4xl font-extrabold text-white mb-4">{t.menuTitle}</h2>
-          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+          <p className="text-gray-400 text-lg max-w-2xl mx-auto mb-8">
             {t.menuDesc}
           </p>
+          
+          {/* TABS Εναλλαγής Μενού */}
+          <div className="flex justify-center gap-4">
+            <button 
+              onClick={() => setMenuType('takeaway')}
+              className={`px-6 py-3 rounded-full font-bold transition-all ${
+                menuType === 'takeaway' 
+                  ? 'bg-white text-[#0F172A] shadow-lg scale-105' 
+                  : 'bg-[#1E293B] text-gray-400 border border-[#334155] hover:bg-[#334155]'
+              }`}
+            >
+              {t.tabTakeaway}
+            </button>
+            <button 
+              onClick={() => setMenuType('wolt')}
+              className={`px-6 py-3 rounded-full font-bold transition-all ${
+                menuType === 'wolt' 
+                  ? 'bg-[#009de0] text-white shadow-lg scale-105' 
+                  : 'bg-[#1E293B] text-gray-400 border border-[#334155] hover:bg-[#334155]'
+              }`}
+            >
+              {t.tabDelivery}
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {menuItems.map((item) => (
             <div key={item.id} className="bg-[#1E293B] rounded-2xl shadow-lg hover:shadow-xl transition-all p-8 relative overflow-hidden group border border-[#334155]">
-              {/* Μπλε Ελληνική γραμμή στο hover */}
-              <div className="absolute top-0 left-0 w-full h-1 bg-[#334155] group-hover:bg-[#38BDF8] transition-colors"></div>
+              {/* Χρωματική γραμμή ανάλογα με το tab */}
+              <div className={`absolute top-0 left-0 w-full h-1 transition-colors ${menuType === 'wolt' ? 'bg-[#009de0]' : 'bg-[#334155] group-hover:bg-[#38BDF8]'}`}></div>
               
               {item.popular && (
-                <div className="absolute top-6 right-6 bg-[#38BDF8]/20 text-[#38BDF8] text-xs font-bold px-3 py-1.5 rounded-full border border-[#38BDF8]/30">
+                <div className={`absolute top-6 right-6 text-xs font-bold px-3 py-1.5 rounded-full border ${
+                  menuType === 'wolt' ? 'bg-[#009de0]/10 text-[#009de0] border-[#009de0]/30' : 'bg-[#38BDF8]/20 text-[#38BDF8] border-[#38BDF8]/30'
+                }`}>
                   {t.popular}
                 </div>
               )}
@@ -242,16 +286,37 @@ export default function Home() {
               </p>
               
               <div className="flex items-center justify-between mt-auto pt-4 border-t border-[#334155]">
-                <span className="text-2xl font-black text-white">
-                  {item.price}
+                {/* Δυναμική αλλαγή τιμής ανάλογα με το επιλεγμένο Tab */}
+                <span className="text-2xl font-black text-white transition-all">
+                  {menuType === 'takeaway' ? item.priceTakeaway : item.priceDelivery}
                 </span>
-                <span className="text-xs font-bold text-[#0F172A] bg-[#38BDF8] px-2 py-1 rounded-md">
-                  {t.takeawayLabel}
+                
+                {/* Δυναμική αλλαγή ταμπέλας δίπλα στην τιμή */}
+                <span className={`text-xs font-bold px-2 py-1 rounded-md transition-colors ${
+                  menuType === 'takeaway' 
+                    ? 'text-[#0F172A] bg-[#38BDF8]' 
+                    : 'text-white bg-[#009de0]'
+                }`}>
+                  {menuType === 'takeaway' ? t.takeawayLabel : t.deliveryLabel}
                 </span>
               </div>
             </div>
           ))}
         </div>
+        
+        {/* Κουμπί παραγγελίας κάτω από τα wolt prices */}
+        {menuType === 'wolt' && (
+          <div className="text-center mt-12 animate-fade-in-up">
+            <a 
+              href="https://wolt.com/da/dnk/aalborg/restaurant/hellas-food1"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block bg-[#009de0] hover:bg-[#0082ba] text-white font-bold py-4 px-12 rounded-full shadow-lg transition transform hover:scale-105"
+            >
+              {t.orderWolt}
+            </a>
+          </div>
+        )}
       </section>
 
       {/* --- FOOTER / LOCATION SECTION --- */}
