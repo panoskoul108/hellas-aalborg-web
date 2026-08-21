@@ -1,7 +1,6 @@
 'use client';
 import React, { useState } from 'react';
 
-// Το "λεξικό" μας (Προσαρμοσμένο να τονίζει την ελληνικότητα)
 const translations = {
   da: {
     menu: 'Menu',
@@ -127,27 +126,28 @@ export default function Home() {
   const t = translations[lang as keyof typeof translations];
 
   return (
-    <div className="min-h-screen font-sans bg-[#F9F9F9] text-gray-800 flex flex-col">
+    // DARK MODE BACKGROUND: Ένα πολύ βαθύ γκρι/μπλε (#0F172A)
+    <div className="min-h-screen font-sans bg-[#0F172A] text-gray-200 flex flex-col">
       
       {/* --- NAVIGATION BAR --- */}
-      <nav className="flex items-center justify-between px-6 py-5 bg-white shadow-sm sticky top-0 z-50">
+      <nav className="flex items-center justify-between px-6 py-5 bg-[#1E293B] shadow-md sticky top-0 z-50 border-b border-[#334155]">
         <div className="flex items-center gap-2">
-          {/* Logo με Ελληνικό Μπλε και Χρυσό */}
-          <span className="text-2xl font-black tracking-tight text-[#003366]">
-            Hellas<span className="text-[#D4AF37] font-medium">Aalborg</span>
+          {/* Logo με λευκό και το Ελληνικό Μπλε φωτισμένο */}
+          <span className="text-2xl font-black tracking-tight text-white">
+            Hellas<span className="text-[#38BDF8] font-medium">Aalborg</span>
           </span>
         </div>
         
-        <div className="hidden md:flex gap-8 font-semibold text-[#003366]/70">
-          <a href="#menu" className="hover:text-[#003366] transition">{t.menu}</a>
-          <a href="#location" className="hover:text-[#003366] transition">{t.location}</a>
+        <div className="hidden md:flex gap-8 font-semibold text-gray-300">
+          <a href="#menu" className="hover:text-white transition">{t.menu}</a>
+          <a href="#location" className="hover:text-white transition">{t.location}</a>
         </div>
 
         <div className="flex items-center gap-4">
           <select 
             value={lang} 
             onChange={(e) => setLang(e.target.value)}
-            className="bg-[#F3F4F6] border-none text-[#003366] rounded-full px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-[#D4AF37] cursor-pointer font-medium"
+            className="bg-[#334155] border-none text-white rounded-full px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-[#38BDF8] cursor-pointer font-medium"
           >
             <option value="da">🇩🇰 DA</option>
             <option value="en">🇬🇧 EN</option>
@@ -166,30 +166,30 @@ export default function Home() {
       </nav>
 
       {/* --- HERO SECTION --- */}
-      <header className="relative bg-[#001f3f] h-[75vh] flex items-center justify-center text-center overflow-hidden">
-        <div className="absolute inset-0 opacity-50">
-          {/* Φωτογραφία που θυμίζει Ελλάδα (μπλε και λευκό) */}
+      <header className="relative bg-[#090E17] h-[75vh] flex items-center justify-center text-center overflow-hidden border-b-[4px] border-[#38BDF8]">
+        <div className="absolute inset-0 opacity-40">
+          {/* Μια πιο "moody" φωτογραφία με κρέας/φωτιά */}
           <img 
-            src="https://images.unsplash.com/photo-1515859005217-8a1f08870f59?q=80&w=2070&auto=format&fit=crop" 
+            src="https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?q=80&w=2070&auto=format&fit=crop" 
             alt="Greek Vibe" 
             className="w-full h-full object-cover"
           />
         </div>
         
         <div className="relative z-10 px-4 flex flex-col items-center">
-          <span className="text-[#D4AF37] font-bold tracking-[0.2em] uppercase mb-4 text-sm bg-white/10 px-4 py-1 rounded-full backdrop-blur-sm">
+          <span className="text-[#38BDF8] font-bold tracking-[0.2em] uppercase mb-4 text-sm bg-[#0F172A]/80 px-4 py-1 rounded-full border border-[#38BDF8]/30">
             {t.tag}
           </span>
-          <h1 className="text-5xl md:text-7xl font-extrabold text-white mb-6 drop-shadow-lg leading-tight">
-            {t.title1} <br/> <span className="text-white/90 font-light italic">{t.title2}</span>
+          <h1 className="text-5xl md:text-7xl font-extrabold text-white mb-6 drop-shadow-[0_5px_5px_rgba(0,0,0,0.8)] leading-tight">
+            {t.title1} <br/> <span className="text-gray-300 font-light italic">{t.title2}</span>
           </h1>
-          <p className="text-lg md:text-xl text-white/80 mb-10 max-w-2xl font-light">
+          <p className="text-lg md:text-xl text-gray-300 mb-10 max-w-2xl font-light drop-shadow-md">
             {t.desc}
           </p>
           
           <a 
             href="#menu"
-            className="bg-[#D4AF37] hover:bg-[#c19b2c] text-white font-bold py-4 px-10 rounded-full shadow-xl transition transform hover:-translate-y-1"
+            className="bg-white hover:bg-gray-200 text-[#0F172A] font-bold py-4 px-10 rounded-full shadow-xl transition transform hover:-translate-y-1"
           >
             {t.btnTakeaway}
           </a>
@@ -197,16 +197,15 @@ export default function Home() {
       </header>
 
       {/* --- GREEK HEART / ABOUT SECTION --- */}
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-[#1E293B]">
         <div className="max-w-4xl mx-auto px-6 text-center">
-          {/* Μια μικρή λεπτομέρεια που θυμίζει μαίανδρο/κύμα */}
-          <div className="flex justify-center gap-2 mb-6 opacity-30">
-            <span className="w-12 h-1 bg-[#003366] rounded-full"></span>
-            <span className="w-4 h-1 bg-[#D4AF37] rounded-full"></span>
-            <span className="w-12 h-1 bg-[#003366] rounded-full"></span>
+          <div className="flex justify-center gap-2 mb-6 opacity-80">
+            <span className="w-12 h-1 bg-white rounded-full"></span>
+            <span className="w-4 h-1 bg-[#38BDF8] rounded-full"></span>
+            <span className="w-12 h-1 bg-white rounded-full"></span>
           </div>
-          <h2 className="text-2xl md:text-3xl font-bold text-[#003366] mb-4">{t.aboutTitle}</h2>
-          <p className="text-gray-500 text-lg leading-relaxed">
+          <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">{t.aboutTitle}</h2>
+          <p className="text-gray-400 text-lg leading-relaxed">
             {t.aboutDesc}
           </p>
         </div>
@@ -215,38 +214,39 @@ export default function Home() {
       {/* --- MENU SECTION --- */}
       <section id="menu" className="py-20 px-4 md:px-8 max-w-6xl mx-auto flex-grow">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-extrabold text-[#003366] mb-4">{t.menuTitle}</h2>
-          <p className="text-gray-500 text-lg max-w-2xl mx-auto">
+          <h2 className="text-4xl font-extrabold text-white mb-4">{t.menuTitle}</h2>
+          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
             {t.menuDesc}
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {menuItems.map((item) => (
-            <div key={item.id} className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all p-8 relative overflow-hidden group">
-              <div className="absolute top-0 left-0 w-full h-1 bg-[#003366]/10 group-hover:bg-[#003366] transition-colors"></div>
+            <div key={item.id} className="bg-[#1E293B] rounded-2xl shadow-lg hover:shadow-xl transition-all p-8 relative overflow-hidden group border border-[#334155]">
+              {/* Μπλε Ελληνική γραμμή στο hover */}
+              <div className="absolute top-0 left-0 w-full h-1 bg-[#334155] group-hover:bg-[#38BDF8] transition-colors"></div>
               
               {item.popular && (
-                <div className="absolute top-6 right-6 bg-[#D4AF37]/10 text-[#c19b2c] text-xs font-bold px-3 py-1.5 rounded-full">
+                <div className="absolute top-6 right-6 bg-[#38BDF8]/20 text-[#38BDF8] text-xs font-bold px-3 py-1.5 rounded-full border border-[#38BDF8]/30">
                   {t.popular}
                 </div>
               )}
               
-              <div className="text-xs text-[#003366]/50 font-bold mb-3 uppercase tracking-widest">
+              <div className="text-xs text-gray-500 font-bold mb-3 uppercase tracking-widest">
                 {item.category}
               </div>
-              <h3 className="text-2xl font-bold text-[#003366] mb-3 pr-10">
+              <h3 className="text-2xl font-bold text-white mb-3 pr-10">
                 {item.title[lang as keyof typeof item.title]}
               </h3>
-              <p className="text-gray-500 text-sm mb-8 line-clamp-3 leading-relaxed">
+              <p className="text-gray-400 text-sm mb-8 line-clamp-3 leading-relaxed">
                 {item.desc[lang as keyof typeof item.desc]}
               </p>
               
-              <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-100">
-                <span className="text-2xl font-black text-[#D4AF37]">
+              <div className="flex items-center justify-between mt-auto pt-4 border-t border-[#334155]">
+                <span className="text-2xl font-black text-white">
                   {item.price}
                 </span>
-                <span className="text-xs font-bold text-gray-400 bg-gray-50 px-2 py-1 rounded-md">
+                <span className="text-xs font-bold text-[#0F172A] bg-[#38BDF8] px-2 py-1 rounded-md">
                   {t.takeawayLabel}
                 </span>
               </div>
@@ -256,47 +256,47 @@ export default function Home() {
       </section>
 
       {/* --- FOOTER / LOCATION SECTION --- */}
-      <footer id="location" className="bg-[#003366] text-white py-16">
+      <footer id="location" className="bg-[#090E17] text-gray-400 py-16 border-t border-[#334155]">
         <div className="max-w-6xl mx-auto px-4 md:px-8 grid grid-cols-1 md:grid-cols-3 gap-12">
           
           <div>
             <h3 className="text-3xl font-black text-white mb-6">
-              Hellas<span className="text-[#D4AF37] font-medium">Aalborg</span>
+              Hellas<span className="text-[#38BDF8] font-medium">Aalborg</span>
             </h3>
-            <p className="mb-6 text-white/70 text-sm leading-relaxed">
+            <p className="mb-6 text-sm leading-relaxed">
               {t.footerDesc}
             </p>
-            <div className="space-y-4 text-sm font-medium">
+            <div className="space-y-4 text-sm font-medium text-white">
               <p className="flex items-center gap-3">
-                <span className="text-[#D4AF37] text-xl">📍</span>
+                <span className="text-[#38BDF8] text-xl">📍</span>
                 Ved Stranden 21, 9000 Aalborg
               </p>
               <p className="flex items-center gap-3">
-                <span className="text-[#D4AF37] text-xl">📞</span>
+                <span className="text-[#38BDF8] text-xl">📞</span>
                 +45 42 17 77 54
               </p>
             </div>
           </div>
 
           <div>
-            <h4 className="text-xl font-bold text-[#D4AF37] mb-6">{t.hoursTitle}</h4>
-            <ul className="space-y-3 text-sm text-white/90">
-              <li className="flex justify-between border-b border-white/10 pb-2">
+            <h4 className="text-xl font-bold text-white mb-6">{t.hoursTitle}</h4>
+            <ul className="space-y-3 text-sm">
+              <li className="flex justify-between border-b border-[#1E293B] pb-2">
                 <span>{t.monThu}</span>
-                <span className="font-bold">18:00 - 24:00</span>
+                <span className="font-bold text-white">18:00 - 24:00</span>
               </li>
-              <li className="flex justify-between border-b border-white/10 pb-2">
-                <span className="text-[#D4AF37]">{t.friSat}</span>
-                <span className="font-bold text-[#D4AF37]">18:00 - 04:00</span>
+              <li className="flex justify-between border-b border-[#1E293B] pb-2">
+                <span className="text-[#38BDF8]">{t.friSat}</span>
+                <span className="font-bold text-[#38BDF8]">18:00 - 04:00</span>
               </li>
-              <li className="flex justify-between border-b border-white/10 pb-2">
+              <li className="flex justify-between border-b border-[#1E293B] pb-2">
                 <span>{t.sun}</span>
-                <span className="font-bold">18:00 - 24:00</span>
+                <span className="font-bold text-white">18:00 - 24:00</span>
               </li>
             </ul>
           </div>
 
-          <div className="h-64 md:h-auto w-full rounded-2xl overflow-hidden shadow-2xl opacity-90 hover:opacity-100 transition-opacity">
+          <div className="h-64 md:h-auto w-full rounded-2xl overflow-hidden shadow-2xl opacity-80 hover:opacity-100 transition-opacity border border-[#334155]">
             <iframe 
               title="Hellas Aalborg Map"
               src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2170.198305602497!2d9.919427015949516!3d57.04944898092288!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x464932b144fc894f%3A0xc3c940b3c5a6c38b!2sVed%20Stranden%2021%2C%209000%20Aalborg%2C%20Denmark!5e0!3m2!1sen!2sgr!4v1680000000000!5m2!1sen!2sgr" 
@@ -311,9 +311,9 @@ export default function Home() {
 
         </div>
         
-        <div className="max-w-6xl mx-auto px-4 md:px-8 mt-16 pt-8 border-t border-white/10 text-center text-xs text-white/50 flex flex-col md:flex-row justify-between items-center">
+        <div className="max-w-6xl mx-auto px-4 md:px-8 mt-16 pt-8 border-t border-[#1E293B] text-center text-xs text-gray-500 flex flex-col md:flex-row justify-between items-center">
           <p>© {new Date().getFullYear()} Hellas Aalborg. All rights reserved.</p>
-          <a href="https://wolt.com/da/dnk/aalborg/restaurant/hellas-food1" target="_blank" rel="noreferrer" className="text-[#D4AF37] hover:text-white mt-4 md:mt-0 transition font-bold tracking-wider uppercase">
+          <a href="https://wolt.com/da/dnk/aalborg/restaurant/hellas-food1" target="_blank" rel="noreferrer" className="text-[#38BDF8] hover:text-white mt-4 md:mt-0 transition font-bold tracking-wider uppercase">
             {t.footerDelivery}
           </a>
         </div>
