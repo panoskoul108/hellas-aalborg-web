@@ -168,12 +168,11 @@ export default function Home() {
       {/* --- HERO SECTION --- */}
       <header className="relative bg-[#090E17] h-[75vh] flex items-center justify-center text-center overflow-hidden border-b-[4px] border-[#38BDF8]">
         <div className="absolute inset-0 opacity-40">
-          {/* Μια πιο "moody" φωτογραφία με κρέας/φωτιά */}
           <img 
-            src="https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?q=80&w=2070&auto=format&fit=crop" 
-            alt="Greek Vibe" 
-            className="w-full h-full object-cover"
-          />
+  src="https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?q=80&w=2070&auto=format&fit=crop" 
+  alt="Greek Vibe" 
+  className="w-full h-full object-cover"
+/>
         </div>
         
         <div className="relative z-10 px-4 flex flex-col items-center">
