@@ -25,7 +25,11 @@ const translations = {
     friSat: 'Fredag - Lørdag',
     sun: 'Søndag',
     footerDesc: 'Dit lille stykke Grækenland i Nordjylland. Vi glæder os til at se dig.',
-    footerDelivery: 'Bestil Delivery'
+    footerDelivery: 'Bestil Delivery',
+    allergies: 'Allergier eller særlige behov? Spørg vores personale!',
+    veg: 'Vegetarisk',
+    smiley: 'Se Fødevarestyrelsens smiley-rapport',
+    followUs: 'Følg os på Instagram'
   },
   en: {
     menu: 'Menu',
@@ -50,7 +54,11 @@ const translations = {
     friSat: 'Friday - Saturday',
     sun: 'Sunday',
     footerDesc: 'Your little piece of Greece in North Jutland. We look forward to seeing you.',
-    footerDelivery: 'Order Delivery'
+    footerDelivery: 'Order Delivery',
+    allergies: 'Allergies or dietary needs? Please ask our staff!',
+    veg: 'Vegetarian',
+    smiley: 'Food safety inspection report',
+    followUs: 'Follow us on Instagram'
   },
   el: {
     menu: 'Μενού',
@@ -75,11 +83,14 @@ const translations = {
     friSat: 'Παρασκευή - Σάββατο',
     sun: 'Κυριακή',
     footerDesc: 'Το δικό σας κομμάτι Ελλάδας στη Βόρεια Γιουτλάνδη. Σας περιμένουμε.',
-    footerDelivery: 'Παραγγελία Delivery'
+    footerDelivery: 'Παραγγελία Delivery',
+    allergies: 'Έχετε αλλεργίες; Ρωτήστε το προσωπικό μας!',
+    veg: 'Χορτοφαγικό',
+    smiley: 'Αναφορά υγειονομικού ελέγχου',
+    followUs: 'Ακολουθήστε μας στο Instagram'
   }
 };
 
-// Τα δεδομένα πλέον έχουν ΔΥΟ τιμές: priceTakeaway και priceDelivery
 const menuItems = [
   {
     id: 1,
@@ -88,7 +99,8 @@ const menuItems = [
     desc: { da: 'Pita med gyros, tomat, løg, tzatziki og pommes frites.', en: 'Pita with gyros, tomato, onion, tzatziki, and fries.', el: 'Πίτα με γύρο, ντομάτα, κρεμμύδι, τζατζίκι και πατάτες.' },
     priceTakeaway: '74 DKK',
     priceDelivery: '94 DKK',
-    popular: true
+    popular: true,
+    vegetarian: false
   },
   {
     id: 2,
@@ -97,7 +109,8 @@ const menuItems = [
     desc: { da: 'Pita med gyros, tomat, løg, pommes frites og picante sauce feta.', en: 'Pita with gyros, tomato, onion, fries, and picante feta sauce.', el: 'Πίτα με γύρο, ντομάτα, κρεμμύδι, πατάτες και picante sauce φέτας.' },
     priceTakeaway: '74 DKK',
     priceDelivery: '94 DKK',
-    popular: false
+    popular: false,
+    vegetarian: false
   },
   {
     id: 3,
@@ -106,7 +119,8 @@ const menuItems = [
     desc: { da: 'Tre pitabrød sauce, serveret lagvis med saftig gyros, tomat, ost, bacon og frisk agurk mellem pitaerne.', en: 'Three pita breads layered with juicy gyros, tomato, cheese, bacon, and fresh cucumber.', el: 'Τρεις πίτες σε στρώσεις με ζουμερό γύρο, ντομάτα, τυρί, μπέικον και φρέσκο αγγούρι.' },
     priceTakeaway: '120 DKK',
     priceDelivery: '149 DKK',
-    popular: true
+    popular: true,
+    vegetarian: false
   },
   {
     id: 4,
@@ -115,7 +129,8 @@ const menuItems = [
     desc: { da: 'To indbagte pitaer, serveret lagvis med gyros, hjemmelavet tzatziki, sauce, frisk tomat og løg imellem.', en: 'Two baked pitas layered with gyros, tzatziki, sauce, tomato, and onions.', el: 'Δύο ψημένες πίτες γεμιστές με γύρο, τζατζίκι, σως, ντομάτα και κρεμμύδι.' },
     priceTakeaway: '89 DKK',
     priceDelivery: '109 DKK',
-    popular: true
+    popular: true,
+    vegetarian: false
   },
   {
     id: 5,
@@ -124,7 +139,8 @@ const menuItems = [
     desc: { da: 'Hjemmelavet svinekødsgyros portion, serveres med pommes frites, tzatziki og pita.', en: 'Homemade pork gyros portion, served with fries, tzatziki, and pita.', el: 'Μερίδα γύρος χοιρινός, σερβίρεται με πατάτες, τζατζίκι και πίτα.' },
     priceTakeaway: '114 DKK',
     priceDelivery: '139 DKK',
-    popular: false
+    popular: false,
+    vegetarian: false
   },
   {
     id: 7,
@@ -133,13 +149,13 @@ const menuItems = [
     desc: { da: 'Pita med grillet halloumi, tzatziki, tomat, løg og pommes frites.', en: 'Pita with grilled halloumi, tzatziki, tomato, onion, and fries.', el: 'Πίτα με ψητό χαλούμι, τζατζίκι, ντομάτα, κρεμμύδι και πατάτες.' },
     priceTakeaway: '79 DKK',
     priceDelivery: '99 DKK',
-    popular: true
+    popular: true,
+    vegetarian: true // <--- ΕΔΩ ΠΡΟΣΘΕΣΑΜΕ ΤΟ VEGETARIAN TAG
   }
 ];
 
 export default function Home() {
   const [lang, setLang] = useState('da'); 
-  // State για να ελέγχουμε ποιο μενού βλέπει ο χρήστης ('takeaway' ή 'wolt')
   const [menuType, setMenuType] = useState('takeaway');
   
   const t = translations[lang as keyof typeof translations];
@@ -184,11 +200,14 @@ export default function Home() {
 
       {/* --- HERO SECTION --- */}
       <header className="relative bg-[#090E17] h-[75vh] flex items-center justify-center text-center overflow-hidden border-b-[4px] border-[#38BDF8]">
-        <div className="absolute inset-0 opacity-50">
-          {/* Νέα φωτογραφία με αληθινό ελληνικό γύρο/σουβλάκι! */}
+        <div className="absolute inset-0 opacity-50 bg-[#0F172A]">
+          {/* 
+            ΒΑΛΕ ΕΔΩ ΤΟ LINK (SRC) ΓΙΑ ΤΗ ΔΙΚΗ ΣΟΥ ΦΩΤΟΓΡΑΦΙΑ. 
+            Το άφησα κενό "" επίτηδες για να βάλεις το δικό σας upload.
+          */}
           <img 
-            src="https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=2070&auto=format&fit=crop" 
-            alt="Authentic Greek Gyros" 
+            src="" 
+            alt="Hellas Aalborg Gyros" 
             className="w-full h-full object-cover"
           />
         </div>
@@ -228,7 +247,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* --- MENU SECTION (WITH TABS) --- */}
+      {/* --- MENU SECTION (WITH TABS & ALLERGENS) --- */}
       <section id="menu" className="py-20 px-4 md:px-8 max-w-6xl mx-auto flex-grow">
         <div className="text-center mb-12">
           <h2 className="text-4xl font-extrabold text-white mb-4">{t.menuTitle}</h2>
@@ -236,7 +255,6 @@ export default function Home() {
             {t.menuDesc}
           </p>
           
-          {/* TABS Εναλλαγής Μενού */}
           <div className="flex justify-center gap-4">
             <button 
               onClick={() => setMenuType('takeaway')}
@@ -264,21 +282,28 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {menuItems.map((item) => (
             <div key={item.id} className="bg-[#1E293B] rounded-2xl shadow-lg hover:shadow-xl transition-all p-8 relative overflow-hidden group border border-[#334155]">
-              {/* Χρωματική γραμμή ανάλογα με το tab */}
               <div className={`absolute top-0 left-0 w-full h-1 transition-colors ${menuType === 'wolt' ? 'bg-[#009de0]' : 'bg-[#334155] group-hover:bg-[#38BDF8]'}`}></div>
               
-              {item.popular && (
-                <div className={`absolute top-6 right-6 text-xs font-bold px-3 py-1.5 rounded-full border ${
-                  menuType === 'wolt' ? 'bg-[#009de0]/10 text-[#009de0] border-[#009de0]/30' : 'bg-[#38BDF8]/20 text-[#38BDF8] border-[#38BDF8]/30'
-                }`}>
-                  {t.popular}
-                </div>
-              )}
+              <div className="flex justify-end gap-2 absolute top-6 right-6">
+                {/* Το Vegan/Vegetarian Tag */}
+                {item.vegetarian && (
+                  <div className="bg-green-500/20 text-green-400 text-xs font-bold px-3 py-1.5 rounded-full border border-green-500/30">
+                    (V) {t.veg}
+                  </div>
+                )}
+                {item.popular && (
+                  <div className={`text-xs font-bold px-3 py-1.5 rounded-full border ${
+                    menuType === 'wolt' ? 'bg-[#009de0]/10 text-[#009de0] border-[#009de0]/30' : 'bg-[#38BDF8]/20 text-[#38BDF8] border-[#38BDF8]/30'
+                  }`}>
+                    {t.popular}
+                  </div>
+                )}
+              </div>
               
-              <div className="text-xs text-gray-500 font-bold mb-3 uppercase tracking-widest">
+              <div className="text-xs text-gray-500 font-bold mb-3 uppercase tracking-widest mt-2">
                 {item.category}
               </div>
-              <h3 className="text-2xl font-bold text-white mb-3 pr-10">
+              <h3 className="text-2xl font-bold text-white mb-3 pr-4">
                 {item.title[lang as keyof typeof item.title]}
               </h3>
               <p className="text-gray-400 text-sm mb-8 line-clamp-3 leading-relaxed">
@@ -286,16 +311,11 @@ export default function Home() {
               </p>
               
               <div className="flex items-center justify-between mt-auto pt-4 border-t border-[#334155]">
-                {/* Δυναμική αλλαγή τιμής ανάλογα με το επιλεγμένο Tab */}
                 <span className="text-2xl font-black text-white transition-all">
                   {menuType === 'takeaway' ? item.priceTakeaway : item.priceDelivery}
                 </span>
-                
-                {/* Δυναμική αλλαγή ταμπέλας δίπλα στην τιμή */}
                 <span className={`text-xs font-bold px-2 py-1 rounded-md transition-colors ${
-                  menuType === 'takeaway' 
-                    ? 'text-[#0F172A] bg-[#38BDF8]' 
-                    : 'text-white bg-[#009de0]'
+                  menuType === 'takeaway' ? 'text-[#0F172A] bg-[#38BDF8]' : 'text-white bg-[#009de0]'
                 }`}>
                   {menuType === 'takeaway' ? t.takeawayLabel : t.deliveryLabel}
                 </span>
@@ -303,10 +323,16 @@ export default function Home() {
             </div>
           ))}
         </div>
+
+        {/* Μήνυμα Αλλεργιογόνων (Allergens) */}
+        <div className="text-center mt-10">
+          <p className="text-gray-500 text-sm italic">
+            ⚠️ {t.allergies}
+          </p>
+        </div>
         
-        {/* Κουμπί παραγγελίας κάτω από τα wolt prices */}
         {menuType === 'wolt' && (
-          <div className="text-center mt-12 animate-fade-in-up">
+          <div className="text-center mt-8 animate-fade-in-up">
             <a 
               href="https://wolt.com/da/dnk/aalborg/restaurant/hellas-food1"
               target="_blank"
@@ -317,6 +343,28 @@ export default function Home() {
             </a>
           </div>
         )}
+      </section>
+
+      {/* --- INSTAGRAM FEED SECTION --- */}
+      <section id="instagram" className="py-12 bg-[#0F172A]">
+        <div className="max-w-6xl mx-auto px-4 md:px-8 text-center">
+          <h2 className="text-xl md:text-2xl font-bold text-white mb-8 flex items-center justify-center gap-3">
+            <span className="text-[#38BDF8] text-2xl">📸</span> 
+            {t.followUs}
+          </h2>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {/* Grid με κενά πλαίσια για να συνδεθούν αργότερα με IG posts */}
+            {[1, 2, 3, 4].map((i) => (
+              <a key={i} href="#" target="_blank" rel="noopener noreferrer" className="relative aspect-square bg-[#1E293B] rounded-xl overflow-hidden group border border-[#334155] flex items-center justify-center hover:border-[#38BDF8] transition-colors">
+                <span className="text-gray-600 group-hover:text-[#38BDF8] text-sm font-medium transition-colors">Image {i}</span>
+                <div className="absolute inset-0 bg-[#0F172A]/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
+                  <span className="text-white font-bold">View Post</span>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
       </section>
 
       {/* --- FOOTER / LOCATION SECTION --- */}
@@ -330,7 +378,7 @@ export default function Home() {
             <p className="mb-6 text-sm leading-relaxed">
               {t.footerDesc}
             </p>
-            <div className="space-y-4 text-sm font-medium text-white">
+            <div className="space-y-4 text-sm font-medium text-white mb-6">
               <p className="flex items-center gap-3">
                 <span className="text-[#38BDF8] text-xl">📍</span>
                 Ved Stranden 21, 9000 Aalborg
@@ -340,6 +388,16 @@ export default function Home() {
                 +45 42 17 77 54
               </p>
             </div>
+            {/* SMILEY SCHEME LINK */}
+            <a 
+              href="https://www.findsmiley.dk/Sider/VirkSide.aspx?virk=1579068" 
+              target="_blank" 
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg border border-[#334155] transition-colors"
+            >
+              <span className="text-2xl">😃</span>
+              <span className="text-sm font-medium text-gray-300">{t.smiley}</span>
+            </a>
           </div>
 
           <div>
