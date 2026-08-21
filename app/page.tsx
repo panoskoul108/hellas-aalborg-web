@@ -167,10 +167,10 @@ export default function Home() {
 
       {/* --- HERO SECTION --- */}
       <header className="relative bg-[#090E17] h-[75vh] flex items-center justify-center text-center overflow-hidden border-b-[4px] border-[#38BDF8]">
-        <div className="absolute inset-0 opacity-40">
-          <img 
-  src="https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?q=80&w=2070&auto=format&fit=crop" 
-  alt="Greek Vibe" 
+        <div className="absolute inset-0 opacity-50">
+         <img 
+  src="https://images.unsplash.com/photo-1628840042765-356cda07504e?q=80&w=2080&auto=format&fit=crop" 
+  alt="Authentic Greek Pita Gyros" 
   className="w-full h-full object-cover"
 />
         </div>
