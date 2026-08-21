@@ -61,7 +61,7 @@ const menuItems = [
 
 export default function Home() {
   return (
-    <div className="min-h-screen font-sans bg-gray-50 text-gray-800">
+    <div className="min-h-screen font-sans bg-gray-50 text-gray-800 flex flex-col">
       
       {/* --- NAVIGATION BAR --- */}
       <nav className="flex items-center justify-between px-6 py-4 bg-white shadow-sm sticky top-0 z-50 border-b border-gray-200">
@@ -127,7 +127,7 @@ export default function Home() {
       </header>
 
       {/* --- MENU SECTION --- */}
-      <section id="menu" className="py-20 px-4 md:px-8 max-w-6xl mx-auto">
+      <section id="menu" className="py-20 px-4 md:px-8 max-w-6xl mx-auto flex-grow">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">Takeaway Menu</h2>
           <p className="text-gray-500 max-w-2xl mx-auto">
@@ -138,16 +138,12 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {menuItems.map((item) => (
             <div key={item.id} className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-gray-200 relative overflow-hidden group">
-              
-              {/* Διακριτική καφέ λεπτομέρεια στο επάνω μέρος κάθε κάρτας */}
               <div className="absolute top-0 left-0 w-full h-1 bg-amber-900/20 group-hover:bg-orange-400 transition-colors"></div>
-
               {item.popular && (
                 <div className="absolute top-4 right-4 bg-orange-100 text-orange-700 text-xs font-bold px-2 py-1 rounded-md">
                   Populært
                 </div>
               )}
-              
               <div className="text-xs text-amber-700/70 font-bold mb-2 uppercase tracking-wider">
                 {item.category}
               </div>
@@ -157,7 +153,6 @@ export default function Home() {
               <p className="text-gray-500 text-sm mb-6 line-clamp-3">
                 {item.desc}
               </p>
-              
               <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-100">
                 <span className="text-xl font-extrabold text-orange-600">
                   {item.price}
@@ -170,6 +165,73 @@ export default function Home() {
           ))}
         </div>
       </section>
+
+      {/* --- FOOTER / LOCATION SECTION --- */}
+      <footer id="location" className="bg-[#1f2122] text-gray-300 py-16 border-t-[4px] border-orange-500">
+        <div className="max-w-6xl mx-auto px-4 md:px-8 grid grid-cols-1 md:grid-cols-3 gap-12">
+          
+          {/* Κολόνα 1: Πληροφορίες */}
+          <div>
+            <h3 className="text-2xl font-bold text-white mb-6">
+              Hellas<span className="text-orange-500">Aalborg</span>
+            </h3>
+            <p className="mb-6 text-sm">
+              Din destination for autentisk græsk street food. Kom forbi og smag forskellen.
+            </p>
+            <div className="space-y-3 text-sm">
+              <p className="flex items-center gap-3">
+                <span className="text-orange-500 text-xl">📍</span>
+                Ved Stranden 21, 9000 Aalborg
+              </p>
+              <p className="flex items-center gap-3">
+                <span className="text-orange-500 text-xl">📞</span>
+                +45 42 17 77 54
+              </p>
+            </div>
+          </div>
+
+          {/* Κολόνα 2: Ωράρια */}
+          <div>
+            <h4 className="text-lg font-bold text-white mb-6 uppercase tracking-wider">Åbningstider</h4>
+            <ul className="space-y-2 text-sm">
+              <li className="flex justify-between border-b border-gray-700 pb-1">
+                <span>Mandag - Torsdag</span>
+                <span className="text-white font-medium">18:00 - 24:00</span>
+              </li>
+              <li className="flex justify-between border-b border-gray-700 pb-1 text-orange-400 font-bold">
+                <span>Fredag - Lørdag</span>
+                <span>18:00 - 04:00</span>
+              </li>
+              <li className="flex justify-between border-b border-gray-700 pb-1">
+                <span>Søndag</span>
+                <span className="text-white font-medium">18:00 - 24:00</span>
+              </li>
+            </ul>
+          </div>
+
+          {/* Κολόνα 3: Χάρτης */}
+          <div className="h-64 md:h-auto w-full rounded-xl overflow-hidden shadow-lg border border-gray-700">
+            <iframe 
+              title="Hellas Aalborg Map"
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2170.198305602497!2d9.919427015949516!3d57.04944898092288!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x464932b144fc894f%3A0xc3c940b3c5a6c38b!2sVed%20Stranden%2021%2C%209000%20Aalborg%2C%20Denmark!5e0!3m2!1sen!2sgr!4v1680000000000!5m2!1sen!2sgr" 
+              width="100%" 
+              height="100%" 
+              style={{ border: 0 }} 
+              allowFullScreen="" 
+              loading="lazy" 
+              referrerPolicy="no-referrer-when-downgrade"
+            ></iframe>
+          </div>
+
+        </div>
+        
+        <div className="max-w-6xl mx-auto px-4 md:px-8 mt-12 pt-6 border-t border-gray-700 text-center text-xs text-gray-500 flex flex-col md:flex-row justify-between items-center">
+          <p>© {new Date().getFullYear()} Hellas Aalborg. All rights reserved.</p>
+          <a href="https://wolt.com/da/dnk/aalborg/restaurant/hellas-food1" target="_blank" rel="noreferrer" className="text-orange-500 hover:text-white mt-2 md:mt-0 transition">
+            Bestil Delivery
+          </a>
+        </div>
+      </footer>
 
     </div>
   );
