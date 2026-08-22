@@ -92,6 +92,7 @@ const translations = {
 };
 
 const menuItems = [
+  // --- GYROS PITA ---
   {
     id: 1,
     category: 'GYROS PITA',
@@ -112,6 +113,17 @@ const menuItems = [
     popular: false,
     vegetarian: false
   },
+  {
+    id: 7,
+    category: 'GYROS PITA',
+    title: { da: 'Halloumi Pita', en: 'Halloumi Pita', el: 'Πίτα Χαλούμι' },
+    desc: { da: 'Pita med grillet halloumi, tzatziki, tomat, løg og pommes frites.', en: 'Pita with grilled halloumi, tzatziki, tomato, onion, and fries.', el: 'Πίτα με ψητό χαλούμι, τζατζίκι, ντομάτα, κρεμμύδι και πατάτες.' },
+    priceTakeaway: '79 DKK',
+    priceDelivery: '99 DKK',
+    popular: true,
+    vegetarian: true
+  },
+  // --- CLUB & SKEPASTI ---
   {
     id: 3,
     category: 'PITA CLUB',
@@ -142,18 +154,100 @@ const menuItems = [
     popular: false,
     vegetarian: false
   },
+  // --- KOMBO TILBUD ---
   {
-    id: 7,
-    category: 'NYHED',
-    title: { da: 'Halloumi Pita', en: 'Halloumi Pita', el: 'Πίτα Χαλούμι' },
-    desc: { da: 'Pita med grillet halloumi, tzatziki, tomat, løg og pommes frites.', en: 'Pita with grilled halloumi, tzatziki, tomato, onion, and fries.', el: 'Πίτα με ψητό χαλούμι, τζατζίκι, ντομάτα, κρεμμύδι και πατάτες.' },
-    priceTakeaway: '79 DKK',
-    priceDelivery: '99 DKK',
+    id: 8,
+    category: 'KOMBO TILBUD',
+    title: { da: '1. XL Menu for 1', en: '1. XL Menu for 1', el: '1. XL Μενού για 1' },
+    desc: { da: 'Dobbelt indbagt pitabrød (Skepasti) med gyros, en portion hjemmelavet tzatziki, pommes frites & 1 sodavand. (Spar 10 kr.)', en: 'Double baked pita (Skepasti) with gyros, homemade tzatziki, fries & 1 soda. (Save 10 DKK)', el: 'Σκεπαστή με γύρο, χειροποίητο τζατζίκι, πατάτες & 1 αναψυκτικό. (Κερδίστε 10 DKK)' },
+    priceTakeaway: '129 DKK',
+    priceDelivery: '154 DKK',
     popular: true,
-    vegetarian: true // <--- ΕΔΩ ΠΡΟΣΘΕΣΑΜΕ ΤΟ VEGETARIAN TAG
+    vegetarian: false
+  },
+  {
+    id: 9,
+    category: 'KOMBO TILBUD',
+    title: { da: '2. Menu for 2', en: '2. Menu for 2', el: '2. Μενού για 2' },
+    desc: { da: '2 pita gyros, en portion hjemmelavet tzatziki, pommes frites & 2 sodavand. (Spar 26 kr.)', en: '2 pita gyros, homemade tzatziki, fries & 2 sodas. (Save 26 DKK)', el: '2 πίτες γύρο, χειροποίητο τζατζίκι, πατάτες & 2 αναψυκτικά. (Κερδίστε 26 DKK)' },
+    priceTakeaway: '240 DKK',
+    priceDelivery: '309 DKK',
+    popular: true,
+    vegetarian: false
+  },
+  {
+    id: 10,
+    category: 'KOMBO TILBUD',
+    title: { da: '3. 2 Pita Club + Tzatziki + 2 Sodavand', en: '3. 2 Pita Club + Tzatziki + 2 Sodas', el: '3. 2 Pita Club + Τζατζίκι + 2 Αναψυκτικά' },
+    desc: { da: '2 pita club sandwiches med gyros, ost & bacon, en portion hjemmelavet tzatziki & 2 sodavand. (Spar 30 kr.)', en: '2 pita club sandwiches with gyros, cheese & bacon, homemade tzatziki & 2 sodas. (Save 30 DKK)', el: '2 pita club με γύρο, τυρί & μπέικον, χειροποίητο τζατζίκι & 2 αναψυκτικά. (Κερδίστε 30 DKK)' },
+    priceTakeaway: '279 DKK',
+    priceDelivery: '349 DKK',
+    popular: true,
+    vegetarian: false
+  },
+  // --- TILBEHØR (SIDES) ---
+  {
+    id: 11,
+    category: 'TILBEHØR',
+    title: { da: 'Pommes Frites', en: 'French Fries', el: 'Πατάτες Τηγανητές' },
+    desc: { da: 'Sprøde pommes frites.', en: 'Crispy french fries.', el: 'Τραγανές πατάτες τηγανητές.' },
+    priceTakeaway: '29 DKK',
+    priceDelivery: '39 DKK',
+    popular: false,
+    vegetarian: true
+  },
+  {
+    id: 12,
+    category: 'TILBEHØR',
+    title: { da: 'Pommes Frites med Dip og Bacon', en: 'Fries with Dip and Bacon', el: 'Πατάτες με Dip και Μπέικον' },
+    desc: { da: 'Sprøde pommes frites toppet med dip og bacon.', en: 'Crispy fries topped with dip and bacon.', el: 'Τραγανές πατάτες με dip και κομμάτια μπέικον.' },
+    priceTakeaway: '39 DKK',
+    priceDelivery: '49 DKK',
+    popular: false,
+    vegetarian: false
+  },
+  {
+    id: 13,
+    category: 'TILBEHØR',
+    title: { da: 'Hjemmelavet Tzatziki', en: 'Homemade Tzatziki', el: 'Χειροποίητο Τζατζίκι' },
+    desc: { da: 'Græsk yoghurt, agurk, hvidløg og frisk dild.', en: 'Greek yogurt, cucumber, garlic, and fresh dill.', el: 'Ελληνικό γιαούρτι, αγγούρι, σκόρδο και φρέσκος άνηθος.' },
+    priceTakeaway: '39 DKK',
+    priceDelivery: '49 DKK',
+    popular: true,
+    vegetarian: true
+  },
+  // --- DRIKKEVARER (DRINKS) ---
+  {
+    id: 14,
+    category: 'DRIKKEVARER',
+    title: { da: 'Sodavand', en: 'Soft Drinks', el: 'Αναψυκτικά' },
+    desc: { da: 'Cola, Faxe Kondi, Fanta eller Pepsi.', en: 'Cola, Faxe Kondi, Fanta, or Pepsi.', el: 'Cola, Faxe Kondi, Fanta, ή Pepsi.' },
+    priceTakeaway: '15 DKK',
+    priceDelivery: '15 DKK',
+    popular: false,
+    vegetarian: true
+  },
+  {
+    id: 15,
+    category: 'DRIKKEVARER',
+    title: { da: 'Vand', en: 'Water', el: 'Νερό' },
+    desc: { da: 'Kildevand.', en: 'Spring water.', el: 'Εμφιαλωμένο νερό.' },
+    priceTakeaway: '15 DKK',
+    priceDelivery: '15 DKK',
+    popular: false,
+    vegetarian: true
+  },
+  {
+    id: 16,
+    category: 'DRIKKEVARER',
+    title: { da: 'Tuborg (Dåse)', en: 'Tuborg Beer (Can)', el: 'Μπύρα Tuborg (Κουτάκι)' },
+    desc: { da: 'Kold Tuborg øl.', en: 'Cold Tuborg beer.', el: 'Παγωμένη μπύρα Tuborg.' },
+    priceTakeaway: '25 DKK',
+    priceDelivery: '35 DKK',
+    popular: false,
+    vegetarian: true
   }
 ];
-
 export default function Home() {
   const [lang, setLang] = useState('da'); 
   const [menuType, setMenuType] = useState('takeaway');
@@ -201,10 +295,6 @@ export default function Home() {
       {/* --- HERO SECTION --- */}
       <header className="relative bg-[#090E17] h-[75vh] flex items-center justify-center text-center overflow-hidden border-b-[4px] border-[#38BDF8]">
         <div className="absolute inset-0 opacity-50 bg-[#0F172A]">
-          {/* 
-            ΒΑΛΕ ΕΔΩ ΤΟ LINK (SRC) ΓΙΑ ΤΗ ΔΙΚΗ ΣΟΥ ΦΩΤΟΓΡΑΦΙΑ. 
-            Το άφησα κενό "" επίτηδες για να βάλεις το δικό σας upload.
-          */}
           <img 
             src="" 
             alt="Hellas Aalborg Gyros" 
@@ -285,7 +375,6 @@ export default function Home() {
               <div className={`absolute top-0 left-0 w-full h-1 transition-colors ${menuType === 'wolt' ? 'bg-[#009de0]' : 'bg-[#334155] group-hover:bg-[#38BDF8]'}`}></div>
               
               <div className="flex justify-end gap-2 absolute top-6 right-6">
-                {/* Το Vegan/Vegetarian Tag */}
                 {item.vegetarian && (
                   <div className="bg-green-500/20 text-green-400 text-xs font-bold px-3 py-1.5 rounded-full border border-green-500/30">
                     (V) {t.veg}
@@ -323,9 +412,7 @@ export default function Home() {
             </div>
           ))}
         </div>
-
-        {/* Μήνυμα Αλλεργιογόνων (Allergens) */}
-        <div className="text-center mt-10">
+   <div className="text-center mt-10">
           <p className="text-gray-500 text-sm italic">
             ⚠️ {t.allergies}
           </p>
@@ -354,7 +441,6 @@ export default function Home() {
           </h2>
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {/* Grid με κενά πλαίσια για να συνδεθούν αργότερα με IG posts */}
             {[1, 2, 3, 4].map((i) => (
               <a key={i} href="#" target="_blank" rel="noopener noreferrer" className="relative aspect-square bg-[#1E293B] rounded-xl overflow-hidden group border border-[#334155] flex items-center justify-center hover:border-[#38BDF8] transition-colors">
                 <span className="text-gray-600 group-hover:text-[#38BDF8] text-sm font-medium transition-colors">Image {i}</span>
@@ -388,7 +474,6 @@ export default function Home() {
                 +45 42 17 77 54
               </p>
             </div>
-            {/* SMILEY SCHEME LINK */}
             <a 
               href="https://www.findsmiley.dk/Sider/VirkSide.aspx?virk=1579068" 
               target="_blank" 
