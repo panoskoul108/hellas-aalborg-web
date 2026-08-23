@@ -281,11 +281,12 @@ export default function Home() {
       <nav className="flex items-center justify-between px-6 py-4 bg-[#1E293B] shadow-md sticky top-0 z-50 border-b border-[#334155]">
         <div className="flex items-center gap-2">
           {/* Το Logo σου - Τώρα πολύ μεγαλύτερο και σωστά προσαρμοσμένο */}
-          <img 
-            src="/logo.png" 
-            alt="Hellas Aalborg Logo" 
-            className="h-16 md:h-20 w-auto object-contain rounded-full" 
-          />
+         <img 
+  src="/logo.png" 
+  alt="Hellas Aalborg Logo" 
+  // Προσθέσαμε το object-cover και το scale-125 (ή 150 αν θέλει κι άλλο ζουμ)
+  className="h-16 w-16 md:h-20 md:w-20 object-cover rounded-full scale-125 shadow-md" 
+/>
         </div>
         
         <div className="hidden md:flex gap-8 font-semibold text-gray-300">
@@ -508,11 +509,12 @@ export default function Home() {
         <div className="max-w-6xl mx-auto px-4 md:px-8 grid grid-cols-1 md:grid-cols-3 gap-12">
           
           <div>
-            <img 
-              src="/logo.jpg" 
-              alt="Hellas Aalborg Logo" 
-              className="h-20 w-auto rounded-full mb-6 shadow-lg object-contain" 
-            />
+           <img 
+  src="/logo.png" 
+  alt="Hellas Aalborg Logo" 
+  // Εδώ το κάνουμε λίγο μεγαλύτερο για το Footer
+  className="h-24 w-24 object-cover rounded-full scale-125 mb-6 shadow-lg bg-white" 
+/>
             <p className="mb-6 text-sm leading-relaxed">
               {t.footerDesc}
             </p>
