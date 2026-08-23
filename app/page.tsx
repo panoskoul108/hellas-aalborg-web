@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const translations = {
   da: {
@@ -248,9 +248,29 @@ const menuItems = [
     vegetarian: true
   }
 ];
+
+// Οι 4 φωτογραφίες για το Carousel (μπορείς μετά να τις αλλάξεις σε π.χ. "/foto1.jpg", "/foto2.jpg" κλπ)
+const heroImages = [
+  "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=2070&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1628840042765-356cda07504e?q=80&w=2080&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?q=80&w=2070&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1626200419199-391ae4be7a41?q=80&w=2071&auto=format&fit=crop"
+];
+
 export default function Home() {
   const [lang, setLang] = useState('da'); 
   const [menuType, setMenuType] = useState('takeaway');
+  
+  // State για το Carousel
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  // Ο μηχανισμός που αλλάζει τη φωτογραφία κάθε 5 δευτερόλεπτα (5000ms)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % heroImages.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
   
   const t = translations[lang as keyof typeof translations];
 
@@ -258,14 +278,15 @@ export default function Home() {
     <div className="min-h-screen font-sans bg-[#0F172A] text-gray-200 flex flex-col">
       
       {/* --- NAVIGATION BAR --- */}
-      <nav className="flex items-center justify-between px-6 py-5 bg-[#1E293B] shadow-md sticky top-0 z-50 border-b border-[#334155]">
-      <div className="flex items-center gap-2">
-  <img 
-    src="/logo.png" /* Αν το αποθήκευσες ως logo.png, άλλαξέ το αντίστοιχα */
-    alt="Hellas Aalborg Logo" 
-    className="h-12 w-auto rounded-full border-2 border-[#38BDF8]" /* Το κάνουμε στρογγυλό και του βάζουμε ένα γαλάζιο περίγραμμα για να ξεχωρίζει */
-  />
-</div>
+      <nav className="flex items-center justify-between px-6 py-4 bg-[#1E293B] shadow-md sticky top-0 z-50 border-b border-[#334155]">
+        <div className="flex items-center gap-2">
+          {/* Το Logo σου - Τώρα πολύ μεγαλύτερο και σωστά προσαρμοσμένο */}
+          <img 
+            src="/logo.jpg" 
+            alt="Hellas Aalborg Logo" 
+            className="h-16 md:h-20 w-auto object-contain rounded-full" 
+          />
+        </div>
         
         <div className="hidden md:flex gap-8 font-semibold text-gray-300">
           <a href="#menu" className="hover:text-white transition">{t.menu}</a>
@@ -294,17 +315,29 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* --- HERO SECTION --- */}
+      {/* --- HERO SECTION ΜΕ CAROUSEL --- */}
       <header className="relative bg-[#090E17] h-[75vh] flex items-center justify-center text-center overflow-hidden border-b-[4px] border-[#38BDF8]">
-        <div className="absolute inset-0 opacity-50 bg-[#0F172A]">
-          <img 
-            src="" 
-            alt="Hellas Aalborg Gyros" 
-            className="w-full h-full object-cover"
-          />
-        </div>
         
-        <div className="relative z-10 px-4 flex flex-col items-center">
+        {/* Οι εικόνες του Carousel */}
+        {heroImages.map((src, index) => (
+          <div 
+            key={index}
+            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+              index === currentSlide ? 'opacity-50' : 'opacity-0'
+            }`}
+          >
+            <img 
+              src={src} 
+              alt={`Hellas Aalborg Vibe ${index + 1}`} 
+              className="w-full h-full object-cover"
+            />
+          </div>
+        ))}
+
+        {/* Ένα έξτρα φίλτρο για να διαβάζονται καλά τα λευκά γράμματα */}
+        <div className="absolute inset-0 bg-[#0F172A]/30"></div>
+        
+        <div className="relative z-10 px-4 flex flex-col items-center mt-8">
           <span className="text-[#38BDF8] font-bold tracking-[0.2em] uppercase mb-4 text-sm bg-[#0F172A]/80 px-4 py-1 rounded-full border border-[#38BDF8]/30">
             {t.tag}
           </span>
@@ -321,6 +354,20 @@ export default function Home() {
           >
             {t.btnTakeaway}
           </a>
+        </div>
+
+        {/* Οι τελείες (indicators) για το Carousel κάτω χαμηλά */}
+        <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-3 z-20">
+          {heroImages.map((_, index) => (
+            <button 
+              key={index}
+              onClick={() => setCurrentSlide(index)}
+              className={`w-3 h-3 rounded-full transition-all ${
+                index === currentSlide ? 'bg-[#38BDF8] scale-125' : 'bg-white/50 hover:bg-white/80'
+              }`}
+              aria-label={`Go to slide ${index + 1}`}
+            />
+          ))}
         </div>
       </header>
 
@@ -414,7 +461,8 @@ export default function Home() {
             </div>
           ))}
         </div>
-   <div className="text-center mt-10">
+
+        <div className="text-center mt-10">
           <p className="text-gray-500 text-sm italic">
             ⚠️ {t.allergies}
           </p>
@@ -460,11 +508,11 @@ export default function Home() {
         <div className="max-w-6xl mx-auto px-4 md:px-8 grid grid-cols-1 md:grid-cols-3 gap-12">
           
           <div>
-  <img 
-    src="/logo.jpg" 
-    alt="Hellas Aalborg Logo" 
-    className="h-20 w-auto rounded-full border-2 border-[#38BDF8] mb-6 shadow-lg" 
-  />
+            <img 
+              src="/logo.jpg" 
+              alt="Hellas Aalborg Logo" 
+              className="h-20 w-auto rounded-full mb-6 shadow-lg object-contain" 
+            />
             <p className="mb-6 text-sm leading-relaxed">
               {t.footerDesc}
             </p>
