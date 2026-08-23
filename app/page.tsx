@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { supabase } from './supabase'; // Η σύνδεση με το Supabase!
+import { supabase } from './supabase'; 
 
 const translations = {
   da: {
@@ -69,7 +69,7 @@ export default function Home() {
       const { data, error } = await supabase
         .from('menu_items')
         .select('*')
-        .order('id', { ascending: true });
+        .order('sort_order', { ascending: true }); // <--- ΑΛΛΑΓΗ ΕΔΩ: Ταξινόμηση βάσει του sort_order
       
       if (data) {
         // Διαμορφώνουμε τα δεδομένα για να ταιριάζουν με το design μας
@@ -146,11 +146,14 @@ export default function Home() {
           </div>
         ))}
         <div className="absolute inset-0 bg-gradient-to-b from-[#0B1120]/80 via-[#0B1120]/40 to-[#0B1120] z-0"></div>
-        <div className="relative z-10 px-4 flex flex-col items-center mt-20">
-          <span className="text-[#38BDF8] font-bold tracking-[0.25em] uppercase mb-5 text-xs bg-[#0F172A]/40 backdrop-blur-md px-5 py-1.5 rounded-full border border-[#38BDF8]/20 shadow-lg">
+        
+        {/* ΑΛΛΑΓΕΣ ΕΔΩ ΓΙΑ ΤΟΝ ΤΙΤΛΟ ΠΟΥ ΠΑΤΑΓΕ */}
+        <div className="relative z-10 px-4 flex flex-col items-center mt-24"> 
+          <span className="text-[#38BDF8] font-bold tracking-[0.25em] uppercase mb-8 text-xs bg-[#0F172A]/40 backdrop-blur-md px-5 py-1.5 rounded-full border border-[#38BDF8]/20 shadow-lg">
             {t.tag}
           </span>
-          <h1 className="text-5xl md:text-8xl font-extrabold text-white mb-6 drop-shadow-2xl leading-tight tracking-tight">
+          {/* Μίκρυνα το μέγεθος σε md:text-7xl */}
+          <h1 className="text-5xl md:text-7xl font-extrabold text-white mt-2 mb-6 drop-shadow-2xl leading-tight tracking-tight">
             {t.title1} <br/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-200 to-gray-500 font-light italic">{t.title2}</span>
           </h1>
           <p className="text-lg md:text-xl text-gray-300 mb-12 max-w-2xl font-light drop-shadow-md">{t.desc}</p>
@@ -158,6 +161,7 @@ export default function Home() {
             {t.btnTakeaway}
           </a>
         </div>
+        
         <div className="absolute bottom-10 left-0 right-0 flex justify-center gap-4 z-20">
           {heroImages.map((_, index) => (
              <button key={index} onClick={() => setCurrentSlide(index)} className={`h-2 rounded-full transition-all duration-500 ${index === currentSlide ? 'bg-[#38BDF8] w-8 shadow-[0_0_10px_rgba(56,189,248,0.8)]' : 'bg-white/30 w-2 hover:bg-white/60'}`} aria-label={`Go to slide ${index + 1}`} />
@@ -229,7 +233,8 @@ export default function Home() {
                   
                   <div className="flex items-center justify-between mt-auto pt-6 border-t border-white/5">
                     <span className="text-3xl font-black text-white">
-                      {menuType === 'takeaway' ? item.priceTakeaway : item.priceDelivery}
+                      {/* ΑΛΛΑΓΗ ΕΔΩ: Προστέθηκε το " DKK" δίπλα στην τιμή */}
+                      {menuType === 'takeaway' ? item.priceTakeaway : item.priceDelivery} DKK
                     </span>
                     <span className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors shadow-sm ${menuType === 'takeaway' ? 'text-[#0B1120] bg-white' : 'text-white bg-[#009de0]'}`}>
                       {menuType === 'takeaway' ? t.takeawayLabel : t.deliveryLabel}
