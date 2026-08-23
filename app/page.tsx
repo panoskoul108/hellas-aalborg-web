@@ -215,41 +215,9 @@ const menuItems = [
     priceDelivery: '49 DKK',
     popular: true,
     vegetarian: true
-  },
-  // --- DRIKKEVARER (DRINKS) ---
-  {
-    id: 14,
-    category: 'DRIKKEVARER',
-    title: { da: 'Sodavand', en: 'Soft Drinks', el: 'Αναψυκτικά' },
-    desc: { da: 'Cola, Faxe Kondi, Fanta eller Pepsi.', en: 'Cola, Faxe Kondi, Fanta, or Pepsi.', el: 'Cola, Faxe Kondi, Fanta, ή Pepsi.' },
-    priceTakeaway: '15 DKK',
-    priceDelivery: '15 DKK',
-    popular: false,
-    vegetarian: true
-  },
-  {
-    id: 15,
-    category: 'DRIKKEVARER',
-    title: { da: 'Vand', en: 'Water', el: 'Νερό' },
-    desc: { da: 'Kildevand.', en: 'Spring water.', el: 'Εμφιαλωμένο νερό.' },
-    priceTakeaway: '15 DKK',
-    priceDelivery: '15 DKK',
-    popular: false,
-    vegetarian: true
-  },
-  {
-    id: 16,
-    category: 'DRIKKEVARER',
-    title: { da: 'Tuborg (Dåse)', en: 'Tuborg Beer (Can)', el: 'Μπύρα Tuborg (Κουτάκι)' },
-    desc: { da: 'Kold Tuborg øl.', en: 'Cold Tuborg beer.', el: 'Παγωμένη μπύρα Tuborg.' },
-    priceTakeaway: '25 DKK',
-    priceDelivery: '35 DKK',
-    popular: false,
-    vegetarian: true
   }
 ];
 
-// Οι 4 φωτογραφίες για το Carousel (μπορείς μετά να τις αλλάξεις σε π.χ. "/foto1.jpg", "/foto2.jpg" κλπ)
 const heroImages = [
   "/foto1.jpg", 
   "/foto2.jpg", 
@@ -261,10 +229,8 @@ export default function Home() {
   const [lang, setLang] = useState('da'); 
   const [menuType, setMenuType] = useState('takeaway');
   
-  // State για το Carousel
   const [currentSlide, setCurrentSlide] = useState(0);
 
-  // Ο μηχανισμός που αλλάζει τη φωτογραφία κάθε 5 δευτερόλεπτα (5000ms)
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % heroImages.length);
@@ -280,13 +246,11 @@ export default function Home() {
       {/* --- NAVIGATION BAR --- */}
       <nav className="flex items-center justify-between px-6 py-4 bg-[#1E293B] shadow-md sticky top-0 z-50 border-b border-[#334155]">
         <div className="flex items-center gap-2">
-          {/* Το Logo σου - Τώρα πολύ μεγαλύτερο και σωστά προσαρμοσμένο */}
-         <img 
-  src="/logo.png" 
-  alt="Hellas Aalborg Logo" 
-  // Προσθέσαμε το object-cover και το scale-125 (ή 150 αν θέλει κι άλλο ζουμ)
-  className="h-16 w-16 md:h-20 md:w-20 object-cover rounded-full scale-130 shadow-md" 
-/>
+          <img 
+            src="/logo.png" 
+            alt="Hellas Aalborg Logo" 
+            className="h-16 w-16 md:h-20 md:w-20 object-contain rounded-full scale-125" 
+          />
         </div>
         
         <div className="hidden md:flex gap-8 font-semibold text-gray-300">
@@ -298,7 +262,7 @@ export default function Home() {
           <select 
             value={lang} 
             onChange={(e) => setLang(e.target.value)}
-            className="bg-[#334155] border-none text-white rounded-full px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-[#38BDF8] cursor-pointer font-medium"
+            className="bg-[#334155] border-none text-white rounded-full px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-[#38BDF8] cursor-pointer font-medium hover:bg-[#475569] transition"
           >
             <option value="da">🇩🇰 DA</option>
             <option value="en">🇬🇧 EN</option>
@@ -309,17 +273,15 @@ export default function Home() {
             href="https://wolt.com/da/dnk/aalborg/restaurant/hellas-food1"
             target="_blank" 
             rel="noopener noreferrer"
-            className="hidden md:block bg-[#009de0] text-white px-6 py-2.5 rounded-full font-bold hover:bg-[#007fb5] transition shadow-sm"
+            className="hidden md:block bg-[#009de0] text-white px-6 py-2.5 rounded-full font-bold hover:bg-[#007fb5] transition shadow-md hover:shadow-lg"
           >
             {t.orderWolt}
           </a>
         </div>
       </nav>
 
-      {/* --- HERO SECTION ΜΕ CAROUSEL --- */}
+      {/* --- HERO SECTION --- */}
       <header className="relative bg-[#090E17] h-[75vh] flex items-center justify-center text-center overflow-hidden border-b-[4px] border-[#38BDF8]">
-        
-        {/* Οι εικόνες του Carousel */}
         {heroImages.map((src, index) => (
           <div 
             key={index}
@@ -334,8 +296,6 @@ export default function Home() {
             />
           </div>
         ))}
-
-        {/* Ένα έξτρα φίλτρο για να διαβάζονται καλά τα λευκά γράμματα */}
         <div className="absolute inset-0 bg-[#0F172A]/30"></div>
         
         <div className="relative z-10 px-4 flex flex-col items-center mt-8">
@@ -357,7 +317,6 @@ export default function Home() {
           </a>
         </div>
 
-        {/* Οι τελείες (indicators) για το Carousel κάτω χαμηλά */}
         <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-3 z-20">
           {heroImages.map((_, index) => (
             <button 
@@ -387,7 +346,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* --- MENU SECTION (WITH TABS & ALLERGENS) --- */}
+      {/* --- MENU SECTION --- */}
       <section id="menu" className="py-20 px-4 md:px-8 max-w-6xl mx-auto flex-grow">
         <div className="text-center mb-12">
           <h2 className="text-4xl font-extrabold text-white mb-4">{t.menuTitle}</h2>
@@ -400,7 +359,7 @@ export default function Home() {
               onClick={() => setMenuType('takeaway')}
               className={`px-6 py-3 rounded-full font-bold transition-all ${
                 menuType === 'takeaway' 
-                  ? 'bg-white text-[#0F172A] shadow-lg scale-105' 
+                  ? 'bg-white text-[#0F172A] shadow-[0_0_15px_rgba(255,255,255,0.3)] scale-105' 
                   : 'bg-[#1E293B] text-gray-400 border border-[#334155] hover:bg-[#334155]'
               }`}
             >
@@ -410,7 +369,7 @@ export default function Home() {
               onClick={() => setMenuType('wolt')}
               className={`px-6 py-3 rounded-full font-bold transition-all ${
                 menuType === 'wolt' 
-                  ? 'bg-[#009de0] text-white shadow-lg scale-105' 
+                  ? 'bg-[#009de0] text-white shadow-[0_0_15px_rgba(0,157,224,0.4)] scale-105' 
                   : 'bg-[#1E293B] text-gray-400 border border-[#334155] hover:bg-[#334155]'
               }`}
             >
@@ -421,7 +380,7 @@ export default function Home() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {menuItems.map((item) => (
-            <div key={item.id} className="bg-[#1E293B] rounded-2xl shadow-lg hover:shadow-xl transition-all p-8 relative overflow-hidden group border border-[#334155]">
+            <div key={item.id} className="bg-[#1E293B] rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 p-8 relative overflow-hidden group border border-[#334155]">
               <div className={`absolute top-0 left-0 w-full h-1 transition-colors ${menuType === 'wolt' ? 'bg-[#009de0]' : 'bg-[#334155] group-hover:bg-[#38BDF8]'}`}></div>
               
               <div className="flex justify-end gap-2 absolute top-6 right-6">
@@ -439,7 +398,8 @@ export default function Home() {
                 )}
               </div>
               
-              <div className="text-xs text-gray-500 font-bold mb-3 uppercase tracking-widest mt-2">
+              {/* Αλλαγή Χρώματος στην Κατηγορία */}
+              <div className="text-xs text-[#F59E0B] font-bold mb-3 uppercase tracking-widest mt-2">
                 {item.category}
               </div>
               <h3 className="text-2xl font-bold text-white mb-3 pr-4">
@@ -475,7 +435,7 @@ export default function Home() {
               href="https://wolt.com/da/dnk/aalborg/restaurant/hellas-food1"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block bg-[#009de0] hover:bg-[#0082ba] text-white font-bold py-4 px-12 rounded-full shadow-lg transition transform hover:scale-105"
+              className="inline-block bg-[#009de0] hover:bg-[#0082ba] text-white font-bold py-4 px-12 rounded-full shadow-[0_0_15px_rgba(0,157,224,0.4)] transition transform hover:scale-105"
             >
               {t.orderWolt}
             </a>
@@ -483,7 +443,7 @@ export default function Home() {
         )}
       </section>
 
-      {/* --- INSTAGRAM FEED SECTION --- */}
+      {/* --- INSTAGRAM FEED --- */}
       <section id="instagram" className="py-12 bg-[#0F172A]">
         <div className="max-w-6xl mx-auto px-4 md:px-8 text-center">
           <h2 className="text-xl md:text-2xl font-bold text-white mb-8 flex items-center justify-center gap-3">
@@ -504,17 +464,16 @@ export default function Home() {
         </div>
       </section>
 
-      {/* --- FOOTER / LOCATION SECTION --- */}
+      {/* --- FOOTER --- */}
       <footer id="location" className="bg-[#090E17] text-gray-400 py-16 border-t border-[#334155]">
         <div className="max-w-6xl mx-auto px-4 md:px-8 grid grid-cols-1 md:grid-cols-3 gap-12">
           
           <div>
-           <img 
-  src="/logo.png" 
-  alt="Hellas Aalborg Logo" 
-  // Εδώ το κάνουμε λίγο μεγαλύτερο για το Footer
-  className="h-24 w-24 object-cover rounded-full scale-130 mb-6 shadow-lg bg-white" 
-/>
+            <img 
+              src="/logo.png" 
+              alt="Hellas Aalborg Logo" 
+              className="h-24 w-24 object-contain rounded-full scale-130 mb-6" 
+            />
             <p className="mb-6 text-sm leading-relaxed">
               {t.footerDesc}
             </p>
