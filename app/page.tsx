@@ -253,7 +253,8 @@ const menuItems = [
 const heroImages = [
   "/foto1.jpg", 
   "/foto2.jpg", 
-  "/foto3.jpg"
+  "/foto3.jpg",
+  "/foto4.jpg"
 ];
 
 export default function Home() {
