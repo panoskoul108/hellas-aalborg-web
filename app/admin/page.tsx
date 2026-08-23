@@ -63,8 +63,12 @@ export default function AdminPage() {
   // Αποθήκευση (Είτε Insert είτε Update)
   const saveItem = async () => {
     if (editingItem.id) {
-      // Update υπάρχοντος
-      const { error } = await supabase.from('menu_items').update(editingItem).eq('id', editingItem.id);
+      // 1. Βγάζουμε το 'id' έξω, και κρατάμε τα υπόλοιπα στο 'dataToUpdate'
+      const { id, ...dataToUpdate } = editingItem;
+
+      // 2. Στέλνουμε για update ΜΟΝΟ τα δεδομένα, χωρίς το id!
+      const { error } = await supabase.from('menu_items').update(dataToUpdate).eq('id', id);
+      
       if (error) alert('Σφάλμα: ' + error.message);
       else { alert('Αποθηκεύτηκε!'); fetchMenu(); setIsModalOpen(false); }
     } else {
