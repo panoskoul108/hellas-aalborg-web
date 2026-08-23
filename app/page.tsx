@@ -139,32 +139,32 @@ export default function Home() {
       </nav>
 
       {/* HERO SECTION */}
-      <header className="relative h-[80vh] flex items-center justify-center text-center overflow-hidden border-b border-white/5 -mt-[98px]">
+      <header className="relative min-h-[90vh] md:min-h-screen flex items-center justify-center text-center overflow-hidden border-b border-white/5 -mt-[98px] pt-[98px] pb-24">
         {heroImages.map((src, index) => (
           <div key={index} className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100 z-0' : 'opacity-0 -z-10'}`}>
             <Image src={src} alt="Hellas Aalborg Vibe" fill priority={index === 0} className={`object-cover transition-transform duration-[7000ms] ease-out ${index === currentSlide ? 'scale-105' : 'scale-100'}`} />
           </div>
         ))}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0B1120]/80 via-[#0B1120]/40 to-[#0B1120] z-0"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0B1120]/80 via-[#0B1120]/50 to-[#0B1120] z-0"></div>
         
-        {/* ΑΛΛΑΓΕΣ ΕΔΩ ΓΙΑ ΤΟΝ ΤΙΤΛΟ ΠΟΥ ΠΑΤΑΓΕ */}
-        <div className="relative z-10 px-4 flex flex-col items-center mt-24"> 
-          <span className="text-[#38BDF8] font-bold tracking-[0.25em] uppercase mb-8 text-xs bg-[#0F172A]/40 backdrop-blur-md px-5 py-1.5 rounded-full border border-[#38BDF8]/20 shadow-lg">
+        {/* ΔΙΟΡΘΩΜΕΝΟ ΚΕΝΤΡΑΡΙΣΜΑ & SPACING */}
+        <div className="relative z-10 px-4 flex flex-col items-center justify-center w-full h-full"> 
+          <span className="text-[#38BDF8] font-bold tracking-[0.25em] uppercase mb-6 md:mb-8 text-[10px] md:text-xs bg-[#0F172A]/50 backdrop-blur-md px-4 py-1.5 md:px-5 md:py-1.5 rounded-full border border-[#38BDF8]/20 shadow-lg">
             {t.tag}
           </span>
-          {/* Μίκρυνα το μέγεθος σε md:text-7xl */}
-          <h1 className="text-5xl md:text-7xl font-extrabold text-white mt-2 mb-6 drop-shadow-2xl leading-tight tracking-tight">
-            {t.title1} <br/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-200 to-gray-500 font-light italic">{t.title2}</span>
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-extrabold text-white mb-4 md:mb-6 drop-shadow-2xl leading-tight tracking-tight">
+            {t.title1} <br className="hidden md:block" /> <span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-200 to-gray-500 font-light italic">{t.title2}</span>
           </h1>
-          <p className="text-lg md:text-xl text-gray-300 mb-12 max-w-2xl font-light drop-shadow-md">{t.desc}</p>
-          <a href="#menu" className="bg-white hover:bg-gray-100 text-[#0B1120] font-bold py-4 px-10 rounded-full shadow-[0_0_30px_rgba(255,255,255,0.2)] transition-all transform hover:-translate-y-1">
+          <p className="text-lg md:text-xl text-gray-300 mb-10 md:mb-14 max-w-2xl font-light drop-shadow-md px-4">{t.desc}</p>
+          <a href="#menu" className="bg-white hover:bg-gray-100 text-[#0B1120] font-bold py-3.5 px-8 md:py-4 md:px-10 rounded-full shadow-[0_0_30px_rgba(255,255,255,0.2)] transition-all transform hover:-translate-y-1 text-sm md:text-base">
             {t.btnTakeaway}
           </a>
         </div>
         
-        <div className="absolute bottom-10 left-0 right-0 flex justify-center gap-4 z-20">
+        {/* ΚΟΥΚΚΙΔΕΣ (SLIDER DOTS) */}
+        <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-3 z-20">
           {heroImages.map((_, index) => (
-             <button key={index} onClick={() => setCurrentSlide(index)} className={`h-2 rounded-full transition-all duration-500 ${index === currentSlide ? 'bg-[#38BDF8] w-8 shadow-[0_0_10px_rgba(56,189,248,0.8)]' : 'bg-white/30 w-2 hover:bg-white/60'}`} aria-label={`Go to slide ${index + 1}`} />
+             <button key={index} onClick={() => setCurrentSlide(index)} className={`h-1.5 md:h-2 rounded-full transition-all duration-500 ${index === currentSlide ? 'bg-[#38BDF8] w-6 md:w-8 shadow-[0_0_10px_rgba(56,189,248,0.8)]' : 'bg-white/30 w-1.5 md:w-2 hover:bg-white/60'}`} aria-label={`Go to slide ${index + 1}`} />
           ))}
         </div>
       </header>
@@ -295,7 +295,7 @@ export default function Home() {
           </div>
         </div>
         <div className="max-w-7xl mx-auto px-6 md:px-8 mt-20 pt-8 border-t border-white/5 text-center text-xs text-gray-600 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p>© {new Date().getFullYear()} Hellas Aalborg. All rights reserved.</p>
+          <p>© 2026 Hellas Aalborg. All rights reserved.</p>
           <a href="https://wolt.com/da/dnk/aalborg/restaurant/hellas-food1" target="_blank" rel="noreferrer" className="text-[#38BDF8] hover:text-white transition font-bold tracking-widest uppercase">{t.footerDelivery}</a>
         </div>
       </footer>
