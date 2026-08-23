@@ -1,0 +1,27 @@
+backend:
+  name: git-gateway
+  branch: main # Το όνομα του branch σου στο GitHub (συνήθως main ή master)
+
+media_folder: "public/images"
+public_folder: "/images"
+
+collections:
+  - name: "menu"
+    label: "Μενού (Πιάτα)"
+    folder: "content/menu" # Εδώ θα σώζονται τα πιάτα αυτόματα
+    create: true
+    slug: "{{id}}-{{title_da}}"
+    fields:
+      - {label: "ID Πιάτου (Αριθμός)", name: "id", widget: "number"}
+      - {label: "Κατηγορία (π.χ. GYROS PITA, KOMBO)", name: "category", widget: "string"}
+      - {label: "Τίτλος (Δανέζικα)", name: "title_da", widget: "string"}
+      - {label: "Τίτλος (Αγγλικά)", name: "title_en", widget: "string"}
+      - {label: "Τίτλος (Ελληνικά)", name: "title_el", widget: "string"}
+      - {label: "Περιγραφή (Δανέζικα)", name: "desc_da", widget: "text"}
+      - {label: "Περιγραφή (Αγγλικά)", name: "desc_en", widget: "text"}
+      - {label: "Περιγραφή (Ελληνικά)", name: "desc_el", widget: "text"}
+      - {label: "Τιμή Takeaway (π.χ. 74 DKK)", name: "priceTakeaway", widget: "string"}
+      - {label: "Τιμή Wolt (π.χ. 94 DKK)", name: "priceDelivery", widget: "string"}
+      - {label: "Είναι Δημοφιλές; (Our Favorite)", name: "popular", widget: "boolean", default: false}
+      - {label: "Είναι Χορτοφαγικό; (V)", name: "vegetarian", widget: "boolean", default: false}
+      - {label: "Μεγάλη Κάρτα; (Για Combos)", name: "featured", widget: "boolean", default: false}
