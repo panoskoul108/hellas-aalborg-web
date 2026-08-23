@@ -90,67 +90,125 @@ export default function AdminPage() {
         {loading ? (
           <p className="text-[#38BDF8]">Φόρτωση πιάτων...</p>
         ) : (
-          <div className="bg-slate-900/50 border border-white/10 rounded-2xl overflow-hidden overflow-x-auto shadow-2xl">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-800 text-gray-400 uppercase">
-                <tr>
-                  <th className="p-4">Κατηγορία</th>
-                  <th className="p-4">Τίτλος (Δανέζικα)</th>
-                  <th className="p-4">Τιμή Takeaway</th>
-                  <th className="p-4">Τιμή Wolt</th>
-                  <th className="p-4">Popular</th>
-                  <th className="p-4 text-right">Ενέργεια</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {menuItems.map(item => (
-                  <tr key={item.id} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="p-4 font-medium text-[#38BDF8]">{item.category}</td>
-                    <td className="p-4">
-                      <input 
-                        type="text" 
-                        value={item.title_da || ''} 
-                        onChange={(e) => handleInputChange(item.id, 'title_da', e.target.value)}
-                        className="bg-transparent border-b border-slate-700 p-1 text-white focus:outline-none focus:border-[#38BDF8] w-full"
-                      />
-                    </td>
-                    <td className="p-4">
-                      <input 
-                        type="text" 
-                        value={item.price_takeaway || ''} 
-                        onChange={(e) => handleInputChange(item.id, 'price_takeaway', e.target.value)}
-                        className="bg-transparent border-b border-slate-700 p-1 text-white focus:outline-none focus:border-[#38BDF8] w-20"
-                      />
-                    </td>
-                    <td className="p-4">
-                      <input 
-                        type="text" 
-                        value={item.price_delivery || ''} 
-                        onChange={(e) => handleInputChange(item.id, 'price_delivery', e.target.value)}
-                        className="bg-transparent border-b border-slate-700 p-1 text-white focus:outline-none focus:border-[#38BDF8] w-20"
-                      />
-                    </td>
-                    <td className="p-4 text-center">
-                      <input 
-                        type="checkbox" 
-                        checked={item.popular} 
-                        onChange={(e) => handleInputChange(item.id, 'popular', e.target.checked)}
-                        className="w-4 h-4 accent-[#38BDF8]"
-                      />
-                    </td>
-                    <td className="p-4 text-right">
-                      <button 
-                        onClick={() => saveItem(item)}
-                        className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-4 py-2 rounded-lg font-bold hover:bg-emerald-500 hover:text-white transition-all"
-                      >
-                        Αποθήκευση
-                      </button>
-                    </td>
+          <>
+            {/* Mobile Cards (φαίνονται μόνο σε μικρές οθόνες) */}
+            <div className="grid grid-cols-1 lg:hidden gap-6">
+              {menuItems.map(item => (
+                <div key={item.id} className="bg-slate-800/50 p-4 rounded-xl border border-white/5 flex flex-col gap-3 shadow-lg">
+                  <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                     <span className="text-xs font-bold text-[#38BDF8] uppercase">{item.category}</span>
+                     <div className="flex items-center gap-2">
+                       <label className="text-xs text-gray-400">Popular</label>
+                       <input 
+                         type="checkbox" 
+                         checked={item.popular} 
+                         onChange={(e) => handleInputChange(item.id, 'popular', e.target.checked)} 
+                         className="w-4 h-4 accent-[#38BDF8]"
+                       />
+                     </div>
+                  </div>
+                  <div>
+                     <label className="text-xs text-gray-500 block mb-1">Τίτλος (Δανέζικα)</label>
+                     <input 
+                       type="text" 
+                       value={item.title_da || ''} 
+                       onChange={(e) => handleInputChange(item.id, 'title_da', e.target.value)} 
+                       className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-sm focus:border-[#38BDF8] outline-none" 
+                     />
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                       <label className="text-xs text-gray-500 block mb-1">Takeaway (DKK)</label>
+                       <input 
+                         type="text" 
+                         value={item.price_takeaway || ''} 
+                         onChange={(e) => handleInputChange(item.id, 'price_takeaway', e.target.value)} 
+                         className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-sm focus:border-[#38BDF8] outline-none" 
+                       />
+                    </div>
+                    <div className="flex-1">
+                       <label className="text-xs text-gray-500 block mb-1">Wolt (DKK)</label>
+                       <input 
+                         type="text" 
+                         value={item.price_delivery || ''} 
+                         onChange={(e) => handleInputChange(item.id, 'price_delivery', e.target.value)} 
+                         className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-sm focus:border-[#38BDF8] outline-none" 
+                       />
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => saveItem(item)} 
+                    className="mt-2 w-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 py-2 rounded-lg font-bold hover:bg-emerald-500 hover:text-white transition-all text-sm"
+                  >
+                    Αποθήκευση
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table (φαίνεται μόνο σε μεγάλες οθόνες) */}
+            <div className="hidden lg:block bg-slate-900/50 border border-white/10 rounded-2xl overflow-hidden overflow-x-auto shadow-2xl">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-800 text-gray-400 uppercase">
+                  <tr>
+                    <th className="p-4">Κατηγορία</th>
+                    <th className="p-4">Τίτλος (Δανέζικα)</th>
+                    <th className="p-4">Τιμή Takeaway</th>
+                    <th className="p-4">Τιμή Wolt</th>
+                    <th className="p-4 text-center">Popular</th>
+                    <th className="p-4 text-right">Ενέργεια</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {menuItems.map(item => (
+                    <tr key={item.id} className="hover:bg-slate-800/30 transition-colors">
+                      <td className="p-4 font-medium text-[#38BDF8]">{item.category}</td>
+                      <td className="p-4">
+                        <input 
+                          type="text" 
+                          value={item.title_da || ''} 
+                          onChange={(e) => handleInputChange(item.id, 'title_da', e.target.value)}
+                          className="bg-transparent border-b border-slate-700 p-1 text-white focus:outline-none focus:border-[#38BDF8] w-full"
+                        />
+                      </td>
+                      <td className="p-4">
+                        <input 
+                          type="text" 
+                          value={item.price_takeaway || ''} 
+                          onChange={(e) => handleInputChange(item.id, 'price_takeaway', e.target.value)}
+                          className="bg-transparent border-b border-slate-700 p-1 text-white focus:outline-none focus:border-[#38BDF8] w-20"
+                        />
+                      </td>
+                      <td className="p-4">
+                        <input 
+                          type="text" 
+                          value={item.price_delivery || ''} 
+                          onChange={(e) => handleInputChange(item.id, 'price_delivery', e.target.value)}
+                          className="bg-transparent border-b border-slate-700 p-1 text-white focus:outline-none focus:border-[#38BDF8] w-20"
+                        />
+                      </td>
+                      <td className="p-4 text-center">
+                        <input 
+                          type="checkbox" 
+                          checked={item.popular} 
+                          onChange={(e) => handleInputChange(item.id, 'popular', e.target.checked)}
+                          className="w-4 h-4 accent-[#38BDF8]"
+                        />
+                      </td>
+                      <td className="p-4 text-right">
+                        <button 
+                          onClick={() => saveItem(item)}
+                          className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-4 py-2 rounded-lg font-bold hover:bg-emerald-500 hover:text-white transition-all"
+                        >
+                          Αποθήκευση
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>
