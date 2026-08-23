@@ -285,7 +285,7 @@ export default function Home() {
   src="/logo.png" 
   alt="Hellas Aalborg Logo" 
   // Προσθέσαμε το object-cover και το scale-125 (ή 150 αν θέλει κι άλλο ζουμ)
-  className="h-16 w-16 md:h-20 md:w-20 object-cover rounded-full scale-150 shadow-md" 
+  className="h-16 w-16 md:h-20 md:w-20 object-cover rounded-full scale-130 shadow-md" 
 />
         </div>
         
@@ -513,7 +513,7 @@ export default function Home() {
   src="/logo.png" 
   alt="Hellas Aalborg Logo" 
   // Εδώ το κάνουμε λίγο μεγαλύτερο για το Footer
-  className="h-24 w-24 object-cover rounded-full scale-150 mb-6 shadow-lg bg-white" 
+  className="h-24 w-24 object-cover rounded-full scale-130 mb-6 shadow-lg bg-white" 
 />
             <p className="mb-6 text-sm leading-relaxed">
               {t.footerDesc}
