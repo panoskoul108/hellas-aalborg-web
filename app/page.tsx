@@ -259,11 +259,13 @@ export default function Home() {
       
       {/* --- NAVIGATION BAR --- */}
       <nav className="flex items-center justify-between px-6 py-5 bg-[#1E293B] shadow-md sticky top-0 z-50 border-b border-[#334155]">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl font-black tracking-tight text-white">
-            Hellas<span className="text-[#38BDF8] font-medium">Aalborg</span>
-          </span>
-        </div>
+      <div className="flex items-center gap-2">
+  <img 
+    src="/logo.png" /* Αν το αποθήκευσες ως logo.png, άλλαξέ το αντίστοιχα */
+    alt="Hellas Aalborg Logo" 
+    className="h-12 w-auto rounded-full border-2 border-[#38BDF8]" /* Το κάνουμε στρογγυλό και του βάζουμε ένα γαλάζιο περίγραμμα για να ξεχωρίζει */
+  />
+</div>
         
         <div className="hidden md:flex gap-8 font-semibold text-gray-300">
           <a href="#menu" className="hover:text-white transition">{t.menu}</a>
@@ -458,9 +460,11 @@ export default function Home() {
         <div className="max-w-6xl mx-auto px-4 md:px-8 grid grid-cols-1 md:grid-cols-3 gap-12">
           
           <div>
-            <h3 className="text-3xl font-black text-white mb-6">
-              Hellas<span className="text-[#38BDF8] font-medium">Aalborg</span>
-            </h3>
+  <img 
+    src="/logo.jpg" 
+    alt="Hellas Aalborg Logo" 
+    className="h-20 w-auto rounded-full border-2 border-[#38BDF8] mb-6 shadow-lg" 
+  />
             <p className="mb-6 text-sm leading-relaxed">
               {t.footerDesc}
             </p>
