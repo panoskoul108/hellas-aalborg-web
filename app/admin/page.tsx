@@ -23,7 +23,6 @@ export default function AdminPage() {
 
   const fetchMenu = async () => {
     setLoading(true);
-    // Πλέον φέρνουμε τα πιάτα ταξινομημένα βάσει της Σειράς (sort_order)
     const { data, error } = await supabase.from('menu_items').select('*').order('sort_order', { ascending: true });
     if (data) setMenuItems(data);
     setLoading(false);
@@ -47,7 +46,8 @@ export default function AdminPage() {
 
   const openNewModal = () => {
     setEditingItem({
-      sort_order: 100, category: 'GYROS PITA', title_da: '', title_en: '', title_el: '', desc_da: '', desc_en: '', desc_el: '',
+      sort_order: menuItems.length + 1, // Μπαίνει αυτόματα στο τέλος της λίστας
+      category: 'GYROS PITA', title_da: '', title_en: '', title_el: '', desc_da: '', desc_en: '', desc_el: '',
       price_takeaway: '', price_delivery: '', popular: false, vegetarian: false, featured: false
     });
     setIsModalOpen(true);
@@ -61,10 +61,8 @@ export default function AdminPage() {
   const saveItem = async () => {
     let dataToUpdate = { ...editingItem };
 
-    // ΑΥΤΟΜΑΤΟ DKK: Κρατάμε μόνο τους αριθμούς (διώχνουμε γράμματα αν γράφτηκαν κατά λάθος)
     dataToUpdate.price_takeaway = String(dataToUpdate.price_takeaway || '').replace(/[^0-9]/g, '');
     dataToUpdate.price_delivery = String(dataToUpdate.price_delivery || '').replace(/[^0-9]/g, '');
-    dataToUpdate.sort_order = parseInt(dataToUpdate.sort_order) || 100;
 
     if (dataToUpdate.id) {
       const { id, ...rest } = dataToUpdate;
@@ -86,6 +84,30 @@ export default function AdminPage() {
     }
   };
 
+  // --- ΝΕΑ ΛΕΙΤΟΥΡΓΙΑ: Αλλαγή Σειράς με Βελάκια ---
+  const moveItem = async (index: number, direction: 'up' | 'down') => {
+    if (direction === 'up' && index === 0) return;
+    if (direction === 'down' && index === menuItems.length - 1) return;
+
+    const newItems = [...menuItems];
+    const swapIndex = direction === 'up' ? index - 1 : index + 1;
+
+    // Αντιμετάθεση (Swap) των αντικειμένων στον πίνακα
+    const temp = newItems[index];
+    newItems[index] = newItems[swapIndex];
+    newItems[swapIndex] = temp;
+
+    // Δημιουργούμε σωστή σειρά 1, 2, 3... για ασφάλεια (αν υπήρχαν διπλά νούμερα)
+    const updatedItems = newItems.map((item, i) => ({ ...item, sort_order: i + 1 }));
+    
+    // Ενημερώνουμε την οθόνη αμέσως (χωρίς να περιμένουμε τη βάση)
+    setMenuItems(updatedItems); 
+
+    // Ενημερώνουμε τη βάση δεδομένων στο παρασκήνιο για τα δύο πιάτα που άλλαξαν θέση
+    await supabase.from('menu_items').update({ sort_order: updatedItems[index].sort_order }).eq('id', updatedItems[index].id);
+    await supabase.from('menu_items').update({ sort_order: updatedItems[swapIndex].sort_order }).eq('id', updatedItems[swapIndex].id);
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-[#0B1120] flex items-center justify-center p-4">
@@ -102,9 +124,9 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-[#0B1120] text-gray-200 p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <h1 className="text-2xl md:text-3xl font-bold text-white">Διαχείριση Μενού</h1>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <button onClick={openNewModal} className="bg-[#38BDF8] text-slate-900 px-4 py-2 rounded-lg text-sm font-bold hover:bg-sky-400">➕ Νέο Πιάτο</button>
             <button onClick={handleLogout} className="bg-red-500/20 text-red-400 px-4 py-2 rounded-lg text-sm border border-red-500/30 hover:bg-red-500 hover:text-white">Αποσύνδεση</button>
           </div>
@@ -114,10 +136,17 @@ export default function AdminPage() {
           <>
             {/* Κινητό: Κάρτες */}
             <div className="grid grid-cols-1 lg:hidden gap-6">
-              {menuItems.map(item => (
-                <div key={item.id} className="bg-slate-800/50 p-5 rounded-xl border border-white/5 shadow-lg">
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-xs font-bold text-[#38BDF8]">#{item.sort_order} - {item.category}</span>
+              {menuItems.map((item, index) => (
+                <div key={item.id} className="bg-slate-800/50 p-5 rounded-xl border border-white/5 shadow-lg relative">
+                  
+                  {/* ΒΕΛΑΚΙΑ ΚΙΝΗΤΟΥ */}
+                  <div className="absolute top-4 right-4 flex flex-col gap-1">
+                    <button onClick={() => moveItem(index, 'up')} disabled={index === 0} className="p-2 bg-slate-700/50 hover:bg-slate-700 rounded text-xs disabled:opacity-30 disabled:cursor-not-allowed">🔼</button>
+                    <button onClick={() => moveItem(index, 'down')} disabled={index === menuItems.length - 1} className="p-2 bg-slate-700/50 hover:bg-slate-700 rounded text-xs disabled:opacity-30 disabled:cursor-not-allowed">🔽</button>
+                  </div>
+
+                  <div className="flex justify-between items-center mb-3 pr-10">
+                    <span className="text-xs font-bold text-[#38BDF8] uppercase tracking-wider">{item.category}</span>
                   </div>
                   <h3 className="text-lg font-bold text-white mb-2">{item.title_da}</h3>
                   <div className="flex gap-4 text-sm text-gray-400 mb-4">
@@ -137,7 +166,7 @@ export default function AdminPage() {
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-800 text-gray-400 uppercase">
                   <tr>
-                    <th className="p-4 w-16">Σειρά</th>
+                    <th className="p-4 w-20 text-center">Σειρά</th>
                     <th className="p-4">Κατηγορία</th>
                     <th className="p-4">Τίτλος</th>
                     <th className="p-4">Takeaway</th>
@@ -146,9 +175,15 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {menuItems.map(item => (
+                  {menuItems.map((item, index) => (
                     <tr key={item.id} className="hover:bg-slate-800/30 transition-colors">
-                      <td className="p-4 font-bold text-gray-400">{item.sort_order}</td>
+                      {/* ΒΕΛΑΚΙΑ ΥΠΟΛΟΓΙΣΤΗ */}
+                      <td className="p-4 text-center">
+                        <div className="flex flex-col items-center gap-1">
+                          <button onClick={() => moveItem(index, 'up')} disabled={index === 0} className="text-gray-400 hover:text-white disabled:opacity-20 transition-colors">▲</button>
+                          <button onClick={() => moveItem(index, 'down')} disabled={index === menuItems.length - 1} className="text-gray-400 hover:text-white disabled:opacity-20 transition-colors">▼</button>
+                        </div>
+                      </td>
                       <td className="p-4 text-[#38BDF8] font-medium">{item.category}</td>
                       <td className="p-4 font-bold text-white">{item.title_da}</td>
                       <td className="p-4">{item.price_takeaway} DKK</td>
@@ -175,11 +210,7 @@ export default function AdminPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">Σειρά (π.χ. 1, 2, 3)</label>
-                <input type="number" value={editingItem.sort_order || ''} onChange={(e) => setEditingItem({...editingItem, sort_order: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-white" />
-              </div>
-              <div>
+              <div className="col-span-full">
                 <label className="text-xs text-gray-400 block mb-1">Κατηγορία</label>
                 <input type="text" value={editingItem.category} onChange={(e) => setEditingItem({...editingItem, category: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-white" />
               </div>
