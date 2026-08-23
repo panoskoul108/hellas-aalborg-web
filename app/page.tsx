@@ -251,10 +251,9 @@ const menuItems = [
 
 // Οι 4 φωτογραφίες για το Carousel (μπορείς μετά να τις αλλάξεις σε π.χ. "/foto1.jpg", "/foto2.jpg" κλπ)
 const heroImages = [
-  "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=2070&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1628840042765-356cda07504e?q=80&w=2080&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?q=80&w=2070&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1626200419199-391ae4be7a41?q=80&w=2071&auto=format&fit=crop"
+  "/foto1.jpg", 
+  "/foto2.jpg", 
+  "/foto3.jpg"
 ];
 
 export default function Home() {
@@ -282,7 +281,7 @@ export default function Home() {
         <div className="flex items-center gap-2">
           {/* Το Logo σου - Τώρα πολύ μεγαλύτερο και σωστά προσαρμοσμένο */}
           <img 
-            src="/logo.jpg" 
+            src="/logo.png" 
             alt="Hellas Aalborg Logo" 
             className="h-16 md:h-20 w-auto object-contain rounded-full" 
           />
