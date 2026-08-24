@@ -59,20 +59,17 @@ export default function Home() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isScrolled, setIsScrolled] = useState(false);
   
-  // States για τα δεδομένα από το Supabase
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Φέρνουμε τα πιάτα από το Supabase μόλις φορτώσει η σελίδα!
     const fetchMenu = async () => {
       const { data, error } = await supabase
         .from('menu_items')
         .select('*')
-        .order('sort_order', { ascending: true }); // <--- ΑΛΛΑΓΗ ΕΔΩ: Ταξινόμηση βάσει του sort_order
+        .order('sort_order', { ascending: true });
       
       if (data) {
-        // Διαμορφώνουμε τα δεδομένα για να ταιριάζουν με το design μας
         const formattedData = data.map(item => ({
           id: item.id,
           category: item.category,
@@ -147,7 +144,6 @@ export default function Home() {
         ))}
         <div className="absolute inset-0 bg-gradient-to-b from-[#0B1120]/80 via-[#0B1120]/50 to-[#0B1120] z-0"></div>
         
-        {/* ΔΙΟΡΘΩΜΕΝΟ ΚΕΝΤΡΑΡΙΣΜΑ & SPACING */}
         <div className="relative z-10 px-4 flex flex-col items-center justify-center w-full h-full"> 
           <span className="text-[#38BDF8] font-bold tracking-[0.25em] uppercase mb-6 md:mb-8 text-[10px] md:text-xs bg-[#0F172A]/50 backdrop-blur-md px-4 py-1.5 md:px-5 md:py-1.5 rounded-full border border-[#38BDF8]/20 shadow-lg">
             {t.tag}
@@ -161,7 +157,6 @@ export default function Home() {
           </a>
         </div>
         
-        {/* ΚΟΥΚΚΙΔΕΣ (SLIDER DOTS) */}
         <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-3 z-20">
           {heroImages.map((_, index) => (
              <button key={index} onClick={() => setCurrentSlide(index)} className={`h-1.5 md:h-2 rounded-full transition-all duration-500 ${index === currentSlide ? 'bg-[#38BDF8] w-6 md:w-8 shadow-[0_0_10px_rgba(56,189,248,0.8)]' : 'bg-white/30 w-1.5 md:w-2 hover:bg-white/60'}`} aria-label={`Go to slide ${index + 1}`} />
@@ -198,48 +193,55 @@ export default function Home() {
           </div>
         </div>
 
-        {/* LOADING & BENTO GRID */}
         {isLoading ? (
           <div className="text-center py-20 text-[#38BDF8] text-xl font-bold animate-pulse">
             Indlæser menu... / Loading Menu...
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          /* ΣΥΜΠΙΕΣΜΕΝΟ ΠΛΕΓΜΑ ΚΑΡΤΩΝ (Gap-5 αντί για Gap-6) */
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {menuItems.map((item) => (
-              <div key={item.id} className={`bg-slate-900/40 backdrop-blur-lg rounded-3xl p-8 relative overflow-hidden group border border-white/10 shadow-2xl hover:shadow-[0_10px_40px_-15px_rgba(56,189,248,0.2)] hover:border-[#38BDF8]/40 transition-all duration-500 hover:-translate-y-1.5 ${item.featured ? 'md:col-span-2 lg:col-span-2 bg-slate-800/40' : 'col-span-1'}`}>
-                <div className="absolute inset-0 bg-gradient-to-br from-[#38BDF8]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              /* PREMIUM ΚΑΡΤΑ - Dark Luxe Glass */
+              <div key={item.id} className={`bg-[#0B1120]/40 backdrop-blur-xl rounded-xl p-5 relative flex flex-col group border border-white/5 shadow-lg hover:shadow-[0_8px_30px_rgba(0,0,0,0.5)] hover:border-white/10 transition-all duration-500 ${item.featured ? 'md:col-span-2 lg:col-span-2 bg-[#0F172A]/40' : 'col-span-1'}`}>
                 
-                <div className="flex justify-end gap-2 absolute top-6 right-6 z-10">
-                  {item.vegetarian && (
-                    <div className="bg-emerald-500/10 text-emerald-400 text-xs font-bold px-3 py-1.5 rounded-full border border-emerald-500/20 backdrop-blur-md">
-                      (V) {t.veg}
-                    </div>
-                  )}
-                  {item.popular && (
-                    <div className={`text-xs font-bold px-3 py-1.5 rounded-full border backdrop-blur-md transition-colors ${menuType === 'wolt' ? 'bg-[#009de0]/10 text-[#009de0] border-[#009de0]/20' : 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20'}`}>
-                      {t.popular}
-                    </div>
-                  )}
+                {/* Εφέ γυαλιού: Απαλή λευκή γραμμή στην κορυφή όταν περνάς το ποντίκι */}
+                <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                
+                <div className="flex justify-between items-start mb-3">
+                  <div className="text-[10px] text-gray-500 font-medium uppercase tracking-[0.2em]">
+                    {item.category}
+                  </div>
+                  <div className="flex gap-1.5">
+                    {item.vegetarian && (
+                      <span className="text-[9px] uppercase tracking-widest font-semibold text-emerald-400/80 border border-emerald-500/20 px-2 py-0.5 rounded">
+                        VEG
+                      </span>
+                    )}
+                    {item.popular && (
+                      <span className="text-[9px] uppercase tracking-widest font-semibold text-amber-400/80 border border-amber-500/20 px-2 py-0.5 rounded">
+                        POPULAR
+                      </span>
+                    )}
+                  </div>
                 </div>
                 
-                <div className="relative z-10 flex flex-col h-full">
-                  <div className="text-xs text-[#38BDF8] font-bold mb-3 uppercase tracking-[0.2em] mt-2">{item.category}</div>
-                  <h3 className={`${item.featured ? 'text-3xl' : 'text-2xl'} font-extrabold text-white mb-3 pr-4 tracking-tight`}>
-                    {item.title[lang as keyof typeof item.title] || item.title.da}
-                  </h3>
-                  <p className={`text-gray-400 text-sm mb-8 leading-relaxed ${item.featured ? 'max-w-xl' : ''}`}>
-                    {item.desc[lang as keyof typeof item.desc] || item.desc.da}
-                  </p>
-                  
-                  <div className="flex items-center justify-between mt-auto pt-6 border-t border-white/5">
-                    <span className="text-3xl font-black text-white">
-                      {/* ΑΛΛΑΓΗ ΕΔΩ: Προστέθηκε το " DKK" δίπλα στην τιμή */}
-                      {menuType === 'takeaway' ? item.priceTakeaway : item.priceDelivery} DKK
+                <h3 className={`${item.featured ? 'text-2xl' : 'text-xl'} font-semibold text-white mb-2 tracking-tight`}>
+                  {item.title[lang as keyof typeof item.title] || item.title.da}
+                </h3>
+                <p className={`text-gray-400 text-xs md:text-sm mb-5 leading-relaxed font-light flex-grow ${item.featured ? 'max-w-xl' : ''}`}>
+                  {item.desc[lang as keyof typeof item.desc] || item.desc.da}
+                </p>
+                
+                <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/5">
+                  <div>
+                    <span className="text-xl md:text-2xl font-light text-white tracking-tight">
+                      {menuType === 'takeaway' ? item.priceTakeaway : item.priceDelivery}
                     </span>
-                    <span className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors shadow-sm ${menuType === 'takeaway' ? 'text-[#0B1120] bg-white' : 'text-white bg-[#009de0]'}`}>
-                      {menuType === 'takeaway' ? t.takeawayLabel : t.deliveryLabel}
-                    </span>
+                    <span className="text-xs font-light text-gray-500 ml-1">DKK</span>
                   </div>
+                  <span className="text-[9px] font-medium text-gray-500 uppercase tracking-widest px-2 py-1 bg-white/5 rounded border border-white/5">
+                    {menuType === 'takeaway' ? t.takeawayLabel : t.deliveryLabel}
+                  </span>
                 </div>
               </div>
             ))}
@@ -295,7 +297,7 @@ export default function Home() {
           </div>
         </div>
         <div className="max-w-7xl mx-auto px-6 md:px-8 mt-20 pt-8 border-t border-white/5 text-center text-xs text-gray-600 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p>© 2026 Hellas Aalborg. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Hellas Aalborg. All rights reserved.</p>
           <a href="https://wolt.com/da/dnk/aalborg/restaurant/hellas-food1" target="_blank" rel="noreferrer" className="text-[#38BDF8] hover:text-white transition font-bold tracking-widest uppercase">{t.footerDelivery}</a>
         </div>
       </footer>
