@@ -193,53 +193,45 @@ export default function Home() {
           </div>
         </div>
 
+        {/* LOADING & MENU LIST (MINIMAL ELEGANCE) */}
         {isLoading ? (
           <div className="text-center py-20 text-[#38BDF8] text-xl font-bold animate-pulse">
             Indlæser menu... / Loading Menu...
           </div>
         ) : (
-          /* ΣΥΜΠΙΕΣΜΕΝΟ ΠΛΕΓΜΑ ΚΑΡΤΩΝ (Gap-5 αντί για Gap-6) */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-12 max-w-6xl mx-auto">
             {menuItems.map((item) => (
-              /* PREMIUM ΚΑΡΤΑ - Dark Luxe Glass */
-              <div key={item.id} className={`bg-[#0B1120]/40 backdrop-blur-xl rounded-xl p-5 relative flex flex-col group border border-white/5 shadow-lg hover:shadow-[0_8px_30px_rgba(0,0,0,0.5)] hover:border-white/10 transition-all duration-500 ${item.featured ? 'md:col-span-2 lg:col-span-2 bg-[#0F172A]/40' : 'col-span-1'}`}>
+              <div key={item.id} className={`flex flex-col md:flex-row justify-between items-start border-b border-white/10 pb-6 group ${item.featured ? 'md:col-span-2' : 'col-span-1'}`}>
                 
-                {/* Εφέ γυαλιού: Απαλή λευκή γραμμή στην κορυφή όταν περνάς το ποντίκι */}
-                <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                
-                <div className="flex justify-between items-start mb-3">
-                  <div className="text-[10px] text-gray-500 font-medium uppercase tracking-[0.2em]">
-                    {item.category}
-                  </div>
-                  <div className="flex gap-1.5">
+                {/* Αριστερό μέρος: Τίτλος και Περιγραφή */}
+                <div className="flex-1 pr-4 md:pr-8">
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="text-[11px] text-[#38BDF8] uppercase tracking-[0.2em] font-semibold">{item.category}</span>
                     {item.vegetarian && (
-                      <span className="text-[9px] uppercase tracking-widest font-semibold text-emerald-400/80 border border-emerald-500/20 px-2 py-0.5 rounded">
-                        VEG
+                      <span className="text-[10px] text-emerald-400 font-medium border border-emerald-400/30 px-2 py-0.5 rounded-full">
+                        (V) {t.veg}
                       </span>
                     )}
                     {item.popular && (
-                      <span className="text-[9px] uppercase tracking-widest font-semibold text-amber-400/80 border border-amber-500/20 px-2 py-0.5 rounded">
-                        POPULAR
+                      <span className="text-[10px] text-amber-400 font-medium border border-amber-400/30 px-2 py-0.5 rounded-full">
+                        ★ {t.popular}
                       </span>
                     )}
                   </div>
+                  <h3 className={`${item.featured ? 'text-3xl' : 'text-xl'} font-normal text-white mb-3 tracking-wide group-hover:text-[#38BDF8] transition-colors duration-300`}>
+                    {item.title[lang as keyof typeof item.title] || item.title.da}
+                  </h3>
+                  <p className="text-gray-400 text-sm md:text-base font-light leading-relaxed max-w-lg">
+                    {item.desc[lang as keyof typeof item.desc] || item.desc.da}
+                  </p>
                 </div>
-                
-                <h3 className={`${item.featured ? 'text-2xl' : 'text-xl'} font-semibold text-white mb-2 tracking-tight`}>
-                  {item.title[lang as keyof typeof item.title] || item.title.da}
-                </h3>
-                <p className={`text-gray-400 text-xs md:text-sm mb-5 leading-relaxed font-light flex-grow ${item.featured ? 'max-w-xl' : ''}`}>
-                  {item.desc[lang as keyof typeof item.desc] || item.desc.da}
-                </p>
-                
-                <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/5">
-                  <div>
-                    <span className="text-xl md:text-2xl font-light text-white tracking-tight">
-                      {menuType === 'takeaway' ? item.priceTakeaway : item.priceDelivery}
-                    </span>
-                    <span className="text-xs font-light text-gray-500 ml-1">DKK</span>
-                  </div>
-                  <span className="text-[9px] font-medium text-gray-500 uppercase tracking-widest px-2 py-1 bg-white/5 rounded border border-white/5">
+
+                {/* Δεξί μέρος: Τιμή */}
+                <div className="mt-4 md:mt-0 flex flex-col items-start md:items-end min-w-[120px] shrink-0 pt-2">
+                  <span className="text-2xl font-light text-white">
+                    {menuType === 'takeaway' ? item.priceTakeaway : item.priceDelivery} <span className="text-base text-gray-500 ml-1">DKK</span>
+                  </span>
+                  <span className="text-[10px] text-gray-500 uppercase tracking-widest mt-2">
                     {menuType === 'takeaway' ? t.takeawayLabel : t.deliveryLabel}
                   </span>
                 </div>
@@ -248,7 +240,7 @@ export default function Home() {
           </div>
         )}
 
-        <div className="text-center mt-12"><p className="text-gray-500 text-sm font-medium"><span className="text-[#38BDF8]">ℹ️</span> {t.allergies}</p></div>
+        <div className="text-center mt-16"><p className="text-gray-500 text-sm font-medium"><span className="text-[#38BDF8]">ℹ️</span> {t.allergies}</p></div>
         {menuType === 'wolt' && (
           <div className="text-center mt-12 animate-fade-in-up pb-10">
             <a href="https://wolt.com/da/dnk/aalborg/restaurant/hellas-food1" target="_blank" rel="noopener noreferrer" className="inline-block bg-gradient-to-r from-[#009de0] to-[#007fb5] text-white font-bold py-4 px-14 rounded-full shadow-[0_0_25px_rgba(0,157,224,0.4)] transition-all transform hover:scale-105 hover:shadow-[0_0_35px_rgba(0,157,224,0.6)]">
@@ -258,7 +250,7 @@ export default function Home() {
         )}
       </section>
 
-      {/* INSTAGRAM & FOOTER COPIED DIRECTLY FROM PREVIOUS */}
+      {/* INSTAGRAM SECTION */}
       <section id="instagram" className="py-16 bg-[#0B1120] relative border-t border-white/5">
         <div className="max-w-7xl mx-auto px-4 md:px-8 text-center">
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-10 flex items-center justify-center gap-3 tracking-tight"><span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 text-3xl">📸</span> {t.followUs}</h2>
@@ -273,6 +265,7 @@ export default function Home() {
         </div>
       </section>
 
+      {/* FOOTER */}
       <footer id="location" className="bg-[#040812] text-gray-400 pt-20 pb-28 md:pb-16 border-t border-white/5">
         <div className="max-w-7xl mx-auto px-6 md:px-8 grid grid-cols-1 md:grid-cols-3 gap-16">
           <div>
