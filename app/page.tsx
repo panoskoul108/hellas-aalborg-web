@@ -17,7 +17,11 @@ const translations = {
     hoursTitle: 'Åbningstider', monThu: 'Mandag - Torsdag', friSat: 'Fredag - Lørdag', sun: 'Søndag',
     footerDesc: 'Dit lille stykke Grækenland i Nordjylland. Vi glæder os til at se dig.',
     footerDelivery: 'Bestil Delivery', allergies: 'Allergier eller særlige behov? Spørg vores personale!',
-    veg: 'Vegetarisk', smiley: 'Se Fødevarestyrelsens smiley-rapport', followUs: 'Følg os på Instagram', callNow: 'Ring nu'
+    veg: 'Vegetarisk', smiley: 'Se Fødevarestyrelsens smiley-rapport', followUs: 'Følg os på Instagram', callNow: 'Ring nu',
+    // Νέα κείμενα για Catering
+    cateringTitle: 'Græsk Catering & Events',
+    cateringDesc: 'Vi bringer den autentiske græske smag til dit arrangement. Vi håndterer store ordrer med særlige priser og gratis levering til din dør.',
+    cateringBtn: 'Ring for Tilbud'
   },
   en: {
     menu: 'Menu', location: 'Find Us', orderWolt: 'Order Wolt', tag: 'Taste of Greece',
@@ -32,7 +36,11 @@ const translations = {
     hoursTitle: 'Opening Hours', monThu: 'Monday - Thursday', friSat: 'Friday - Saturday', sun: 'Sunday',
     footerDesc: 'Your little piece of Greece in North Jutland. We look forward to seeing you.',
     footerDelivery: 'Order Delivery', allergies: 'Allergies or dietary needs? Please ask our staff!',
-    veg: 'Vegetarian', smiley: 'Food safety inspection report', followUs: 'Follow us on Instagram', callNow: 'Call Now'
+    veg: 'Vegetarian', smiley: 'Food safety inspection report', followUs: 'Follow us on Instagram', callNow: 'Call Now',
+    // Νέα κείμενα για Catering
+    cateringTitle: 'Greek Catering & Events',
+    cateringDesc: 'Bring authentic Greek flavors to your event. We accommodate large orders with special pricing and complimentary delivery to your venue.',
+    cateringBtn: 'Call for a Quote'
   },
   el: {
     menu: 'Μενού', location: 'Βρείτε μας', orderWolt: 'Μέσω Wolt', tag: 'Η Γεύση της Ελλάδας',
@@ -47,7 +55,11 @@ const translations = {
     hoursTitle: 'Ωράριο Λειτουργίας', monThu: 'Δευτέρα - Πέμπτη', friSat: 'Παρασκευή - Σάββατο', sun: 'Κυριακή',
     footerDesc: 'Το δικό σας κομμάτι Ελλάδας στη Βόρεια Γιουτλάνδη. Σας περιμένουμε.',
     footerDelivery: 'Παραγγελία Delivery', allergies: 'Έχετε αλλεργίες; Ρωτήστε το προσωπικό μας!',
-    veg: 'Χορτοφαγικό', smiley: 'Αναφορά υγειονομικού ελέγχου', followUs: 'Ακολουθήστε μας στο Instagram', callNow: 'Κλήση'
+    veg: 'Χορτοφαγικό', smiley: 'Αναφορά υγειονομικού ελέγχου', followUs: 'Ακολουθήστε μας στο Instagram', callNow: 'Κλήση',
+    // Νέα κείμενα για Catering
+    cateringTitle: 'Ελληνικό Catering & Εκδηλώσεις',
+    cateringDesc: 'Φέρνουμε την αυθεντική ελληνική γεύση στην εκδήλωσή σας. Αναλαμβάνουμε μεγάλες παραγγελίες με ειδικές προνομιακές τιμές και δωρεάν διανομή.',
+    cateringBtn: 'Καλέστε μας'
   }
 };
 
@@ -218,7 +230,6 @@ export default function Home() {
                       </span>
                     )}
                   </div>
-                  {/* ΑΛΛΑΓΗ: font-bold αντί για font-normal (και font-extrabold στα featured) */}
                   <h3 className={`${item.featured ? 'text-3xl font-extrabold' : 'text-xl font-bold'} text-white mb-3 tracking-wide group-hover:text-[#38BDF8] transition-colors duration-300`}>
                     {item.title[lang as keyof typeof item.title] || item.title.da}
                   </h3>
@@ -229,7 +240,6 @@ export default function Home() {
 
                 {/* Δεξί μέρος: Τιμή */}
                 <div className="mt-4 md:mt-0 flex flex-col items-start md:items-end min-w-[120px] shrink-0 pt-2">
-                  {/* ΑΛΛΑΓΗ: font-bold αντί για font-light */}
                   <span className="text-2xl font-bold text-white">
                     {menuType === 'takeaway' ? item.priceTakeaway : item.priceDelivery} <span className="text-base font-medium text-gray-500 ml-1">DKK</span>
                   </span>
@@ -250,6 +260,23 @@ export default function Home() {
             </a>
           </div>
         )}
+      </section>
+
+      {/* CATERING SECTION */}
+      <section className="py-16 md:py-24 bg-[#0F172A]/50 relative border-t border-white/5">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#38BDF8]/5 via-transparent to-transparent opacity-50 pointer-events-none"></div>
+        <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
+          <span className="text-[#38BDF8] text-3xl mb-4 block">🎉</span>
+          <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-6 tracking-tight">
+            {t.cateringTitle}
+          </h2>
+          <p className="text-gray-400 text-lg leading-relaxed font-light mb-10 max-w-2xl mx-auto">
+            {t.cateringDesc}
+          </p>
+          <a href="tel:+4542177754" className="inline-flex items-center gap-3 bg-white hover:bg-gray-100 text-[#0B1120] font-bold py-3.5 px-8 rounded-full shadow-[0_0_20px_rgba(255,255,255,0.1)] transition-transform transform hover:-translate-y-1">
+            📞 {t.cateringBtn}
+          </a>
+        </div>
       </section>
 
       {/* INSTAGRAM SECTION */}
