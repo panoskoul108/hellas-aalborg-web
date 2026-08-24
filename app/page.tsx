@@ -193,7 +193,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* LOADING & MENU LIST (MINIMAL ELEGANCE) */}
+        {/* LOADING & MENU LIST (MINIMAL ELEGANCE - ΕΝΤΟΝΑ ΓΡΑΜΜΑΤΑ) */}
         {isLoading ? (
           <div className="text-center py-20 text-[#38BDF8] text-xl font-bold animate-pulse">
             Indlæser menu... / Loading Menu...
@@ -206,19 +206,20 @@ export default function Home() {
                 {/* Αριστερό μέρος: Τίτλος και Περιγραφή */}
                 <div className="flex-1 pr-4 md:pr-8">
                   <div className="flex items-center gap-3 mb-3">
-                    <span className="text-[11px] text-[#38BDF8] uppercase tracking-[0.2em] font-semibold">{item.category}</span>
+                    <span className="text-[11px] text-[#38BDF8] uppercase tracking-[0.2em] font-bold">{item.category}</span>
                     {item.vegetarian && (
-                      <span className="text-[10px] text-emerald-400 font-medium border border-emerald-400/30 px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] text-emerald-400 font-bold border border-emerald-400/30 px-2 py-0.5 rounded-full">
                         (V) {t.veg}
                       </span>
                     )}
                     {item.popular && (
-                      <span className="text-[10px] text-amber-400 font-medium border border-amber-400/30 px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] text-amber-400 font-bold border border-amber-400/30 px-2 py-0.5 rounded-full">
                         ★ {t.popular}
                       </span>
                     )}
                   </div>
-                  <h3 className={`${item.featured ? 'text-3xl' : 'text-xl'} font-normal text-white mb-3 tracking-wide group-hover:text-[#38BDF8] transition-colors duration-300`}>
+                  {/* ΑΛΛΑΓΗ: font-bold αντί για font-normal (και font-extrabold στα featured) */}
+                  <h3 className={`${item.featured ? 'text-3xl font-extrabold' : 'text-xl font-bold'} text-white mb-3 tracking-wide group-hover:text-[#38BDF8] transition-colors duration-300`}>
                     {item.title[lang as keyof typeof item.title] || item.title.da}
                   </h3>
                   <p className="text-gray-400 text-sm md:text-base font-light leading-relaxed max-w-lg">
@@ -228,10 +229,11 @@ export default function Home() {
 
                 {/* Δεξί μέρος: Τιμή */}
                 <div className="mt-4 md:mt-0 flex flex-col items-start md:items-end min-w-[120px] shrink-0 pt-2">
-                  <span className="text-2xl font-light text-white">
-                    {menuType === 'takeaway' ? item.priceTakeaway : item.priceDelivery} <span className="text-base text-gray-500 ml-1">DKK</span>
+                  {/* ΑΛΛΑΓΗ: font-bold αντί για font-light */}
+                  <span className="text-2xl font-bold text-white">
+                    {menuType === 'takeaway' ? item.priceTakeaway : item.priceDelivery} <span className="text-base font-medium text-gray-500 ml-1">DKK</span>
                   </span>
-                  <span className="text-[10px] text-gray-500 uppercase tracking-widest mt-2">
+                  <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-widest mt-2">
                     {menuType === 'takeaway' ? t.takeawayLabel : t.deliveryLabel}
                   </span>
                 </div>
