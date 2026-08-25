@@ -6,6 +6,7 @@ export default function CookieBanner() {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
+    // Ελέγχουμε αν υπάρχει ήδη αποθηκευμένη απάντηση (είτε ναι είτε όχι)
     const consent = localStorage.getItem('cookieConsent');
     if (!consent) setIsVisible(true);
   }, []);
@@ -13,8 +14,15 @@ export default function CookieBanner() {
   if (!isVisible) return null;
 
   const acceptCookies = () => {
-    localStorage.setItem('cookieConsent', 'true');
+    localStorage.setItem('cookieConsent', 'accepted');
     setIsVisible(false);
+    // Στο μέλλον: Εδώ θα δίνουμε εντολή να φορτώσει το Google Analytics
+  };
+
+  const declineCookies = () => {
+    localStorage.setItem('cookieConsent', 'declined');
+    setIsVisible(false);
+    // Το site λειτουργεί κανονικά, απλώς δεν παρακολουθούμε τον χρήστη
   };
 
   return (
@@ -25,9 +33,18 @@ export default function CookieBanner() {
           Læs mere / Read more
         </Link>
       </p>
-      <button onClick={acceptCookies} className="bg-[#38BDF8] text-slate-900 font-extrabold px-8 py-2.5 rounded-xl hover:bg-sky-400 transition-colors whitespace-nowrap shadow-[0_0_15px_rgba(56,189,248,0.3)]">
-        Accept / Accepter
-      </button>
+      
+      <div className="flex items-center gap-2 md:gap-4">
+        {/* Κουμπί Απόρριψης - Πιο διακριτικό */}
+        <button onClick={declineCookies} className="text-gray-400 hover:text-white font-medium px-4 py-2 text-sm transition-colors">
+          Afvis / Decline
+        </button>
+        
+        {/* Κουμπί Αποδοχής - Έντονο */}
+        <button onClick={acceptCookies} className="bg-[#38BDF8] text-slate-900 font-extrabold px-6 py-2.5 rounded-xl hover:bg-sky-400 transition-colors whitespace-nowrap shadow-[0_0_15px_rgba(56,189,248,0.3)]">
+          Accepter / Accept
+        </button>
+      </div>
     </div>
   );
 }
