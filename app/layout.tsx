@@ -1,21 +1,22 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import CookieBanner from './CookieBanner'; // Εισάγουμε το διακριτικό banner που φτιάξαμε
 
-// 1. Βασικό SEO & Meta Tags
+// Εδώ ρυθμίζουμε το SEO (Τίτλοι, Περιγραφές και Εικόνα για τα Social Media)
 export const metadata: Metadata = {
-  title: 'Hellas Aalborg | Ægte Græsk Gyros & Takeaway',
-  description: 'Oplev den autentiske græske stemning i hjertet af Aalborg. Bestil gyros, pita og græske specialiteter. Spar penge ved Takeaway!',
-  keywords: ['græsk mad Aalborg', 'gyros Aalborg', 'græsk restaurant', 'takeaway Aalborg', 'Hellas Aalborg', 'souvlaki', 'tzatziki'],
+  title: 'Hellas Aalborg | Ægte Græsk Gyros i Aalborg',
+  description: 'Oplev den autentiske græske stemning i hjertet af Aalborg. Vi bringer opskrifterne direkte fra Grækenland til dig. Bestil Takeaway eller via Wolt.',
   openGraph: {
-    title: 'Hellas Aalborg | Authentic Greek Food',
-    description: 'Spar penge på vores lækre græske retter ved at bestille direkte som Takeaway.',
-    url: 'https://hellasaalborg.dk', // Το μελλοντικό σας domain
+    title: 'Hellas Aalborg | Smagen af Grækenland',
+    description: 'Autentisk græsk mad i hjertet af Aalborg. Bestil Takeaway eller via Wolt.',
+    url: 'https://hellasaalborg.dk', // Εδώ θα μπει το τελικό σας domain αν το αλλάξετε
     siteName: 'Hellas Aalborg',
     images: [
       {
-        url: '/logo.png',
-        width: 800,
-        height: 600,
+        url: '/foto1.jpg', // Αυτή η φωτογραφία θα φαίνεται όταν στέλνετε το link σε μήνυμα!
+        width: 1200,
+        height: 630,
+        alt: 'Hellas Aalborg Authentic Greek Food',
       },
     ],
     locale: 'da_DK',
@@ -28,37 +29,18 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  
-  // 2. Local Business Schema (Rich Snippets) για το Google
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Restaurant",
-    "name": "Hellas Aalborg",
-    "image": "https://hellasaalborg.dk/logo.png",
-    "url": "https://hellasaalborg.dk",
-    "telephone": "+4542177754",
-    "address": {
-      "@type": "PostalAddress",
-      "streetAddress": "Ved Stranden 21",
-      "addressLocality": "Aalborg",
-      "postalCode": "9000",
-      "addressCountry": "DK"
-    },
-    "menu": "https://hellasaalborg.dk/#menu",
-    "servesCuisine": "Greek",
-    "priceRange": "$$"
-  };
-
   return (
     <html lang="da" className="scroll-smooth">
-      <head>
-        {/* Ενσωμάτωση του Schema.org */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-        />
-      </head>
-      <body>{children}</body>
+      {/* 
+        Το antialiased κάνει τα γράμματα πιο καθαρά.
+        Το selection ρυθμίζει το χρώμα όταν κάποιος μαρκάρει κείμενο στο site (γαλάζιο).
+      */}
+      <body className="bg-[#0B1120] text-gray-200 antialiased selection:bg-[#38BDF8] selection:text-[#0B1120]">
+        {children}
+        
+        {/* Εδώ φορτώνει το Cookie Banner σε κάθε σελίδα, αλλά επιπλέει στο κάτω μέρος χωρίς να χαλάει το design */}
+        <CookieBanner />
+      </body>
     </html>
   );
 }
