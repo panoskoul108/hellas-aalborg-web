@@ -318,9 +318,22 @@ export default function Home() {
             <iframe title="Hellas Aalborg Map" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2170.198305602497!2d9.919427015949516!3d57.04944898092288!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x464932b144fc894f%3A0xc3c940b3c5a6c38b!2sVed%20Stranden%2021%2C%209000%20Aalborg%2C%20Denmark!5e0!3m2!1sen!2sgr!4v1680000000000!5m2!1sen!2sgr" width="100%" height="100%" style={{ border: 0 }} allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" className="absolute inset-0"></iframe>
           </div>
         </div>
-        <div className="max-w-7xl mx-auto px-6 md:px-8 mt-20 pt-8 border-t border-white/5 text-center text-xs text-gray-600 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p>© {new Date().getFullYear()} Hellas Aalborg. All rights reserved.</p>
-          <a href="https://wolt.com/da/dnk/aalborg/restaurant/hellas-food1" target="_blank" rel="noreferrer" className="text-[#38BDF8] hover:text-white transition font-bold tracking-widest uppercase">{t.footerDelivery}</a>
+        
+        <div className="max-w-7xl mx-auto px-6 md:px-8 mt-20 pt-8 border-t border-white/5 text-center flex flex-col md:flex-row justify-between items-center gap-4">
+          {/* Αριστερή πλευρά: Copyright & CVR (Υποχρεωτικό στη Δανία) */}
+          <div className="text-xs text-gray-600 flex flex-col md:flex-row items-center gap-2 md:gap-4">
+            <p>© {new Date().getFullYear()} Nordic-mythos 1 ApS. All rights reserved.</p>
+            <span className="hidden md:block text-gray-700">•</span>
+            <p>CVR: 46414373</p>
+          </div>
+
+          {/* Δεξιά πλευρά: Wolt Disclaimer & Link */}
+          <div className="text-xs text-gray-600 flex flex-col md:flex-row items-center gap-2 md:gap-6">
+            <p className="max-w-xs text-center md:text-right">Orders and payments are securely processed by Wolt.</p>
+            <a href="https://wolt.com/da/dnk/aalborg/restaurant/hellas-food1" target="_blank" rel="noreferrer" className="text-[#38BDF8] hover:text-white transition font-bold tracking-widest uppercase mt-2 md:mt-0">
+              {t.footerDelivery}
+            </a>
+          </div>
         </div>
       </footer>
 
