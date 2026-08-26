@@ -18,7 +18,6 @@ const translations = {
     footerDesc: 'Dit lille stykke Grækenland i Nordjylland. Vi glæder os til at se dig.',
     footerDelivery: 'Bestil Delivery', allergies: 'Allergier eller særlige behov? Spørg vores personale!',
     veg: 'Vegetarisk', smiley: 'Se Fødevarestyrelsens smiley-rapport', followUs: 'Følg os på Instagram', callNow: 'Ring nu',
-    // Νέα κείμενα για Catering
     cateringTitle: 'Græsk Catering & Events',
     cateringDesc: 'Vi bringer den autentiske græske smag til dit arrangement. Vi håndterer store ordrer med særlige priser og gratis levering til din dør.',
     cateringBtn: 'Ring for Tilbud'
@@ -37,7 +36,6 @@ const translations = {
     footerDesc: 'Your little piece of Greece in North Jutland. We look forward to seeing you.',
     footerDelivery: 'Order Delivery', allergies: 'Allergies or dietary needs? Please ask our staff!',
     veg: 'Vegetarian', smiley: 'Food safety inspection report', followUs: 'Follow us on Instagram', callNow: 'Call Now',
-    // Νέα κείμενα για Catering
     cateringTitle: 'Greek Catering & Events',
     cateringDesc: 'Bring authentic Greek flavors to your event. We accommodate large orders with special pricing and complimentary delivery to your venue.',
     cateringBtn: 'Call for a Quote'
@@ -56,7 +54,6 @@ const translations = {
     footerDesc: 'Το δικό σας κομμάτι Ελλάδας στη Βόρεια Γιουτλάνδη. Σας περιμένουμε.',
     footerDelivery: 'Παραγγελία Delivery', allergies: 'Έχετε αλλεργίες; Ρωτήστε το προσωπικό μας!',
     veg: 'Χορτοφαγικό', smiley: 'Αναφορά υγειονομικού ελέγχου', followUs: 'Ακολουθήστε μας στο Instagram', callNow: 'Κλήση',
-    // Νέα κείμενα για Catering
     cateringTitle: 'Ελληνικό Catering & Εκδηλώσεις',
     cateringDesc: 'Φέρνουμε την αυθεντική ελληνική γεύση στην εκδήλωσή σας. Αναλαμβάνουμε μεγάλες παραγγελίες με ειδικές προνομιακές τιμές και δωρεάν διανομή.',
     cateringBtn: 'Καλέστε μας'
@@ -205,7 +202,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* LOADING & MENU LIST (MINIMAL ELEGANCE - ΕΝΤΟΝΑ ΓΡΑΜΜΑΤΑ) */}
+        {/* LOADING & MENU LIST */}
         {isLoading ? (
           <div className="text-center py-20 text-[#38BDF8] text-xl font-bold animate-pulse">
             Indlæser menu... / Loading Menu...
@@ -253,13 +250,19 @@ export default function Home() {
         )}
 
         <div className="text-center mt-16"><p className="text-gray-500 text-sm font-medium"><span className="text-[#38BDF8]">ℹ️</span> {t.allergies}</p></div>
-        {menuType === 'wolt' && (
-          <div className="text-center mt-12 animate-fade-in-up pb-10">
+        
+        {/* ΚΟΥΜΠΙΑ ΠΑΡΑΓΓΕΛΙΑΣ ΚΑΤΩ ΑΠΟ ΤΟ ΜΕΝΟΥ */}
+        <div className="text-center mt-12 animate-fade-in-up pb-10 flex justify-center">
+          {menuType === 'wolt' ? (
             <a href="https://wolt.com/da/dnk/aalborg/restaurant/hellas-food1" target="_blank" rel="noopener noreferrer" className="inline-block bg-gradient-to-r from-[#009de0] to-[#007fb5] text-white font-bold py-4 px-14 rounded-full shadow-[0_0_25px_rgba(0,157,224,0.4)] transition-all transform hover:scale-105 hover:shadow-[0_0_35px_rgba(0,157,224,0.6)]">
               {t.orderWolt}
             </a>
-          </div>
-        )}
+          ) : (
+            <a href="tel:+4542177754" className="inline-flex items-center gap-3 bg-white text-[#0B1120] font-bold py-4 px-14 rounded-full shadow-[0_0_25px_rgba(255,255,255,0.15)] transition-all transform hover:scale-105 hover:shadow-[0_0_35px_rgba(255,255,255,0.25)]">
+              📞 {t.callNow}
+            </a>
+          )}
+        </div>
       </section>
 
       {/* CATERING SECTION */}
@@ -320,14 +323,12 @@ export default function Home() {
         </div>
         
         <div className="max-w-7xl mx-auto px-6 md:px-8 mt-20 pt-8 border-t border-white/5 text-center flex flex-col md:flex-row justify-between items-center gap-4">
-          {/* Αριστερή πλευρά: Copyright & CVR (Υποχρεωτικό στη Δανία) */}
           <div className="text-xs text-gray-600 flex flex-col md:flex-row items-center gap-2 md:gap-4">
             <p>© {new Date().getFullYear()} Nordic-mythos 1 ApS. All rights reserved.</p>
             <span className="hidden md:block text-gray-700">•</span>
             <p>CVR: 46414373</p>
           </div>
 
-          {/* Δεξιά πλευρά: Wolt Disclaimer & Link */}
           <div className="text-xs text-gray-600 flex flex-col md:flex-row items-center gap-2 md:gap-6">
             <p className="max-w-xs text-center md:text-right">Orders and payments are securely processed by Wolt.</p>
             <a href="https://wolt.com/da/dnk/aalborg/restaurant/hellas-food1" target="_blank" rel="noreferrer" className="text-[#38BDF8] hover:text-white transition font-bold tracking-widest uppercase mt-2 md:mt-0">
