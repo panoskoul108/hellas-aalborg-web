@@ -60,7 +60,14 @@ const translations = {
   }
 };
 
-const heroImages = ["/foto1.jpg", "/foto2.jpg", "/foto3.jpg", "/foto4.jpg"];
+// Εδώ ορίζουμε την εστίαση για κάθε φωτογραφία
+// Αν θες να δείξεις πιο αριστερά ή δεξιά, άλλαξε το object-center σε object-left ή object-right
+const heroImages = [
+  { src: "/foto1.jpg", focus: "object-center" },
+  { src: "/foto2.jpg", focus: "object-center" }, 
+  { src: "/foto3.jpg", focus: "object-center" }, 
+  { src: "/foto4.jpg", focus: "object-center" }
+];
 
 export default function Home() {
   const [lang, setLang] = useState('da'); 
@@ -144,16 +151,16 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* HERO SECTION */}
-      <header className="relative min-h-[90vh] md:min-h-screen flex items-center justify-center text-center overflow-hidden border-b border-white/5 -mt-[98px] pt-[98px] pb-24">
-        {heroImages.map((src, index) => (
+      {/* HERO SECTION - Μικρότερο ύψος στο κινητό (min-h-[75vh]) */}
+      <header className="relative min-h-[75vh] md:min-h-screen flex items-center justify-center text-center overflow-hidden border-b border-white/5 -mt-[98px] pt-[98px] pb-24">
+        {heroImages.map((img, index) => (
           <div key={index} className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100 z-0' : 'opacity-0 -z-10'}`}>
-            <Image src={src} alt="Hellas Aalborg Vibe" fill priority={index === 0} className={`object-cover transition-transform duration-[7000ms] ease-out ${index === currentSlide ? 'scale-105' : 'scale-100'}`} />
+            <Image src={img.src} alt="Hellas Aalborg Vibe" fill priority={index === 0} className={`object-cover ${img.focus} transition-transform duration-[7000ms] ease-out ${index === currentSlide ? 'scale-[1.03] md:scale-105' : 'scale-100'}`} />
           </div>
         ))}
         <div className="absolute inset-0 bg-gradient-to-b from-[#0B1120]/80 via-[#0B1120]/50 to-[#0B1120] z-0"></div>
         
-        <div className="relative z-10 px-4 flex flex-col items-center justify-center w-full h-full"> 
+        <div className="relative z-10 px-4 flex flex-col items-center justify-center w-full h-full mt-10 md:mt-0"> 
           <span className="text-[#38BDF8] font-bold tracking-[0.25em] uppercase mb-6 md:mb-8 text-[10px] md:text-xs bg-[#0F172A]/50 backdrop-blur-md px-4 py-1.5 md:px-5 md:py-1.5 rounded-full border border-[#38BDF8]/20 shadow-lg">
             {t.tag}
           </span>
