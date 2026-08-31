@@ -317,7 +317,7 @@ export default function Home() {
             
             {/* SOCIAL MEDIA ΚΑΙ SMILEY REPORT */}
             <div className="flex flex-col gap-5">
-              <a href="https://www.findsmiley.dk/Sider/VirkSide.aspx?virk=1579068" target="_blank" rel="noreferrer" className="inline-flex items-center gap-3 bg-white/5 hover:bg-white/10 px-5 py-3 rounded-xl border border-white/10 transition-colors w-fit">
+              <a href="https://www.findsmiley.dk/app/1579068" target="_blank" rel="noreferrer" className="inline-flex items-center gap-3 bg-white/5 hover:bg-white/10 px-5 py-3 rounded-xl border border-white/10 transition-colors w-fit">
                 <span className="text-2xl">😃</span>
                 <span className="text-sm font-medium text-gray-300">{t.smiley}</span>
               </a>
