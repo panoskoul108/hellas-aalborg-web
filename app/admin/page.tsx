@@ -14,7 +14,7 @@ export default function AdminPage() {
   const [imageUploading, setImageUploading] = useState(false); // Νέο state για το loading της εικόνας
 
   // Το URL του Supabase Storage για τις προεπισκοπήσεις
-  const supabaseImageUrl = "https://keolpijcsvwsrzkjqtke.supabase.co/storage/v1/object/public/menu-images/";
+ const supabaseImageUrl = "[https://keolpijcsvwsrzkjqtkc.supabase.co/storage/v1/object/public/menu-images/](https://keolpijcsvwsrzkjqtkc.supabase.co/storage/v1/object/public/menu-images/)";
 
   useEffect(() => {
     const checkUser = async () => {
