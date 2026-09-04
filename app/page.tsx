@@ -227,16 +227,15 @@ export default function Home() {
                 <div className="flex-1 pr-4 md:pr-8 flex items-start gap-4 w-full"> 
                   
                   {/* --- ΕΝΘΕΤΟ ΦΩΤΟΓΡΑΦΙΑΣ: Conditional Rendering --- */}
-                  {item.imagePath && (
-                    <div className="relative w-20 h-20 md:w-24 md:h-24 shrink-0 rounded-xl overflow-hidden border border-white/5 shadow-md">
-                      <Image
-                        src={`${supabaseImageUrl}${item.imagePath}`} // Συνθέτουμε το URL
-                        alt={item.title[lang as keyof typeof item.title] || item.title.da}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                  )}
+          {item.imagePath && (
+  <div className="relative w-20 h-20 md:w-24 md:h-24 shrink-0 rounded-xl overflow-hidden border border-white/5 shadow-md">
+    <img
+      src={`${supabaseImageUrl}${item.imagePath}`} 
+      alt={item.title[lang as keyof typeof item.title] || item.title.da}
+      className="w-full h-full object-cover"
+    />
+  </div>
+)}
                   {/* --- ΤΕΛΟΣ ΕΝΘΕΤΟΥ --- */}
 
                   {/* Το κείμενο shifts right αν υπάρχει εικόνα, αλλιώς μένει στην ίδια θέση */}
