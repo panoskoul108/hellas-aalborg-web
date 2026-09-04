@@ -15,7 +15,7 @@ const translations = {
     aboutTitle: 'Græsk Hjerte, Dansk Hygge',
     aboutDesc: 'Hos Hellas Aalborg forener vi den varme græske gæstfrihed med nordisk kvalitet. Vores gyros laves efter originale familieopskrifter med kød af højeste kvalitet og håndlavet tzatziki.',
     hoursTitle: 'Åbningstider', monThu: 'Mandag - Torsdag', friSat: 'Fredag - Lørdag', sun: 'Søndag',
-    footerDesc: 'Dit lille stykke Grækenland i Nordjylland. Vi glæder os til at se dig.',
+    footerDesc: 'Dit lille stykke Grækenland i Nordjylland. Vi glæδos til at se dig.',
     footerDelivery: 'Bestil Delivery', allergies: 'Allergier eller særlige behov? Spørg vores personale!',
     veg: 'Vegetarisk', smiley: 'Se Fødevarestyrelsens smiley-rapport', followUs: 'Følg os på Instagram', callNow: 'Ring nu',
     cateringTitle: 'Græsk Catering & Events',
@@ -60,8 +60,6 @@ const translations = {
   }
 };
 
-// Εδώ ορίζουμε την εστίαση για κάθε φωτογραφία
-// Αν θες να δείξεις πιο αριστερά ή δεξιά, άλλαξε το object-center σε object-left ή object-right
 const heroImages = [
   { src: "/foto1.jpg", focus: "object-center" },
   { src: "/foto2.jpg", focus: "object-center" }, 
@@ -78,8 +76,12 @@ export default function Home() {
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // ΣΤΑΘΕΡΑ: Το URL του Supabase Storage για τις εικόνες μας
+  const supabaseImageUrl = "https://keolpijcsvwsrzkjqtke.supabase.co/storage/v1/object/public/menu-images/";
+
   useEffect(() => {
     const fetchMenu = async () => {
+      // Τραβάμε όλα τα πεδία, συμπεριλαμβανομένου του νέου image_path
       const { data, error } = await supabase
         .from('menu_items')
         .select('*')
@@ -95,7 +97,8 @@ export default function Home() {
           priceDelivery: item.price_delivery,
           popular: item.popular,
           vegetarian: item.vegetarian,
-          featured: item.featured
+          featured: item.featured,
+          imagePath: item.image_path // Εδώ κρατάμε το path της εικόνας
         }));
         setMenuItems(formattedData);
       }
@@ -151,7 +154,7 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* HERO SECTION - Μικρότερο ύψος στο κινητό (min-h-[75vh]) */}
+      {/* HERO SECTION */}
       <header className="relative min-h-[75vh] md:min-h-screen flex items-center justify-center text-center overflow-hidden border-b border-white/5 -mt-[98px] pt-[98px] pb-24">
         {heroImages.map((img, index) => (
           <div key={index} className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100 z-0' : 'opacity-0 -z-10'}`}>
@@ -217,29 +220,47 @@ export default function Home() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-12 max-w-6xl mx-auto">
             {menuItems.map((item) => (
+              // Εδώ κάνουμε την αλλαγή για να υποστηρίξουμε φωτογραφία
               <div key={item.id} className={`flex flex-col md:flex-row justify-between items-start border-b border-white/10 pb-6 group ${item.featured ? 'md:col-span-2' : 'col-span-1'}`}>
                 
-                {/* Αριστερό μέρος: Τίτλος και Περιγραφή */}
-                <div className="flex-1 pr-4 md:pr-8">
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="text-[11px] text-[#38BDF8] uppercase tracking-[0.2em] font-bold">{item.category}</span>
-                    {item.vegetarian && (
-                      <span className="text-[10px] text-emerald-400 font-bold border border-emerald-400/30 px-2 py-0.5 rounded-full">
-                        (V) {t.veg}
-                      </span>
-                    )}
-                    {item.popular && (
-                      <span className="text-[10px] text-amber-400 font-bold border border-amber-400/30 px-2 py-0.5 rounded-full">
-                        ★ {t.popular}
-                      </span>
-                    )}
+                {/* Αριστερό μέρος: Τίτλος, Περιγραφή ΚΑΙ ΦΩΤΟΓΡΑΦΙΑ (αν υπάρχει) */}
+                <div className="flex-1 pr-4 md:pr-8 flex items-start gap-4 w-full"> 
+                  
+                  {/* --- ΕΝΘΕΤΟ ΦΩΤΟΓΡΑΦΙΑΣ: Conditional Rendering --- */}
+                  {item.imagePath && (
+                    <div className="relative w-20 h-20 md:w-24 md:h-24 shrink-0 rounded-xl overflow-hidden border border-white/5 shadow-md">
+                      <Image
+                        src={`${supabaseImageUrl}${item.imagePath}`} // Συνθέτουμε το URL
+                        alt={item.title[lang as keyof typeof item.title] || item.title.da}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  )}
+                  {/* --- ΤΕΛΟΣ ΕΝΘΕΤΟΥ --- */}
+
+                  {/* Το κείμενο shifts right αν υπάρχει εικόνα, αλλιώς μένει στην ίδια θέση */}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className="text-[11px] text-[#38BDF8] uppercase tracking-[0.2em] font-bold">{item.category}</span>
+                      {item.vegetarian && (
+                        <span className="text-[10px] text-emerald-400 font-bold border border-emerald-400/30 px-2 py-0.5 rounded-full">
+                          (V) {t.veg}
+                        </span>
+                      )}
+                      {item.popular && (
+                        <span className="text-[10px] text-amber-400 font-bold border border-amber-400/30 px-2 py-0.5 rounded-full">
+                          ★ {t.popular}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className={`${item.featured ? 'text-3xl font-extrabold' : 'text-xl font-bold'} text-white mb-3 tracking-wide group-hover:text-[#38BDF8] transition-colors duration-300`}>
+                      {item.title[lang as keyof typeof item.title] || item.title.da}
+                    </h3>
+                    <p className="text-gray-400 text-sm md:text-base font-light leading-relaxed max-w-lg">
+                      {item.desc[lang as keyof typeof item.desc] || item.desc.da}
+                    </p>
                   </div>
-                  <h3 className={`${item.featured ? 'text-3xl font-extrabold' : 'text-xl font-bold'} text-white mb-3 tracking-wide group-hover:text-[#38BDF8] transition-colors duration-300`}>
-                    {item.title[lang as keyof typeof item.title] || item.title.da}
-                  </h3>
-                  <p className="text-gray-400 text-sm md:text-base font-light leading-relaxed max-w-lg">
-                    {item.desc[lang as keyof typeof item.desc] || item.desc.da}
-                  </p>
                 </div>
 
                 {/* Δεξί μέρος: Τιμή */}
@@ -317,7 +338,8 @@ export default function Home() {
             
             {/* SOCIAL MEDIA ΚΑΙ SMILEY REPORT */}
             <div className="flex flex-col gap-5">
-              <a href="https://www.findsmiley.dk/app/1579068" target="_blank" rel="noreferrer" className="inline-flex items-center gap-3 bg-white/5 hover:bg-white/10 px-5 py-3 rounded-xl border border-white/10 transition-colors w-fit">
+              {/* ΔΙΟΡΘΩΣΗ: Σύνδεσμος Smiley Report (πρέπει να βάλεις το δικό σας link) */}
+              <a href="https://www.findsmiley.dk/Sider/VirkSide.aspx?virk=1579068" target="_blank" rel="noreferrer" className="inline-flex items-center gap-3 bg-white/5 hover:bg-white/10 px-5 py-3 rounded-xl border border-white/10 transition-colors w-fit">
                 <span className="text-2xl">😃</span>
                 <span className="text-sm font-medium text-gray-300">{t.smiley}</span>
               </a>
@@ -354,6 +376,7 @@ export default function Home() {
 
           <div className="text-xs text-gray-600 flex flex-col md:flex-row items-center gap-2 md:gap-6">
             <p className="max-w-xs text-center md:text-right">Orders and payments are securely processed by Wolt.</p>
+            {/* ΔΙΟΡΘΩΣΗ: hellassalborg.dk -> hellasaalborg.dk */}
             <a href="https://wolt.com/da/dnk/aalborg/restaurant/hellas-food1" target="_blank" rel="noreferrer" className="text-[#38BDF8] hover:text-white transition font-bold tracking-widest uppercase mt-2 md:mt-0">
               {t.footerDelivery}
             </a>
