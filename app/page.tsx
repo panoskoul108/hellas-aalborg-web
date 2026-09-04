@@ -77,7 +77,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
 
   // ΣΤΑΘΕΡΑ: Το URL του Supabase Storage για τις εικόνες μας
-  const supabaseImageUrl = "https://keolpijcsvwsrzkjqtke.supabase.co/storage/v1/object/public/menu-images/";
+  const supabaseImageUrl = "[https://keolpijcsvwsrzkjqtkc.supabase.co/storage/v1/object/public/menu-images/](https://keolpijcsvwsrzkjqtkc.supabase.co/storage/v1/object/public/menu-images/)";
 
   useEffect(() => {
     const fetchMenu = async () => {
