@@ -15,7 +15,7 @@ const translations = {
     aboutTitle: 'Græsk Hjerte, Dansk Hygge',
     aboutDesc: 'Hos Hellas Aalborg forener vi den varme græske gæstfrihed med nordisk kvalitet. Vores gyros laves efter originale familieopskrifter med kød af højeste kvalitet og håndlavet tzatziki.',
     hoursTitle: 'Åbningstider', monThu: 'Mandag - Torsdag', friSat: 'Fredag - Lørdag', sun: 'Søndag',
-    footerDesc: 'Dit lille stykke Grækenland i Nordjylland. Vi glæδos til at se dig.',
+    footerDesc: 'Dit lille stykke Grækenland i Nordjylland. Vi glæder os til at se dig.',
     footerDelivery: 'Bestil Delivery', allergies: 'Allergier eller særlige behov? Spørg vores personale!',
     veg: 'Vegetarisk', smiley: 'Se Fødevarestyrelsens smiley-rapport', followUs: 'Følg os på Instagram', callNow: 'Ring nu',
     cateringTitle: 'Græsk Catering & Events',
@@ -75,13 +75,14 @@ export default function Home() {
   
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // ΝΕΟ STATE: Κρατάει το πιάτο που πάτησε ο πελάτης
+  const [selectedItem, setSelectedItem] = useState<any>(null);
 
-  // ΣΤΑΘΕΡΑ: Το URL του Supabase Storage για τις εικόνες μας
   const supabaseImageUrl = "https://keolpijcsvwsrzkjqtkc.supabase.co/storage/v1/object/public/menu-images/";
 
   useEffect(() => {
     const fetchMenu = async () => {
-      // Τραβάμε όλα τα πεδία, συμπεριλαμβανομένου του νέου image_path
       const { data, error } = await supabase
         .from('menu_items')
         .select('*')
@@ -98,7 +99,7 @@ export default function Home() {
           popular: item.popular,
           vegetarian: item.vegetarian,
           featured: item.featured,
-          imagePath: item.image_path // Εδώ κρατάμε το path της εικόνας
+          imagePath: item.image_path
         }));
         setMenuItems(formattedData);
       }
@@ -114,18 +115,21 @@ export default function Home() {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
     
+    // Απενεργοποίηση scrolling στο background όταν είναι ανοιχτό το Modal
+    if (selectedItem) document.body.style.overflow = 'hidden';
+    else document.body.style.overflow = 'unset';
+    
     return () => {
       clearInterval(timer);
       window.removeEventListener('scroll', handleScroll);
     };
-  }, []);
+  }, [selectedItem]);
   
   const t = translations[lang as keyof typeof translations];
 
   return (
     <div className="min-h-screen font-sans bg-[#0B1120] text-gray-200 flex flex-col selection:bg-[#38BDF8] selection:text-[#0B1120]">
       
-      {/* NAVIGATION BAR */}
       <nav className={`flex items-center justify-between px-6 py-4 sticky top-0 z-50 transition-all duration-300 ${
         isScrolled ? 'bg-[#0B1120]/80 backdrop-blur-xl border-b border-white/5 shadow-lg' : 'bg-transparent'
       }`}>
@@ -154,7 +158,6 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* HERO SECTION */}
       <header className="relative min-h-[75vh] md:min-h-screen flex items-center justify-center text-center overflow-hidden border-b border-white/5 -mt-[98px] pt-[98px] pb-24">
         {heroImages.map((img, index) => (
           <div key={index} className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100 z-0' : 'opacity-0 -z-10'}`}>
@@ -183,7 +186,6 @@ export default function Home() {
         </div>
       </header>
 
-      {/* ABOUT SECTION */}
       <section className="py-20 relative">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <div className="flex justify-center gap-2 mb-8 opacity-60">
@@ -196,7 +198,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* MENU SECTION */}
       <section id="menu" className="py-16 px-4 md:px-8 max-w-7xl mx-auto flex-grow relative z-10">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight">{t.menuTitle}</h2>
@@ -212,33 +213,30 @@ export default function Home() {
           </div>
         </div>
 
-        {/* LOADING & MENU LIST */}
         {isLoading ? (
           <div className="text-center py-20 text-[#38BDF8] text-xl font-bold animate-pulse">
             Indlæser menu... / Loading Menu...
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-12 max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-4 max-w-6xl mx-auto">
             {menuItems.map((item) => (
-              // Εδώ κάνουμε την αλλαγή για να υποστηρίξουμε φωτογραφία
-              <div key={item.id} className={`flex flex-col md:flex-row justify-between items-start border-b border-white/10 pb-6 group ${item.featured ? 'md:col-span-2' : 'col-span-1'}`}>
+              <div 
+                key={item.id} 
+                onClick={() => setSelectedItem(item)} // Κάνει όλη την κάρτα κλικαριστή
+                className={`flex flex-col md:flex-row justify-between items-start border-b border-white/10 p-4 md:p-6 -mx-4 md:-mx-6 rounded-2xl group cursor-pointer hover:bg-slate-800/40 transition-all duration-300 ${item.featured ? 'md:col-span-2' : 'col-span-1'}`}
+              >
                 
-                {/* Αριστερό μέρος: Τίτλος, Περιγραφή ΚΑΙ ΦΩΤΟΓΡΑΦΙΑ (αν υπάρχει) */}
                 <div className="flex-1 pr-4 md:pr-8 flex items-start gap-4 w-full"> 
-                  
-                  {/* --- ΕΝΘΕΤΟ ΦΩΤΟΓΡΑΦΙΑΣ: Conditional Rendering --- */}
-          {item.imagePath && (
-  <div className="relative w-20 h-20 md:w-24 md:h-24 shrink-0 rounded-xl overflow-hidden border border-white/5 shadow-md">
-    <img
-      src={`${supabaseImageUrl}${item.imagePath}`} 
-      alt={item.title[lang as keyof typeof item.title] || item.title.da}
-      className="w-full h-full object-cover"
-    />
-  </div>
-)}
-                  {/* --- ΤΕΛΟΣ ΕΝΘΕΤΟΥ --- */}
+                  {item.imagePath && (
+                    <div className="relative w-20 h-20 md:w-24 md:h-24 shrink-0 rounded-xl overflow-hidden border border-white/5 shadow-md">
+                      <img
+                        src={`${supabaseImageUrl}${item.imagePath}`} 
+                        alt={item.title[lang as keyof typeof item.title] || item.title.da}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                  )}
 
-                  {/* Το κείμενο shifts right αν υπάρχει εικόνα, αλλιώς μένει στην ίδια θέση */}
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-3">
                       <span className="text-[11px] text-[#38BDF8] uppercase tracking-[0.2em] font-bold">{item.category}</span>
@@ -256,15 +254,14 @@ export default function Home() {
                     <h3 className={`${item.featured ? 'text-3xl font-extrabold' : 'text-xl font-bold'} text-white mb-3 tracking-wide group-hover:text-[#38BDF8] transition-colors duration-300`}>
                       {item.title[lang as keyof typeof item.title] || item.title.da}
                     </h3>
-                    <p className="text-gray-400 text-sm md:text-base font-light leading-relaxed max-w-lg">
+                    <p className="text-gray-400 text-sm md:text-base font-light leading-relaxed max-w-lg line-clamp-2">
                       {item.desc[lang as keyof typeof item.desc] || item.desc.da}
                     </p>
                   </div>
                 </div>
 
-                {/* Δεξί μέρος: Τιμή */}
                 <div className="mt-4 md:mt-0 flex flex-col items-start md:items-end min-w-[120px] shrink-0 pt-2">
-                  <span className="text-2xl font-bold text-white">
+                  <span className="text-2xl font-bold text-white group-hover:text-[#38BDF8] transition-colors">
                     {menuType === 'takeaway' ? item.priceTakeaway : item.priceDelivery} <span className="text-base font-medium text-gray-500 ml-1">DKK</span>
                   </span>
                   <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-widest mt-2">
@@ -278,7 +275,6 @@ export default function Home() {
 
         <div className="text-center mt-16"><p className="text-gray-500 text-sm font-medium"><span className="text-[#38BDF8]">ℹ️</span> {t.allergies}</p></div>
         
-        {/* ΚΟΥΜΠΙΑ ΠΑΡΑΓΓΕΛΙΑΣ ΚΑΤΩ ΑΠΟ ΤΟ ΜΕΝΟΥ */}
         <div className="text-center mt-12 animate-fade-in-up pb-10 flex justify-center">
           {menuType === 'wolt' ? (
             <a href="https://wolt.com/da/dnk/aalborg/restaurant/hellas-food1" target="_blank" rel="noopener noreferrer" className="inline-block bg-gradient-to-r from-[#009de0] to-[#007fb5] text-white font-bold py-4 px-14 rounded-full shadow-[0_0_25px_rgba(0,157,224,0.4)] transition-all transform hover:scale-105 hover:shadow-[0_0_35px_rgba(0,157,224,0.6)]">
@@ -292,7 +288,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CATERING SECTION */}
       <section className="py-16 md:py-24 bg-[#0F172A]/50 relative border-t border-white/5">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#38BDF8]/5 via-transparent to-transparent opacity-50 pointer-events-none"></div>
         <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
@@ -309,7 +304,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* INSTAGRAM SECTION */}
       <section id="instagram" className="py-16 bg-[#0B1120] relative border-t border-white/5">
         <div className="max-w-7xl mx-auto px-4 md:px-8 text-center">
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-10 flex items-center justify-center gap-3 tracking-tight"><span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 text-3xl">📸</span> {t.followUs}</h2>
@@ -324,7 +318,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FOOTER */}
       <footer id="location" className="bg-[#040812] text-gray-400 pt-20 pb-28 md:pb-16 border-t border-white/5">
         <div className="max-w-7xl mx-auto px-6 md:px-8 grid grid-cols-1 md:grid-cols-3 gap-16">
           <div>
@@ -335,11 +328,8 @@ export default function Home() {
               <p className="flex items-center gap-4"><span className="text-[#38BDF8] text-xl bg-[#38BDF8]/10 p-2 rounded-full">📞</span>+45 42 17 77 54</p>
             </div>
             
-            {/* SOCIAL MEDIA ΚΑΙ SMILEY REPORT */}
             <div className="flex flex-col gap-5">
-              {/* ΔΙΟΡΘΩΣΗ: Σύνδεσμος Smiley Report (πρέπει να βάλεις το δικό σας link) */}
               <a href="https://www.findsmiley.dk/app/1579068" target="_blank" rel="noreferrer" className="inline-flex items-center gap-3 bg-white/5 hover:bg-white/10 px-5 py-3 rounded-xl border border-white/10 transition-colors w-fit">
-
                 <span className="text-2xl">😃</span>
                 <span className="text-sm font-medium text-gray-300">{t.smiley}</span>
               </a>
@@ -376,7 +366,6 @@ export default function Home() {
 
           <div className="text-xs text-gray-600 flex flex-col md:flex-row items-center gap-2 md:gap-6">
             <p className="max-w-xs text-center md:text-right">Orders and payments are securely processed by Wolt.</p>
-            {/* ΔΙΟΡΘΩΣΗ: hellassalborg.dk -> hellasaalborg.dk */}
             <a href="https://wolt.com/da/dnk/aalborg/restaurant/hellas-food1" target="_blank" rel="noreferrer" className="text-[#38BDF8] hover:text-white transition font-bold tracking-widest uppercase mt-2 md:mt-0">
               {t.footerDelivery}
             </a>
@@ -384,11 +373,81 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* MOBILE BAR */}
-      <div className="md:hidden fixed bottom-0 left-0 w-full bg-[#0B1120]/90 backdrop-blur-xl border-t border-white/10 px-4 py-3 z-50 flex justify-between gap-3 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+      <div className="md:hidden fixed bottom-0 left-0 w-full bg-[#0B1120]/90 backdrop-blur-xl border-t border-white/10 px-4 py-3 z-40 flex justify-between gap-3 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
         <a href="tel:+4542177754" className="flex-1 bg-white text-[#0B1120] text-center font-bold py-3 rounded-2xl flex justify-center items-center gap-2 active:scale-95 transition-transform">📞 {t.callNow}</a>
         <a href="https://wolt.com/da/dnk/aalborg/restaurant/hellas-food1" target="_blank" rel="noopener noreferrer" className="flex-1 bg-gradient-to-r from-[#009de0] to-[#007fb5] text-white text-center font-bold py-3 rounded-2xl flex justify-center items-center gap-2 active:scale-95 transition-transform">🛵 {t.orderWolt}</a>
       </div>
+
+      {/* ΝΕΟ: ΑΝΑΔΥΟΜΕΝΟ ΠΑΡΑΘΥΡΟ ΠΙΑΤΟΥ (MODAL) */}
+      {selectedItem && (
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 md:p-6 opacity-100 transition-opacity"
+          onClick={() => setSelectedItem(null)} // Κλείνει αν πατήσεις έξω
+        >
+          <div 
+            className="bg-[#0F172A] border border-white/10 rounded-3xl w-full max-w-xl overflow-hidden relative shadow-2xl flex flex-col max-h-[90vh]"
+            onClick={e => e.stopPropagation()} // Σταματάει το κλείσιμο αν πατήσεις μέσα στην κάρτα
+          >
+            {/* Κουμπί Κλεισίματος (X) */}
+            <button 
+              onClick={() => setSelectedItem(null)} 
+              className="absolute top-4 right-4 bg-black/50 text-white w-10 h-10 rounded-full flex items-center justify-center hover:bg-black/80 z-10 backdrop-blur-md border border-white/10 transition-colors"
+            >
+              <span className="text-xl leading-none">&times;</span>
+            </button>
+
+            {/* Μεγάλη Φωτογραφία */}
+            {selectedItem.imagePath && (
+              <div className="relative w-full h-56 md:h-72 bg-slate-800 shrink-0">
+                <img 
+                  src={`${supabaseImageUrl}${selectedItem.imagePath}`} 
+                  alt={selectedItem.title[lang as keyof typeof selectedItem.title] || selectedItem.title.da} 
+                  className="w-full h-full object-cover" 
+                />
+              </div>
+            )}
+
+            {/* Πληροφορίες Πιάτου */}
+            <div className="p-6 md:p-8 flex-1 overflow-y-auto">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-xs text-[#38BDF8] uppercase tracking-[0.2em] font-bold bg-[#38BDF8]/10 px-3 py-1 rounded-full">{selectedItem.category}</span>
+                {selectedItem.vegetarian && <span className="text-[10px] text-emerald-400 font-bold border border-emerald-400/30 px-2 py-1 rounded-full">(V) {t.veg}</span>}
+              </div>
+              
+              <h3 className="text-2xl md:text-3xl font-extrabold text-white mb-4">
+                {selectedItem.title[lang as keyof typeof selectedItem.title] || selectedItem.title.da}
+              </h3>
+              
+              <p className="text-gray-300 text-base md:text-lg leading-relaxed mb-6">
+                {selectedItem.desc[lang as keyof typeof selectedItem.desc] || selectedItem.desc.da}
+              </p>
+              
+              <div className="flex justify-between items-center border-t border-white/10 pt-6 mt-4">
+                <div className="flex flex-col">
+                  <span className="text-xs text-gray-500 font-semibold uppercase mb-1">
+                    {menuType === 'takeaway' ? t.takeawayLabel : t.deliveryLabel}
+                  </span>
+                  <span className="text-2xl font-bold text-[#38BDF8]">
+                    {menuType === 'takeaway' ? selectedItem.priceTakeaway : selectedItem.priceDelivery} <span className="text-lg text-white">DKK</span>
+                  </span>
+                </div>
+                
+                {/* Κουμπί δράσης μέσα στο Modal */}
+                {menuType === 'wolt' ? (
+                  <a href="https://wolt.com/da/dnk/aalborg/restaurant/hellas-food1" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-r from-[#009de0] to-[#007fb5] text-white px-6 py-3 rounded-full font-bold hover:scale-105 transition-transform shadow-lg">
+                    {t.orderWolt}
+                  </a>
+                ) : (
+                  <a href="tel:+4542177754" className="bg-white text-[#0B1120] px-6 py-3 rounded-full font-bold hover:scale-105 transition-transform shadow-lg">
+                    {t.callNow}
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
