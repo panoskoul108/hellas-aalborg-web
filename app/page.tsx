@@ -76,7 +76,6 @@ export default function Home() {
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // ΝΕΟ STATE: Κρατάει το πιάτο που πάτησε ο πελάτης
   const [selectedItem, setSelectedItem] = useState<any>(null);
 
   const supabaseImageUrl = "https://keolpijcsvwsrzkjqtkc.supabase.co/storage/v1/object/public/menu-images/";
@@ -115,7 +114,6 @@ export default function Home() {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
     
-    // Απενεργοποίηση scrolling στο background όταν είναι ανοιχτό το Modal
     if (selectedItem) document.body.style.overflow = 'hidden';
     else document.body.style.overflow = 'unset';
     
@@ -126,7 +124,6 @@ export default function Home() {
   }, [selectedItem]);
   
   const t = translations[lang as keyof typeof translations];
-
   return (
     <div className="min-h-screen font-sans bg-[#0B1120] text-gray-200 flex flex-col selection:bg-[#38BDF8] selection:text-[#0B1120]">
       
@@ -197,7 +194,6 @@ export default function Home() {
           <p className="text-gray-400 text-lg md:text-xl leading-relaxed font-light">{t.aboutDesc}</p>
         </div>
       </section>
-
       <section id="menu" className="py-16 px-4 md:px-8 max-w-7xl mx-auto flex-grow relative z-10">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight">{t.menuTitle}</h2>
@@ -222,7 +218,7 @@ export default function Home() {
             {menuItems.map((item) => (
               <div 
                 key={item.id} 
-                onClick={() => setSelectedItem(item)} // Κάνει όλη την κάρτα κλικαριστή
+                onClick={() => setSelectedItem(item)} 
                 className={`flex flex-col md:flex-row justify-between items-start border-b border-white/10 p-4 md:p-6 -mx-4 md:-mx-6 rounded-2xl group cursor-pointer hover:bg-slate-800/40 transition-all duration-300 ${item.featured ? 'md:col-span-2' : 'col-span-1'}`}
               >
                 
@@ -287,7 +283,6 @@ export default function Home() {
           )}
         </div>
       </section>
-
       <section className="py-16 md:py-24 bg-[#0F172A]/50 relative border-t border-white/5">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#38BDF8]/5 via-transparent to-transparent opacity-50 pointer-events-none"></div>
         <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
@@ -347,9 +342,9 @@ export default function Home() {
           <div>
             <h4 className="text-lg font-bold text-white mb-8 tracking-wide">{t.hoursTitle}</h4>
             <ul className="space-y-4 text-sm">
-              <li className="flex justify-between border-b border-white/5 pb-3"><span className="text-gray-400">{t.monThu}</span><span className="font-bold text-white">18:00 - 24:00</span></li>
-              <li className="flex justify-between border-b border-white/5 pb-3"><span className="text-[#38BDF8] font-medium">{t.friSat}</span><span className="font-bold text-[#38BDF8]">18:00 - 04:00</span></li>
-              <li className="flex justify-between border-b border-white/5 pb-3"><span className="text-gray-400">{t.sun}</span><span className="font-bold text-white">18:00 - 24:00</span></li>
+              <li className="flex justify-between border-b border-white/5 pb-3"><span className="text-gray-400">{t.monThu}</span><span className="font-bold text-white">16:00 - 22:00</span></li>
+              <li className="flex justify-between border-b border-white/5 pb-3"><span className="text-[#38BDF8] font-medium">{t.friSat}</span><span className="font-bold text-[#38BDF8]">17:00 - 05:00</span></li>
+              <li className="flex justify-between border-b border-white/5 pb-3"><span className="text-gray-400">{t.sun}</span><span className="font-bold text-white">17:00 - 22:00</span></li>
             </ul>
           </div>
           <div className="h-72 w-full rounded-3xl overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.5)] opacity-80 hover:opacity-100 transition-opacity border border-white/10 relative">
@@ -382,13 +377,12 @@ export default function Home() {
       {selectedItem && (
         <div 
           className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 md:p-6 opacity-100 transition-opacity"
-          onClick={() => setSelectedItem(null)} // Κλείνει αν πατήσεις έξω
+          onClick={() => setSelectedItem(null)} 
         >
           <div 
             className="bg-[#0F172A] border border-white/10 rounded-3xl w-full max-w-xl overflow-hidden relative shadow-2xl flex flex-col max-h-[90vh]"
-            onClick={e => e.stopPropagation()} // Σταματάει το κλείσιμο αν πατήσεις μέσα στην κάρτα
+            onClick={e => e.stopPropagation()}
           >
-            {/* Κουμπί Κλεισίματος (X) */}
             <button 
               onClick={() => setSelectedItem(null)} 
               className="absolute top-4 right-4 bg-black/50 text-white w-10 h-10 rounded-full flex items-center justify-center hover:bg-black/80 z-10 backdrop-blur-md border border-white/10 transition-colors"
@@ -396,7 +390,6 @@ export default function Home() {
               <span className="text-xl leading-none">&times;</span>
             </button>
 
-            {/* Μεγάλη Φωτογραφία */}
             {selectedItem.imagePath && (
               <div className="relative w-full h-56 md:h-72 bg-slate-800 shrink-0">
                 <img 
@@ -407,7 +400,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* Πληροφορίες Πιάτου */}
             <div className="p-6 md:p-8 flex-1 overflow-y-auto">
               <div className="flex items-center gap-3 mb-4">
                 <span className="text-xs text-[#38BDF8] uppercase tracking-[0.2em] font-bold bg-[#38BDF8]/10 px-3 py-1 rounded-full">{selectedItem.category}</span>
@@ -432,7 +424,6 @@ export default function Home() {
                   </span>
                 </div>
                 
-                {/* Κουμπί δράσης μέσα στο Modal */}
                 {menuType === 'wolt' ? (
                   <a href="https://wolt.com/da/dnk/aalborg/restaurant/hellas-food1" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-r from-[#009de0] to-[#007fb5] text-white px-6 py-3 rounded-full font-bold hover:scale-105 transition-transform shadow-lg">
                     {t.orderWolt}
