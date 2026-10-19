@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { supabase } from '../supabase'; // Πρόσεξε τις δύο τελείες '../' επειδή είμαστε σε υποφάκελο
+import { supabase } from '../supabase';
 
 export default function OrderPage() {
   const [menuItems, setMenuItems] = useState<any[]>([]);
@@ -9,11 +9,18 @@ export default function OrderPage() {
   const [cart, setCart] = useState<{item: any, quantity: number}[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   
-  // Φόρμα Checkout
-  const [checkoutStep, setCheckoutStep] = useState<'cart' | 'checkout' | 'success'>('cart');
+  // ΝΕΟ: Authentication State
+  const [user, setUser] = useState<any>(null);
+  const [authMode, setAuthMode] = useState<'signup' | 'login'>('signup');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [authError, setAuthError] = useState('');
+
+  // Checkout State
+  const [checkoutStep, setCheckoutStep] = useState<'cart' | 'auth' | 'checkout' | 'success'>('cart');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('card'); // 'card' ή 'cash'
+  const [paymentMethod, setPaymentMethod] = useState('card');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const supabaseImageUrl = "https://keolpijcsvwsrzkjqtkc.supabase.co/storage/v1/object/public/menu-images/";
@@ -25,23 +32,22 @@ export default function OrderPage() {
       setIsLoading(false);
     };
     fetchMenu();
+
+    // Έλεγχος σύνδεσης (Login) του χρήστη
+    supabase.auth.getSession().then(({ data: { session } }) => setUser(session?.user || null));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user || null));
+    return () => subscription.unsubscribe();
   }, []);
 
-  // Λειτουργίες Καλαθιού
   const addToCart = (item: any) => {
     setCart(prev => {
       const existing = prev.find(cartItem => cartItem.item.id === item.id);
-      if (existing) {
-        return prev.map(cartItem => cartItem.item.id === item.id ? { ...cartItem, quantity: cartItem.quantity + 1 } : cartItem);
-      }
+      if (existing) return prev.map(cartItem => cartItem.item.id === item.id ? { ...cartItem, quantity: cartItem.quantity + 1 } : cartItem);
       return [...prev, { item, quantity: 1 }];
     });
   };
 
-  const removeFromCart = (id: number) => {
-    setCart(prev => prev.filter(cartItem => cartItem.item.id !== id));
-  };
-
+  const removeFromCart = (id: number) => setCart(prev => prev.filter(cartItem => cartItem.item.id !== id));
   const updateQuantity = (id: number, delta: number) => {
     setCart(prev => prev.map(cartItem => {
       if (cartItem.item.id === id) {
@@ -54,15 +60,45 @@ export default function OrderPage() {
 
   const cartTotal = cart.reduce((total, cartItem) => total + (Number(cartItem.item.price_takeaway) * cartItem.quantity), 0);
 
-  // Αποστολή Παραγγελίας στο Supabase
+  // Σύστημα Σύνδεσης / Εγγραφής Πελάτη
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+    if (authMode === 'signup') {
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (error) setAuthError('Σφάλμα εγγραφής: ' + error.message);
+      else {
+        setUser(data.user);
+        setCheckoutStep('checkout'); // Πάμε απευθείας στο ταμείο
+      }
+    } else {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) setAuthError('Λάθος email ή κωδικός.');
+      else {
+        setUser(data.user);
+        setCheckoutStep('checkout');
+      }
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setCheckoutStep('cart');
+  };
+
+  const proceedToCheckout = () => {
+    if (user) setCheckoutStep('checkout');
+    else setCheckoutStep('auth'); // Ζητάμε login/signup αν δεν είναι συνδεδεμένος
+  };
+
   const submitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customerName || !customerPhone) return alert('Παρακαλώ συμπληρώστε όνομα και τηλέφωνο.');
-    
+    if (!customerName || !customerPhone || !user) return alert('Λείπουν στοιχεία.');
     setIsSubmitting(true);
     try {
-      // 1. Δημιουργία της κύριας παραγγελίας
       const { data: orderData, error: orderError } = await supabase.from('orders').insert([{
+        user_id: user.id, // Συνδέουμε την παραγγελία με τον λογαριασμό
         customer_name: customerName,
         customer_phone: customerPhone,
         order_type: 'takeaway',
@@ -72,7 +108,6 @@ export default function OrderPage() {
 
       if (orderError) throw orderError;
 
-      // 2. Εισαγωγή των ειδών (Order Items)
       const orderItems = cart.map(cartItem => ({
         order_id: orderData.id,
         item_name: cartItem.item.title_da,
@@ -84,16 +119,14 @@ export default function OrderPage() {
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
       if (itemsError) throw itemsError;
 
-      // Επιτυχία!
       setCheckoutStep('success');
-      setCart([]); // Άδειασμα καλαθιού
+      setCart([]);
     } catch (error: any) {
-      alert('Υπήρξε πρόβλημα με την παραγγελία σας: ' + error.message);
+      alert('Σφάλμα παραγγελίας: ' + error.message);
     } finally {
       setIsSubmitting(false);
     }
   };
-
   return (
     <div className="min-h-screen font-sans bg-[#0B1120] text-gray-200 selection:bg-[#38BDF8] selection:text-[#0B1120] pb-24">
       {/* Header */}
@@ -104,33 +137,36 @@ export default function OrderPage() {
           </a>
           <div>
             <h1 className="text-xl font-bold text-white leading-tight">Hellas Aalborg</h1>
-            <span className="text-xs text-[#38BDF8] uppercase tracking-wider font-bold">Takeaway Bestilling</span>
+            <span className="text-xs text-[#38BDF8] uppercase tracking-wider font-bold">Takeaway</span>
           </div>
         </div>
-        <button 
-          onClick={() => setIsCartOpen(true)}
-          className="relative bg-white/10 hover:bg-white/20 p-3 rounded-full transition-colors border border-white/5"
-        >
-          🛒
-          {cart.length > 0 && (
-            <span className="absolute -top-1 -right-1 bg-[#38BDF8] text-[#0B1120] text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full shadow-lg border-2 border-[#0F172A]">
-              {cart.reduce((sum, item) => sum + item.quantity, 0)}
-            </span>
+        <div className="flex items-center gap-4">
+          {user ? (
+            <div className="hidden md:flex flex-col text-right">
+              <span className="text-xs text-gray-400">{user.email}</span>
+              <button onClick={handleLogout} className="text-xs text-red-400 hover:text-red-300 underline">Log ud</button>
+            </div>
+          ) : (
+            <button onClick={() => { setIsCartOpen(true); setCheckoutStep('auth'); }} className="hidden md:block text-sm font-bold text-[#38BDF8] hover:text-white transition-colors">
+              Log ind / Opret
+            </button>
           )}
-        </button>
+          <button onClick={() => setIsCartOpen(true)} className="relative bg-white/10 hover:bg-white/20 p-3 rounded-full transition-colors border border-white/5">
+            🛒
+            {cart.length > 0 && <span className="absolute -top-1 -right-1 bg-[#38BDF8] text-[#0B1120] text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full shadow-lg border-2 border-[#0F172A]">{cart.reduce((sum, item) => sum + item.quantity, 0)}</span>}
+          </button>
+        </div>
       </header>
 
       {/* Menu List */}
       <main className="max-w-4xl mx-auto p-4 md:p-6 pt-10">
         <h2 className="text-3xl font-extrabold text-white mb-8">Vælg dine retter</h2>
-        
         {isLoading ? (
           <p className="text-center text-[#38BDF8] animate-pulse">Indlæser menu...</p>
         ) : (
           <div className="flex flex-col gap-4">
             {menuItems.map(item => (
               <div key={item.id} className="bg-slate-800/40 p-4 rounded-2xl border border-white/5 flex gap-4 hover:border-white/10 transition-colors shadow-sm items-center">
-                
                 {item.image_path ? (
                   <div className="w-20 h-20 md:w-24 md:h-24 shrink-0 rounded-xl overflow-hidden bg-slate-800 border border-white/5">
                     <img src={`${supabaseImageUrl}${item.image_path}`} alt="Food" className="w-full h-full object-cover" />
@@ -138,17 +174,12 @@ export default function OrderPage() {
                 ) : (
                    <div className="w-20 h-20 shrink-0 rounded-xl bg-slate-800/50 border border-white/5 flex items-center justify-center text-2xl">🍽️</div>
                 )}
-
                 <div className="flex-1">
                   <h3 className="font-bold text-lg text-white mb-1">{item.title_da}</h3>
                   <p className="text-sm text-gray-400 line-clamp-2 leading-relaxed mb-2">{item.desc_da}</p>
                   <span className="font-bold text-[#38BDF8]">{item.price_takeaway} DKK</span>
                 </div>
-
-                <button 
-                  onClick={() => addToCart(item)}
-                  className="bg-white hover:bg-gray-200 text-[#0B1120] font-bold p-3 md:px-6 md:py-2.5 rounded-xl shadow-md transition-transform active:scale-95 shrink-0 flex items-center gap-2"
-                >
+                <button onClick={() => addToCart(item)} className="bg-white hover:bg-gray-200 text-[#0B1120] font-bold p-3 md:px-6 md:py-2.5 rounded-xl shadow-md transition-transform active:scale-95 shrink-0 flex items-center gap-2">
                   <span className="hidden md:inline">Tilføj</span> ➕
                 </button>
               </div>
@@ -157,11 +188,10 @@ export default function OrderPage() {
         )}
       </main>
 
-      {/* Floating Cart Panel (Αναδυόμενο Καλάθι) */}
+      {/* Floating Cart Panel */}
       {isCartOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-end">
           <div className="w-full max-w-md bg-[#0F172A] h-full flex flex-col shadow-2xl border-l border-white/10 animate-fade-in-up">
-            
             <div className="p-6 border-b border-white/10 flex justify-between items-center bg-slate-900">
               <h2 className="text-xl font-bold text-white">Din Bestilling</h2>
               <button onClick={() => setIsCartOpen(false)} className="text-gray-400 hover:text-white text-2xl">&times;</button>
@@ -173,15 +203,29 @@ export default function OrderPage() {
                   <span className="text-6xl mb-4 block">✅</span>
                   <h3 className="text-2xl font-bold text-white mb-2">Tak for din bestilling!</h3>
                   <p className="text-gray-400">Din mad vil være klar til afhentning snart.</p>
-                  <button onClick={() => { setIsCartOpen(false); setCheckoutStep('cart'); }} className="mt-8 bg-white text-slate-900 font-bold px-8 py-3 rounded-full hover:bg-gray-200 transition-colors">
-                    Luk
+                  <button onClick={() => { setIsCartOpen(false); setCheckoutStep('cart'); }} className="mt-8 bg-white text-slate-900 font-bold px-8 py-3 rounded-full hover:bg-gray-200 transition-colors">Luk</button>
+                </div>
+              ) : checkoutStep === 'auth' ? (
+                /* AUTH FORM (LOGIN/SIGNUP) */
+                <div className="flex flex-col gap-5 py-4">
+                  <div className="text-center mb-4">
+                    <h3 className="text-2xl font-bold text-white mb-2">{authMode === 'signup' ? 'Opret en konto' : 'Velkommen tilbage'}</h3>
+                    <p className="text-gray-400 text-sm">{authMode === 'signup' ? 'Opret en konto for at bestille.' : 'Log ind for at fortsætte.'}</p>
+                  </div>
+                  <form onSubmit={handleAuth} className="flex flex-col gap-4">
+                    {authError && <div className="bg-red-500/10 border border-red-500 text-red-400 p-3 rounded-lg text-sm">{authError}</div>}
+                    <input type="email" placeholder="Email adresse" value={email} onChange={e => setEmail(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white outline-none focus:border-[#38BDF8]" />
+                    <input type="password" placeholder="Adgangskode" value={password} onChange={e => setPassword(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white outline-none focus:border-[#38BDF8]" />
+                    <button type="submit" className="w-full bg-[#38BDF8] hover:bg-sky-400 text-slate-900 font-bold py-4 rounded-xl shadow-lg transition-colors text-lg mt-2">
+                      {authMode === 'signup' ? 'Opret Konto' : 'Log Ind'}
+                    </button>
+                  </form>
+                  <button type="button" onClick={() => setAuthMode(authMode === 'signup' ? 'login' : 'signup')} className="text-sm text-gray-400 hover:text-white underline transition-colors mt-4 text-center">
+                    {authMode === 'signup' ? 'Har du allerede en konto? Log ind her' : 'Har du ikke en konto? Opret en her'}
                   </button>
                 </div>
-              ) : cart.length === 0 ? (
-                <div className="text-center text-gray-500 mt-20">
-                  <span className="text-4xl mb-3 block">🛒</span>
-                  <p>Din kurv er tom.</p>
-                </div>
+          ) : cart.length === 0 ? (
+                <div className="text-center text-gray-500 mt-20"><span className="text-4xl mb-3 block">🛒</span><p>Din kurv er tom.</p></div>
               ) : checkoutStep === 'cart' ? (
                 <div className="flex flex-col gap-4">
                   {cart.map(cartItem => (
@@ -211,7 +255,6 @@ export default function OrderPage() {
                     <label className="text-xs text-gray-400 block mb-1">Telefonnummer</label>
                     <input type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white outline-none focus:border-[#38BDF8]" placeholder="+45 12 34 56 78" />
                   </div>
-                  
                   <div className="mt-4">
                     <label className="text-xs text-gray-400 block mb-2">Betalingsmetode ved afhentning</label>
                     <div className="grid grid-cols-2 gap-3">
@@ -236,8 +279,12 @@ export default function OrderPage() {
                 </div>
                 
                 {checkoutStep === 'cart' ? (
-                  <button onClick={() => setCheckoutStep('checkout')} className="w-full bg-[#38BDF8] hover:bg-sky-400 text-slate-900 font-bold py-4 rounded-xl shadow-lg transition-colors text-lg">
+                  <button onClick={proceedToCheckout} className="w-full bg-[#38BDF8] hover:bg-sky-400 text-slate-900 font-bold py-4 rounded-xl shadow-lg transition-colors text-lg">
                     Gå til Kassen
+                  </button>
+                ) : checkoutStep === 'auth' ? (
+                  <button type="button" onClick={() => setCheckoutStep('cart')} className="w-full px-6 py-4 rounded-xl bg-slate-800 text-white font-bold hover:bg-slate-700 border border-white/5">
+                    Tilbage til kurv
                   </button>
                 ) : (
                   <div className="flex gap-3">
@@ -251,7 +298,6 @@ export default function OrderPage() {
                 )}
               </div>
             )}
-
           </div>
         </div>
       )}
