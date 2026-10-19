@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { supabase } from '../supabase';
+import { supabase } from './supabase';
 
 export default function OrderPage() {
   const [menuItems, setMenuItems] = useState<any[]>([]);
