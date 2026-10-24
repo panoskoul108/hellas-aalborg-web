@@ -48,7 +48,9 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
-    if (isAuthenticated) fetchMenu();
+    if (isAuthenticated) {
+      fetchMenu();
+    }
   }, [isAuthenticated]);
 
   // Αυτόματη ανανέωση παραγγελιών κάθε 15 δευτερόλεπτα
@@ -144,7 +146,6 @@ export default function AdminPage() {
     await supabase.from('menu_items').update({ sort_order: updatedItems[index].sort_order }).eq('id', updatedItems[index].id);
     await supabase.from('menu_items').update({ sort_order: updatedItems[swapIndex].sort_order }).eq('id', updatedItems[swapIndex].id);
   };
-
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-[#0B1120] flex items-center justify-center p-4">
