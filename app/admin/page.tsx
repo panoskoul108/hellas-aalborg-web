@@ -175,7 +175,7 @@ export default function AdminDashboard() {
                 <OrderCard 
                   key={order.id} 
                   order={order} 
-                  onAccept={(mins) => handleAcceptOrder(order, mins)} 
+                 onAccept={(mins: number) => handleAcceptOrder(order, mins)}
                 />
               ))}
             </div>
