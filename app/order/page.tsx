@@ -338,7 +338,6 @@ export default function OrderPage() {
 
             <div className="flex-1 overflow-y-auto p-6">
               {checkoutStep === 'success' ? (
-                
                 <div className="text-center py-10 flex flex-col items-center">
                   {placedOrder?.status === 'pending' && (
                     <>
@@ -348,30 +347,22 @@ export default function OrderPage() {
                     </>
                   )}
 
-                  {placedOrder?.status === 'preparing' && (
+                  {placedOrder?.status === 'completed' && (
                     <div className="animate-fade-in-up">
                       <span className="text-6xl mb-4 block">🔥</span>
-                      <h3 className="text-2xl font-black text-white mb-2 uppercase">{ui.trackPrepTitle}</h3>
+                      <h3 className="text-2xl font-black text-emerald-400 mb-2 uppercase">{ui.trackPrepTitle}</h3>
                       <div className="bg-[#38BDF8]/20 border border-[#38BDF8]/50 rounded-2xl p-6 mt-6 shadow-xl">
                         <p className="text-sm font-black text-[#38BDF8] uppercase tracking-widest mb-1">{ui.trackPrepTime}</p>
                         <p className="text-5xl font-black text-white">{placedOrder.requested_time}</p>
                       </div>
+                      <p className="text-gray-400 font-bold mt-6 text-sm">Προσέλθετε στο ταμείο την παραπάνω ώρα για παραλαβή.</p>
                     </div>
                   )}
 
-                  {placedOrder?.status === 'completed' && (
-                    <div className="animate-fade-in-up">
-                      <span className="text-6xl mb-4 block">✅</span>
-                      <h3 className="text-2xl font-black text-emerald-400 mb-2 uppercase">{ui.trackReadyTitle}</h3>
-                      <p className="text-gray-300 font-bold">{ui.trackReadyDesc}</p>
-                    </div>
-                  )}
-
-                  <button onClick={() => { setIsCartOpen(false); setCheckoutStep('cart'); setPlacedOrder(null); }} className="mt-12 bg-white text-[#0B1120] font-black px-8 py-3 rounded-xl hover:bg-gray-200 transition-colors uppercase">
+                  <button onClick={() => { setIsCartOpen(false); setCheckoutStep('cart'); setPlacedOrder(null); setCart([]); }} className="mt-12 bg-white text-[#0B1120] font-black px-8 py-3 rounded-xl hover:bg-gray-200 transition-colors uppercase">
                     {ui.close}
                   </button>
                 </div>
-
               ) : checkoutStep === 'auth' ? (
                 <div className="flex flex-col gap-5 py-4">
                   <h3 className="text-2xl font-bold text-white text-center mb-2">{ui.loginTitle}</h3>
