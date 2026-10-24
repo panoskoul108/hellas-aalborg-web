@@ -23,7 +23,6 @@ export function useOrderSubmit() {
     }
   }, []);
 
-  // Έλεγχος πόντων Loyalty με βάση το τηλέφωνο του πελάτη
   const checkCustomerLoyalty = async (phone) => {
     if (!phone || phone.trim().length < 6) {
       setLoyaltyInfo(null);
@@ -56,7 +55,6 @@ export function useOrderSubmit() {
     setIsSubmitting(true);
 
     try {
-      // 1. Δημιουργία ή ανάκτηση του μοναδικού ID της συσκευής (Session ID)
       let deviceId = localStorage.getItem("servato_device_id");
       if (!deviceId) {
         deviceId = crypto.randomUUID();
@@ -65,25 +63,20 @@ export function useOrderSubmit() {
 
       const cleanPhone = (orderData.customer_phone || "").replace(/\s+/g, "");
       const subtotal = Number(orderData.subtotal_dkk || 0);
-      const deliveryFee = Number(orderData.delivery_fee_dkk || 0);
       const discount = Number(orderData.discount_dkk || 0);
-      const finalTotal = Math.max(0, subtotal + deliveryFee - discount);
+      const finalTotal = Math.max(0, subtotal - discount);
 
-      // Στη Δανία οι τιμές καταλόγου περιλαμβάνουν 25% ΦΠΑ (Moms = 20% της τελικής τιμής)
+      // 25% Δανέζικος ΦΠΑ (Moms = 20% της τελικής τιμής με ΦΠΑ)
       const vatMoms = Number((finalTotal * 0.2).toFixed(2));
 
-      // 2. Payload για τον πίνακα orders του Hellas Aalborg
       const payload = {
-        order_type: orderData.order_type || "takeaway",
+        order_type: "takeaway",
         customer_name: orderData.customer_name,
         customer_phone: cleanPhone,
-        delivery_address: orderData.order_type === "delivery" ? orderData.delivery_address : null,
-        postal_code: orderData.order_type === "delivery" ? orderData.postal_code : null,
-        floor_door: orderData.order_type === "delivery" ? orderData.floor_door : null,
         requested_time: orderData.requested_time || "ASAP",
         items: orderData.items,
         subtotal_dkk: subtotal,
-        delivery_fee_dkk: deliveryFee,
+        delivery_fee_dkk: 0,
         discount_dkk: discount,
         vat_moms_dkk: vatMoms,
         total_price: finalTotal,
@@ -92,7 +85,6 @@ export function useOrderSubmit() {
         notes: orderData.notes || null,
       };
 
-      // 3. Εισαγωγή παραγγελίας στο Supabase
       const { data: insertedOrder, error: orderError } = await supabase
         .from("orders")
         .insert([payload])
@@ -101,16 +93,21 @@ export function useOrderSubmit() {
 
       if (orderError) throw orderError;
 
-      // 4. Καταγραφή στο action_logs (για Δανέζικο SAF-T Audit Log)
+      // Καταγραφή στο action_logs (SAF-T Audit Log για Nordic-mythos 1 ApS)
       await supabase.from("action_logs").insert([
         {
-          action_type: "ORDER_CREATED",
+          action_type: "TAKEAWAY_ORDER_CREATED",
           order_id: insertedOrder.id,
-          details: { session_id: deviceId, total_dkk: finalTotal, vat_moms_dkk: vatMoms },
+          details: {
+            company: "Nordic-mythos 1 ApS",
+            session_id: deviceId,
+            total_dkk: finalTotal,
+            vat_moms_dkk: vatMoms,
+          },
         },
       ]);
 
-      // 5. Ενημέρωση Loyalty Πόντων (π.χ. 1 πόντος ανά 10 DKK αγοράς)
+      // Ενημέρωση Loyalty Πόντων (1 πόντος ανά 10 DKK)
       const earnedPoints = Math.floor(finalTotal / 10);
       const existingLoyalty = await checkCustomerLoyalty(cleanPhone);
 
@@ -142,7 +139,6 @@ export function useOrderSubmit() {
         ]);
       }
 
-      // 6. Ενημέρωση του μετρητή Anti-Spam
       const newTotal = ordersPlaced + 1;
       setOrdersPlaced(newTotal);
       localStorage.setItem("servato_orders", newTotal.toString());
