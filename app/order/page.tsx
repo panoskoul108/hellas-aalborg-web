@@ -15,14 +15,12 @@ export default function OrderPage() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [lang, setLang] = useState<'da' | 'en' | 'el'>('da');
   
-  // Authentication State
   const [user, setUser] = useState<any>(null);
   const [authMode, setAuthMode] = useState<'signup' | 'login'>('signup');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState('');
 
-  // Checkout State
   const [checkoutStep, setCheckoutStep] = useState<'cart' | 'auth' | 'checkout' | 'success'>('cart');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -30,7 +28,6 @@ export default function OrderPage() {
   const [requestedTime, setRequestedTime] = useState('ASAP');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Loyalty & Anti-spam
   const [loyaltyInfo, setLoyaltyInfo] = useState<any>(null);
   const [redeemReward, setRedeemReward] = useState(false);
   const [ordersPlaced, setOrdersPlaced] = useState(0);
@@ -38,13 +35,62 @@ export default function OrderPage() {
 
   const supabaseImageUrl = "https://keolpijcsvwsrzkjqtkc.supabase.co/storage/v1/object/public/menu-images/";
 
-  // Λεξικό UI
+  // ΠΛΗΡΕΣ ΛΕΞΙΚΟ ΓΙΑ ΟΛΟ ΤΟ UI
   const dict = {
-    da: { menuTitle: "Vælg dine retter", add: "Tilføj", wolt: "Ønsker du levering? Bestil via Wolt 🛵" },
-    en: { menuTitle: "Choose your dishes", add: "Add", wolt: "Want delivery? Order via Wolt 🛵" },
-    el: { menuTitle: "Επιλέξτε τα πιάτα σας", add: "Προσθήκη", wolt: "Θέλετε Delivery; Παραγγείλτε μέσω Wolt 🛵" }
+    da: { 
+      menuTitle: "Vælg dine retter", add: "Tilføj", wolt: "Ønsker du levering? Bestil via Wolt 🛵",
+      cartTitle: "Din Bestilling", emptyCart: "Din kurv er tom.",
+      detailsTitle: "Dine oplysninger (Afhentning)", nameLabel: "Fulde Navn", phoneLabel: "Telefonnummer",
+      timeLabel: "Afhentningstidspunkt", asap: "Hurtigst muligt",
+      payLabel: "Betalingsmetode", card: "Kort", cash: "Kontant",
+      subtotal: "Subtotal", loyaltyDiscount: "Loyalty Rabat", vat: "Heraf 25% moms",
+      totalPay: "Total at betale", back: "Tilbage", confirm: "Bekræft Bestilling", sending: "Sender...",
+      successMsg: "Tak for din bestilling!", successDesc: "Din mad vil være klar til afhentning snart.", close: "Luk",
+      loginTitle: "Log ind eller Opret", toCheckout: "Gå til Kassen", backToCart: "Tilbage til kurv"
+    },
+    en: { 
+      menuTitle: "Choose your dishes", add: "Add", wolt: "Want delivery? Order via Wolt 🛵",
+      cartTitle: "Your Order", emptyCart: "Your cart is empty.",
+      detailsTitle: "Your Details (Pickup)", nameLabel: "Full Name", phoneLabel: "Phone Number",
+      timeLabel: "Pickup Time", asap: "As soon as possible",
+      payLabel: "Payment Method", card: "Card", cash: "Cash",
+      subtotal: "Subtotal", loyaltyDiscount: "Loyalty Discount", vat: "Includes 25% VAT",
+      totalPay: "Total to pay", back: "Back", confirm: "Confirm Order", sending: "Sending...",
+      successMsg: "Thank you for your order!", successDesc: "Your food will be ready for pickup soon.", close: "Close",
+      loginTitle: "Login or Register", toCheckout: "Proceed to Checkout", backToCart: "Back to Cart"
+    },
+    el: { 
+      menuTitle: "Επιλέξτε τα πιάτα σας", add: "Προσθήκη", wolt: "Θέλετε Delivery; Παραγγείλτε μέσω Wolt 🛵",
+      cartTitle: "Η Παραγγελία σας", emptyCart: "Το καλάθι σας είναι άδειο.",
+      detailsTitle: "Τα στοιχεία σας (Takeaway)", nameLabel: "Ονοματεπώνυμο", phoneLabel: "Τηλέφωνο",
+      timeLabel: "Ώρα Παραλαβής", asap: "Το συντομότερο δυνατό",
+      payLabel: "Τρόπος Πληρωμής", card: "Κάρτα (POS)", cash: "Μετρητά",
+      subtotal: "Μερικό Σύνολο", loyaltyDiscount: "Έκπτωση Loyalty", vat: "Περιλαμβάνει 25% ΦΠΑ",
+      totalPay: "Σύνολο Πληρωμής", back: "Πίσω", confirm: "Επιβεβαίωση", sending: "Αποστολή...",
+      successMsg: "Ευχαριστούμε για την παραγγελία!", successDesc: "Το φαγητό σας θα είναι σύντομα έτοιμο.", close: "Κλείσιμο",
+      loginTitle: "Σύνδεση ή Εγγραφή", toCheckout: "Ολοκλήρωση Παραγγελίας", backToCart: "Πίσω στο καλάθι"
+    }
   };
   const ui = dict[lang];
+
+  // ΔΥΝΑΜΙΚΟΣ ΥΠΟΛΟΓΙΣΜΟΣ ΩΡΑΣ (Ανά 15 λεπτά)
+  const generateTimeSlots = () => {
+    const slots = [{ value: 'ASAP', label: `${ui.asap} (~15-20 min)` }];
+    const now = new Date();
+    
+    let current = new Date(now.getTime() + 15 * 60000); 
+    current.setMinutes(Math.ceil(current.getMinutes() / 15) * 15);
+    
+    const closeTime = new Date();
+    closeTime.setHours(22, 0, 0, 0); // Ρύθμισε εδώ την ώρα κλεισίματος
+
+    while (current <= closeTime) {
+      const timeString = current.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
+      slots.push({ value: timeString, label: timeString });
+      current = new Date(current.getTime() + 15 * 60000);
+    }
+    return slots;
+  };
 
   useEffect(() => {
     const fetchMenu = async () => {
@@ -54,34 +100,24 @@ export default function OrderPage() {
     };
     fetchMenu();
 
-    // Έλεγχος Σύνδεσης
     supabase.auth.getSession().then(({ data: { session } }) => setUser(session?.user || null));
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user || null));
     
-    // Anti-spam έλεγχος
     const storedOrders = parseInt(localStorage.getItem("servato_orders") || "0");
     const lastTime = parseInt(localStorage.getItem("servato_time") || "0");
-    if (Date.now() - lastTime > LOCKOUT_MS) {
-      localStorage.setItem("servato_orders", "0");
-    } else {
-      setOrdersPlaced(storedOrders);
-      if (storedOrders >= MAX_ORDERS) setIsLocked(true);
-    }
+    if (Date.now() - lastTime > LOCKOUT_MS) localStorage.setItem("servato_orders", "0");
+    else { setOrdersPlaced(storedOrders); if (storedOrders >= MAX_ORDERS) setIsLocked(true); }
 
     return () => subscription.unsubscribe();
   }, []);
 
-  // Έλεγχος Loyalty Live
   useEffect(() => {
     const checkLoyalty = async () => {
       if (customerPhone.trim().length >= 8) {
         const cleanPhone = customerPhone.replace(/\s+/g, "");
         const { data } = await supabase.from('customers_loyalty').select('*').eq('phone', cleanPhone).maybeSingle();
         setLoyaltyInfo(data || { phone: cleanPhone, points: 0 });
-      } else {
-        setLoyaltyInfo(null);
-        setRedeemReward(false);
-      }
+      } else { setLoyaltyInfo(null); setRedeemReward(false); }
     };
     const timer = setTimeout(checkLoyalty, 500);
     return () => clearTimeout(timer);
@@ -110,12 +146,11 @@ export default function OrderPage() {
     }));
   };
 
-  // Οικονομικοί Υπολογισμοί
   const subtotal = cart.reduce((total, cartItem) => total + (getItemPrice(cartItem.item) * cartItem.quantity), 0);
   const canRedeem = loyaltyInfo && loyaltyInfo.points >= REWARD_THRESHOLD;
   const discount = canRedeem && redeemReward ? REWARD_DISCOUNT_DKK : 0;
   const finalTotal = Math.max(0, subtotal - discount);
-  const vatMoms = Number((finalTotal * 0.2).toFixed(2)); // 25% Moms
+  const vatMoms = Number((finalTotal * 0.2).toFixed(2)); 
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,30 +166,18 @@ export default function OrderPage() {
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setCheckoutStep('cart');
-  };
+  const proceedToCheckout = () => { user ? setCheckoutStep('checkout') : setCheckoutStep('auth'); };
 
-  const proceedToCheckout = () => {
-    if (user) setCheckoutStep('checkout');
-    else setCheckoutStep('auth');
-  };
-
-  // Ο ΕΓΚΕΦΑΛΟΣ ΑΠΟΣΤΟΛΗΣ SERVATO (Προσαρμοσμένος για Hellas)
   const submitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLocked) return alert("Du har nået grænsen. Vent lidt / Limit reached.");
+    if (isLocked) return alert("Limit reached.");
     if (!customerName || !customerPhone || !user) return alert('Λείπουν στοιχεία.');
     
     setIsSubmitting(true);
     try {
       const cleanPhone = customerPhone.replace(/\s+/g, "");
-      const deviceId = crypto.randomUUID();
-
       const payload = {
-        user_id: user.id, // Κρατάμε τη σύνδεση με το λογαριασμό
+        user_id: user.id,
         order_type: 'takeaway',
         customer_name: customerName,
         customer_phone: cleanPhone,
@@ -174,18 +197,15 @@ export default function OrderPage() {
         status: 'pending'
       };
 
-      // 1. Αποστολή στο orders (ΟΧΙ πια στο order_items)
       const { data: orderData, error: orderError } = await supabase.from('orders').insert([payload]).select().single();
       if (orderError) throw orderError;
 
-      // 2. Audit Log για Nordic-mythos 1 ApS
       await supabase.from('action_logs').insert([{
         action_type: "TAKEAWAY_ORDER_CREATED",
         order_id: orderData.id,
         details: { company: "Nordic-mythos 1 ApS", user: user.email, total_dkk: finalTotal }
       }]);
 
-      // 3. Loyalty Update
       const earnedPoints = Math.floor(finalTotal / 10);
       if (loyaltyInfo && loyaltyInfo.id) {
         const currentPoints = loyaltyInfo.points || 0;
@@ -201,7 +221,6 @@ export default function OrderPage() {
         }]);
       }
 
-      // 4. Anti-spam
       const newTotal = ordersPlaced + 1;
       setOrdersPlaced(newTotal);
       localStorage.setItem("servato_orders", newTotal.toString());
@@ -209,16 +228,11 @@ export default function OrderPage() {
 
       setCheckoutStep('success');
       setCart([]);
-    } catch (error: any) {
-      alert('Σφάλμα: ' + error.message);
-    } finally {
-      setIsSubmitting(false);
-    }
+    } catch (error: any) { alert('Σφάλμα: ' + error.message); } finally { setIsSubmitting(false); }
   };
 
   return (
     <div className="min-h-screen font-sans bg-[#0B1120] text-gray-200 selection:bg-[#38BDF8] selection:text-[#0B1120] pb-24">
-      {/* Header */}
       <header className="bg-[#0F172A] border-b border-white/10 p-4 md:p-6 sticky top-0 z-40 flex justify-between items-center shadow-lg">
         <div className="flex items-center gap-3">
           <a href="/" className="hover:opacity-80 transition-opacity">
@@ -231,7 +245,6 @@ export default function OrderPage() {
         </div>
 
         <div className="flex items-center gap-3 md:gap-5">
-          {/* Language Switcher */}
           <div className="flex gap-1 md:gap-2 text-xl bg-slate-800 p-1 rounded-lg border border-white/10">
             <button onClick={() => setLang('da')} className={`p-1 rounded ${lang === 'da' ? 'bg-white/20 scale-110' : 'opacity-50 hover:opacity-100'}`}>🇩🇰</button>
             <button onClick={() => setLang('en')} className={`p-1 rounded ${lang === 'en' ? 'bg-white/20 scale-110' : 'opacity-50 hover:opacity-100'}`}>🇬🇧</button>
@@ -241,26 +254,20 @@ export default function OrderPage() {
           {user ? (
             <div className="hidden md:flex flex-col text-right">
               <span className="text-xs text-gray-400">{user.email}</span>
-              <button onClick={handleLogout} className="text-xs text-red-400 hover:text-red-300 underline">Log ud</button>
+              <button onClick={() => {supabase.auth.signOut(); setUser(null);}} className="text-xs text-red-400 hover:text-red-300 underline">Log ud</button>
             </div>
           ) : (
-            <button onClick={() => { setIsCartOpen(true); setCheckoutStep('auth'); }} className="hidden md:block text-sm font-bold text-[#38BDF8] hover:text-white transition-colors">
-              Log ind
-            </button>
+            <button onClick={() => { setIsCartOpen(true); setCheckoutStep('auth'); }} className="hidden md:block text-sm font-bold text-[#38BDF8] hover:text-white transition-colors">Log ind</button>
           )}
           <button onClick={() => setIsCartOpen(true)} className="relative bg-white/10 hover:bg-white/20 p-3 rounded-full transition-colors border border-white/5">
-            🛒
-            {cart.length > 0 && <span className="absolute -top-1 -right-1 bg-[#38BDF8] text-[#0B1120] text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full shadow-lg border-2 border-[#0F172A]">{cart.reduce((sum, item) => sum + item.quantity, 0)}</span>}
+            🛒 {cart.length > 0 && <span className="absolute -top-1 -right-1 bg-[#38BDF8] text-[#0B1120] text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full shadow-lg border-2 border-[#0F172A]">{cart.reduce((sum, item) => sum + item.quantity, 0)}</span>}
           </button>
         </div>
       </header>
 
-      {/* Menu List */}
       <main className="max-w-4xl mx-auto p-4 md:p-6 pt-8">
         <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-6">{ui.menuTitle}</h2>
-        {isLoading ? (
-          <p className="text-center text-[#38BDF8] animate-pulse">Indlæser menu...</p>
-        ) : (
+        {isLoading ? <p className="text-center text-[#38BDF8] animate-pulse">Loading...</p> : (
           <div className="flex flex-col gap-4">
             {menuItems.map(item => (
               <div key={item.id} className="bg-slate-800/40 p-4 rounded-2xl border border-white/5 flex gap-4 hover:border-white/10 transition-colors shadow-sm items-center">
@@ -268,9 +275,7 @@ export default function OrderPage() {
                   <div className="w-20 h-20 md:w-24 md:h-24 shrink-0 rounded-xl overflow-hidden bg-slate-800 border border-white/5">
                     <img src={`${supabaseImageUrl}${item.image_path}`} alt={getTitle(item)} className="w-full h-full object-cover" />
                   </div>
-                ) : (
-                   <div className="w-20 h-20 shrink-0 rounded-xl bg-slate-800/50 border border-white/5 flex items-center justify-center text-2xl">🍽️</div>
-                )}
+                ) : <div className="w-20 h-20 shrink-0 rounded-xl bg-slate-800/50 border border-white/5 flex items-center justify-center text-2xl">🍽️</div>}
                 <div className="flex-1">
                   <h3 className="font-bold text-lg text-white mb-1">{getTitle(item)}</h3>
                   <p className="text-sm text-gray-400 line-clamp-2 leading-relaxed mb-2">{getDesc(item)}</p>
@@ -285,12 +290,11 @@ export default function OrderPage() {
         )}
       </main>
 
-      {/* Floating Cart Panel */}
       {isCartOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-end">
           <div className="w-full max-w-md bg-[#0F172A] h-full flex flex-col shadow-2xl border-l border-white/10 animate-fade-in-up">
             <div className="p-6 border-b border-white/10 flex justify-between items-center bg-slate-900">
-              <h2 className="text-xl font-bold text-white">TAKEAWAY</h2>
+              <h2 className="text-xl font-bold text-white">{ui.cartTitle}</h2>
               <button onClick={() => setIsCartOpen(false)} className="text-gray-400 hover:text-white text-2xl">&times;</button>
             </div>
 
@@ -298,37 +302,30 @@ export default function OrderPage() {
               {checkoutStep === 'success' ? (
                 <div className="text-center py-20">
                   <span className="text-6xl mb-4 block">✅</span>
-                  <h3 className="text-2xl font-bold text-white mb-2">Tak for din bestilling!</h3>
-                  <p className="text-gray-400">Din mad vil være klar til afhentning snart.</p>
-                  <button onClick={() => { setIsCartOpen(false); setCheckoutStep('cart'); }} className="mt-8 bg-[#38BDF8] text-slate-900 font-bold px-8 py-3 rounded-xl hover:bg-sky-400 transition-colors">Luk</button>
+                  <h3 className="text-2xl font-bold text-white mb-2">{ui.successMsg}</h3>
+                  <p className="text-gray-400">{ui.successDesc}</p>
+                  <button onClick={() => { setIsCartOpen(false); setCheckoutStep('cart'); }} className="mt-8 bg-[#38BDF8] text-slate-900 font-bold px-8 py-3 rounded-xl hover:bg-sky-400 transition-colors">{ui.close}</button>
                 </div>
               ) : checkoutStep === 'auth' ? (
                 <div className="flex flex-col gap-5 py-4">
-                  <div className="text-center mb-4">
-                    <h3 className="text-2xl font-bold text-white mb-2">{authMode === 'signup' ? 'Opret en konto' : 'Velkommen tilbage'}</h3>
-                    <p className="text-gray-400 text-sm">{authMode === 'signup' ? 'Opret en konto for at bestille.' : 'Log ind for at fortsætte.'}</p>
-                  </div>
+                  <h3 className="text-2xl font-bold text-white text-center mb-2">{ui.loginTitle}</h3>
                   <form onSubmit={handleAuth} className="flex flex-col gap-4">
                     {authError && <div className="bg-red-500/10 border border-red-500 text-red-400 p-3 rounded-lg text-sm">{authError}</div>}
-                    <input type="email" placeholder="Email adresse" value={email} onChange={e => setEmail(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white outline-none focus:border-[#38BDF8]" />
-                    <input type="password" placeholder="Adgangskode" value={password} onChange={e => setPassword(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white outline-none focus:border-[#38BDF8]" />
-                    <button type="submit" className="w-full bg-[#38BDF8] hover:bg-sky-400 text-slate-900 font-bold py-4 rounded-xl shadow-lg transition-colors text-lg mt-2">
-                      {authMode === 'signup' ? 'Opret Konto' : 'Log Ind'}
-                    </button>
+                    <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white outline-none focus:border-[#38BDF8]" />
+                    <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white outline-none focus:border-[#38BDF8]" />
+                    <button type="submit" className="w-full bg-[#38BDF8] hover:bg-sky-400 text-slate-900 font-bold py-4 rounded-xl shadow-lg mt-2">Submit</button>
                   </form>
-                  <button type="button" onClick={() => setAuthMode(authMode === 'signup' ? 'login' : 'signup')} className="text-sm text-gray-400 hover:text-white underline transition-colors mt-4 text-center">
-                    {authMode === 'signup' ? 'Har du allerede en konto? Log ind her' : 'Har du ikke en konto? Opret en her'}
+                  <button type="button" onClick={() => setAuthMode(authMode === 'signup' ? 'login' : 'signup')} className="text-sm text-gray-400 hover:text-white underline text-center">
+                    Toggle Login / Register
                   </button>
                 </div>
               ) : cart.length === 0 ? (
-                <div className="text-center text-gray-500 mt-20"><span className="text-4xl mb-3 block">🛒</span><p>Din kurv er tom.</p></div>
+                <div className="text-center text-gray-500 mt-20"><span className="text-4xl mb-3 block">🛒</span><p>{ui.emptyCart}</p></div>
               ) : checkoutStep === 'cart' ? (
                 <div className="flex flex-col gap-4">
-                  {/* Wolt Banner */}
                   <a href="https://wolt.com" target="_blank" rel="noreferrer" className="block text-center bg-[#38BDF8]/10 border border-[#38BDF8]/30 text-[#38BDF8] text-xs font-bold p-3 rounded-xl hover:bg-[#38BDF8]/20 transition-colors">
                     {ui.wolt}
                   </a>
-
                   {cart.map(cartItem => (
                     <div key={cartItem.item.id} className="flex justify-between items-center bg-slate-800/30 p-3 rounded-xl border border-white/5">
                       <div className="flex-1 pr-2">
@@ -346,17 +343,16 @@ export default function OrderPage() {
                 </div>
               ) : (
                 <form id="checkoutForm" onSubmit={submitOrder} className="flex flex-col gap-5">
-                  <h3 className="font-bold text-lg text-white border-b border-white/10 pb-2">Dine oplysninger (Afhentning)</h3>
+                  <h3 className="font-bold text-lg text-white border-b border-white/10 pb-2">{ui.detailsTitle}</h3>
                   <div>
-                    <label className="text-xs text-gray-400 block mb-1">Fulde Navn</label>
-                    <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white outline-none focus:border-[#38BDF8]" placeholder="Dit navn" />
+                    <label className="text-xs text-gray-400 block mb-1">{ui.nameLabel}</label>
+                    <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white outline-none focus:border-[#38BDF8]" />
                   </div>
                   <div>
-                    <label className="text-xs text-gray-400 block mb-1">Telefonnummer (For Loyalty Points)</label>
-                    <input type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white outline-none focus:border-[#38BDF8]" placeholder="12345678" />
+                    <label className="text-xs text-gray-400 block mb-1">{ui.phoneLabel} (Loyalty)</label>
+                    <input type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white outline-none focus:border-[#38BDF8]" />
                   </div>
 
-                  {/* Loyalty Display */}
                   {loyaltyInfo && (
                     <div className="bg-emerald-900/30 border border-emerald-500/50 p-3 rounded-xl flex justify-between items-center">
                       <div>
@@ -365,75 +361,49 @@ export default function OrderPage() {
                       </div>
                       {canRedeem && (
                         <button type="button" onClick={() => setRedeemReward(!redeemReward)} className={`text-xs px-3 py-1.5 rounded-lg font-bold transition-colors ${redeemReward ? 'bg-emerald-500 text-slate-900' : 'bg-slate-800 text-emerald-400 border border-emerald-500/50'}`}>
-                          {redeemReward ? "✓ Brugt" : "Brug (-35 kr)"}
+                          {redeemReward ? "✓" : "Brug (-35 kr)"}
                         </button>
                       )}
                     </div>
                   )}
 
                   <div>
-                    <label className="text-xs text-gray-400 block mb-1">Afhentningstidspunkt</label>
+                    <label className="text-xs text-gray-400 block mb-1">{ui.timeLabel}</label>
                     <select value={requestedTime} onChange={e => setRequestedTime(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white outline-none focus:border-[#38BDF8]">
-                      <option value="ASAP">Hurtigst muligt (ASAP)</option>
-                      <option value="+20 min">Om 20 minutter</option>
-                      <option value="+45 min">Om 45 minutter</option>
+                      {generateTimeSlots().map((slot, i) => (
+                        <option key={i} value={slot.value}>{slot.label}</option>
+                      ))}
                     </select>
                   </div>
 
                   <div className="mt-2">
-                    <label className="text-xs text-gray-400 block mb-2">Betalingsmetode ved afhentning</label>
+                    <label className="text-xs text-gray-400 block mb-2">{ui.payLabel}</label>
                     <div className="grid grid-cols-2 gap-3">
-                      <div onClick={() => setPaymentMethod('card')} className={`cursor-pointer p-4 rounded-xl border text-center transition-all ${paymentMethod === 'card' ? 'bg-[#38BDF8]/10 border-[#38BDF8] text-[#38BDF8]' : 'bg-slate-800 border-white/5 text-gray-400'}`}>
-                        <span className="block text-2xl mb-1">💳</span> Kort
-                      </div>
-                      <div onClick={() => setPaymentMethod('cash')} className={`cursor-pointer p-4 rounded-xl border text-center transition-all ${paymentMethod === 'cash' ? 'bg-[#38BDF8]/10 border-[#38BDF8] text-[#38BDF8]' : 'bg-slate-800 border-white/5 text-gray-400'}`}>
-                        <span className="block text-2xl mb-1">💵</span> Kontant
-                      </div>
+                      <div onClick={() => setPaymentMethod('card')} className={`cursor-pointer p-4 rounded-xl border text-center transition-all ${paymentMethod === 'card' ? 'bg-[#38BDF8]/10 border-[#38BDF8] text-[#38BDF8]' : 'bg-slate-800 border-white/5 text-gray-400'}`}>💳 {ui.card}</div>
+                      <div onClick={() => setPaymentMethod('cash')} className={`cursor-pointer p-4 rounded-xl border text-center transition-all ${paymentMethod === 'cash' ? 'bg-[#38BDF8]/10 border-[#38BDF8] text-[#38BDF8]' : 'bg-slate-800 border-white/5 text-gray-400'}`}>💵 {ui.cash}</div>
                     </div>
                   </div>
                 </form>
               )}
             </div>
 
-            {/* Cart Footer */}
             {cart.length > 0 && checkoutStep !== 'success' && (
               <div className="p-6 bg-slate-900 border-t border-white/10">
                 <div className="flex justify-between items-center mb-1">
-                  <span className="text-gray-400">Subtotal</span>
-                  <span className="text-white font-bold">{subtotal} DKK</span>
+                  <span className="text-gray-400">{ui.subtotal}</span><span className="text-white font-bold">{subtotal} DKK</span>
                 </div>
-                {discount > 0 && (
-                  <div className="flex justify-between items-center mb-1 text-emerald-400">
-                    <span className="text-xs">Loyalty Rabat</span>
-                    <span className="font-bold">-{discount} DKK</span>
-                  </div>
-                )}
-                <div className="flex justify-between items-center mb-1 text-gray-500 text-xs">
-                  <span>Heraf 25% moms</span>
-                  <span>{vatMoms} DKK</span>
-                </div>
-                
-                <div className="flex justify-between items-center mt-4 mb-6 border-t border-white/10 pt-4">
-                  <span className="text-gray-200 font-bold">Total at betale</span>
-                  <span className="text-2xl font-bold text-[#38BDF8]">{finalTotal} DKK</span>
-                </div>
+                {discount > 0 && <div className="flex justify-between items-center mb-1 text-emerald-400"><span className="text-xs">{ui.loyaltyDiscount}</span><span className="font-bold">-{discount} DKK</span></div>}
+                <div className="flex justify-between items-center mb-1 text-gray-500 text-xs"><span>{ui.vat}</span><span>{vatMoms} DKK</span></div>
+                <div className="flex justify-between items-center mt-4 mb-6 border-t border-white/10 pt-4"><span className="text-gray-200 font-bold">{ui.totalPay}</span><span className="text-2xl font-bold text-[#38BDF8]">{finalTotal} DKK</span></div>
                 
                 {checkoutStep === 'cart' ? (
-                  <button onClick={proceedToCheckout} className="w-full bg-[#38BDF8] hover:bg-sky-400 text-slate-900 font-bold py-4 rounded-xl shadow-lg transition-colors text-lg">
-                    Gå til Kassen
-                  </button>
+                  <button onClick={proceedToCheckout} className="w-full bg-[#38BDF8] text-slate-900 font-bold py-4 rounded-xl shadow-lg">{ui.toCheckout}</button>
                 ) : checkoutStep === 'auth' ? (
-                  <button type="button" onClick={() => setCheckoutStep('cart')} className="w-full px-6 py-4 rounded-xl bg-slate-800 text-white font-bold hover:bg-slate-700 border border-white/5">
-                    Tilbage til kurv
-                  </button>
+                  <button type="button" onClick={() => setCheckoutStep('cart')} className="w-full px-6 py-4 rounded-xl bg-slate-800 text-white font-bold border border-white/5">{ui.backToCart}</button>
                 ) : (
                   <div className="flex gap-3">
-                    <button type="button" onClick={() => setCheckoutStep('cart')} className="px-6 py-4 rounded-xl bg-slate-800 text-white font-bold hover:bg-slate-700 border border-white/5">
-                      Tilbage
-                    </button>
-                    <button type="submit" form="checkoutForm" disabled={isSubmitting} className="flex-1 bg-green-500 hover:bg-green-400 text-white font-bold py-4 rounded-xl shadow-lg transition-colors text-lg disabled:opacity-50">
-                      {isSubmitting ? 'Sender...' : 'Bekræft Bestilling'}
-                    </button>
+                    <button type="button" onClick={() => setCheckoutStep('cart')} className="px-6 py-4 rounded-xl bg-slate-800 text-white font-bold border border-white/5">{ui.back}</button>
+                    <button type="submit" form="checkoutForm" disabled={isSubmitting} className="flex-1 bg-green-500 text-white font-bold py-4 rounded-xl disabled:opacity-50">{isSubmitting ? ui.sending : ui.confirm}</button>
                   </div>
                 )}
               </div>
