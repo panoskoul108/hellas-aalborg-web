@@ -175,7 +175,7 @@ export default function AdminDashboard() {
                 <OrderCard 
                   key={order.id} 
                   order={order} 
-                 onAccept={(mins: number) => handleAcceptOrder(order, mins)}
+                  onAccept={(mins: number) => handleAcceptOrder(order, mins)} 
                 />
               ))}
             </div>
@@ -248,7 +248,7 @@ const OrderCard = ({ order, onAccept, onPrint, onComplete }: any) => {
   const isPending = order.status === 'pending';
   const isPreparing = order.status === 'preparing';
   
-  const [prepTime, setPrepTime] = useState(20);
+  const [prepTime, setPrepTime] = useState(10); // Προεπιλογή
 
   return (
     <div className={`bg-slate-800 border rounded-2xl p-5 shadow-lg relative overflow-hidden ${isPending ? "border-[#38BDF8]/50" : "border-orange-500/50"}`}>
@@ -300,12 +300,12 @@ const OrderCard = ({ order, onAccept, onPrint, onComplete }: any) => {
             onChange={(e) => setPrepTime(Number(e.target.value))}
             className="bg-slate-900 text-[#38BDF8] font-black p-3 rounded-xl outline-none border border-slate-700 flex-1 text-sm text-center"
           >
+            <option value={5}>Σε 5'</option>
+            <option value={7}>Σε 7'</option>
             <option value={10}>Σε 10'</option>
+            <option value={12}>Σε 12'</option>
             <option value={15}>Σε 15'</option>
             <option value={20}>Σε 20'</option>
-            <option value={30}>Σε 30'</option>
-            <option value={45}>Σε 45'</option>
-            <option value={60}>Σε 1 Ώρα</option>
           </select>
           <button 
             onClick={() => onAccept(prepTime)} 
