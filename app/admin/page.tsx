@@ -14,8 +14,8 @@ export default function AdminPage() {
   const [editingItem, setEditingItem] = useState<any>(null);
   const [imageUploading, setImageUploading] = useState(false);
 
-  // ΝΕΟ: State για τις Παραγγελίες
-  const [activeTab, setActiveTab] = useState<'menu' | 'orders'>('orders'); // Ξεκινάει στις παραγγελίες από προεπιλογή
+  // State για τις Παραγγελίες
+  const [activeTab, setActiveTab] = useState<'menu' | 'orders'>('orders'); 
   const [orders, setOrders] = useState<any[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
 
@@ -32,20 +32,17 @@ export default function AdminPage() {
 
   const fetchMenu = async () => {
     setLoading(true);
-    const { data, error } = await supabase.from('menu_items').select('*').order('sort_order', { ascending: true });
+    const { data } = await supabase.from('menu_items').select('*').order('sort_order', { ascending: true });
     if (data) setMenuItems(data);
     setLoading(false);
   };
 
-  // ΝΕΟ: Φόρτωση Παραγγελιών
   const fetchOrders = async () => {
     setLoadingOrders(true);
-    // Τραβάμε τις παραγγελίες ΜΑΖΙ με τα πιάτα (order_items) που ανήκουν σε αυτές
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('orders')
       .select('*, order_items(*)')
       .order('created_at', { ascending: false });
-    
     if (data) setOrders(data);
     setLoadingOrders(false);
   };
@@ -56,14 +53,12 @@ export default function AdminPage() {
     }
   }, [isAuthenticated]);
 
-  // ΝΕΟ: Αυτόματη ανανέωση παραγγελιών κάθε 15 δευτερόλεπτα (σαν live POS)
+  // Αυτόματη ανανέωση παραγγελιών κάθε 15 δευτερόλεπτα
   useEffect(() => {
     let interval: any;
     if (isAuthenticated && activeTab === 'orders') {
       fetchOrders();
-      interval = setInterval(() => {
-        fetchOrders();
-      }, 15000);
+      interval = setInterval(() => fetchOrders(), 15000);
     }
     return () => clearInterval(interval);
   }, [isAuthenticated, activeTab]);
@@ -80,17 +75,12 @@ export default function AdminPage() {
     setIsAuthenticated(false);
   };
 
-  // ΝΕΟ: Αλλαγή Κατάστασης Παραγγελίας
   const updateOrderStatus = async (orderId: string, status: string) => {
     const { error } = await supabase.from('orders').update({ status }).eq('id', orderId);
-    if (!error) {
-      fetchOrders(); // Ανανεώνουμε τη λίστα μετά την αλλαγή
-    } else {
-      alert('Σφάλμα: ' + error.message);
-    }
+    if (!error) fetchOrders();
+    else alert('Σφάλμα: ' + error.message);
   };
 
-  // --- Λειτουργίες Μενού (Παραμένουν ίδιες) ---
   const openNewModal = () => {
     setEditingItem({
       sort_order: menuItems.length + 1, 
@@ -173,19 +163,12 @@ export default function AdminPage() {
     <div className="min-h-screen bg-[#0B1120] text-gray-200 p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
         
-        {/* TABS & BUTTONS */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 border-b border-white/10 pb-4">
           <div className="flex gap-6">
-            <button 
-              onClick={() => setActiveTab('orders')} 
-              className={`text-xl md:text-2xl font-bold pb-2 transition-colors ${activeTab === 'orders' ? 'text-white border-b-2 border-[#38BDF8]' : 'text-gray-500 hover:text-gray-300'}`}
-            >
+            <button onClick={() => setActiveTab('orders')} className={`text-xl md:text-2xl font-bold pb-2 transition-colors ${activeTab === 'orders' ? 'text-white border-b-2 border-[#38BDF8]' : 'text-gray-500 hover:text-gray-300'}`}>
               📦 Παραγγελίες
             </button>
-            <button 
-              onClick={() => setActiveTab('menu')} 
-              className={`text-xl md:text-2xl font-bold pb-2 transition-colors ${activeTab === 'menu' ? 'text-white border-b-2 border-[#38BDF8]' : 'text-gray-500 hover:text-gray-300'}`}
-            >
+            <button onClick={() => setActiveTab('menu')} className={`text-xl md:text-2xl font-bold pb-2 transition-colors ${activeTab === 'menu' ? 'text-white border-b-2 border-[#38BDF8]' : 'text-gray-500 hover:text-gray-300'}`}>
               🍔 Μενού
             </button>
           </div>
@@ -203,7 +186,6 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* ΕΝΟΤΗΤΑ ΠΑΡΑΓΓΕΛΙΩΝ */}
         {activeTab === 'orders' && (
           <div className="flex flex-col gap-6">
             {loadingOrders && orders.length === 0 ? (
@@ -272,7 +254,7 @@ export default function AdminPage() {
             )}
           </div>
         )}
-        {/* ΕΝΟΤΗΤΑ ΜΕΝΟΥ */}
+
         {activeTab === 'menu' && (
           <div>
             {loading ? <p className="text-[#38BDF8]">Φόρτωση πιάτων...</p> : (
