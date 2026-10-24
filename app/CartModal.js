@@ -21,23 +21,17 @@ export default function CartModal({
   isAcceptingOrders = true,
   openPrivacy,
   theme = "light",
-  // Νέα props για Hellas Takeaway/Delivery & Loyalty
-  orderType = "takeaway", // 'takeaway' | 'delivery'
-  setOrderType,
   onSubmitOrder,
   loyaltyInfo,
   checkCustomerLoyalty,
   isSubmitting = false,
+  woltUrl = "https://wolt.com", // Βάλε εδώ το ακριβές link του Hellas Aalborg στη Wolt
 }) {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
-  const [deliveryAddress, setDeliveryAddress] = useState("");
-  const [postalCode, setPostalCode] = useState("9000");
-  const [floorDoor, setFloorDoor] = useState("");
   const [requestedTime, setRequestedTime] = useState("ASAP");
   const [redeemReward, setRedeemReward] = useState(false);
 
-  // Αυτόματος έλεγχος πόντων Loyalty όταν ο πελάτης πληκτρολογεί το τηλέφωνό του
   useEffect(() => {
     const timer = setTimeout(() => {
       if (checkCustomerLoyalty && customerPhone.trim().length >= 8) {
@@ -50,120 +44,98 @@ export default function CartModal({
   if (!isCartOpen) return null;
   const isDark = theme === "dark";
 
-  // Πολυγλωσσικό λεξικό (Δανικά, Αγγλικά, Ελληνικά)
   const dict = {
     da: {
-      yourOrder: "DIN BESTILLING",
-      takeaway: "AFHENTNING",
-      delivery: "LEVERING",
+      yourOrder: "DIN TAKEAWAY BESTILLING",
+      takeawayBadge: "🛍️ KUN AFHENTNING I BUTIKKEN",
+      woltPrompt: "Ønsker du levering? Bestil via Wolt 🛵",
       namePlaceholder: "Dit fulde navn *",
       phonePlaceholder: "Telefonnummer (f.eks. 12345678) *",
-      addressPlaceholder: "Gade og husnummer *",
-      postalPlaceholder: "Postnr. *",
-      floorPlaceholder: "Etage / Dør (valgfrit)",
-      timeLabel: "Ønsket tidspunkt",
-      asap: "Hurtigst muligt (ASAP)",
+      timeLabel: "Afhentningstidspunkt",
+      asap: "Hurtigst muligt (ca. 15-20 min)",
       freqBought: "OFTE KØBT SAMMEN",
       genNoteTitle: "BEMÆRKNINGER TIL ORDREN",
       notePlaceholder: "Allergier, ekstra servietter osv...",
-      payMethod: "BETALINGSMETODE",
+      payMethod: "BETALING VED AFHENTNING",
       cardPickup: "KORT / MOBILEPAY",
       cash: "KONTANT",
       subtotal: "Subtotal",
-      deliveryFee: "Leveringsgebyr",
       momsIncluded: "Heraf 25% moms",
       loyaltyTitle: "LOYALITETSPOINT",
       redeemText: `Brug ${REWARD_THRESHOLD} point (-${REWARD_DISCOUNT_DKK} kr.)`,
-      fillRequired: "UDFYLD KONTAKTOPLYSNINGER",
-      sendOrder: "SEND BESTILLING",
-      processing: "BEHANDLER...",
+      fillRequired: "UDFYLD NAVN & TELEFON",
+      sendOrder: "BESTIL TIL AFHENTNING",
+      processing: "SENDER...",
       pausedMsg: "Vi modtager desværre ikke online ordrer i øjeblikket.",
-      privacyLink: "Privatlivspolitik & Handelsbetingelser",
+      privacyLink: "Privatlivspolitik & Handelsbetingelser (Nordic-mythos 1 ApS)",
     },
     en: {
-      yourOrder: "YOUR ORDER",
-      takeaway: "TAKEAWAY",
-      delivery: "DELIVERY",
+      yourOrder: "YOUR TAKEAWAY ORDER",
+      takeawayBadge: "🛍️ STORE PICKUP ONLY",
+      woltPrompt: "Want delivery? Order via Wolt 🛵",
       namePlaceholder: "Your full name *",
       phonePlaceholder: "Phone number *",
-      addressPlaceholder: "Street and house number *",
-      postalPlaceholder: "Postal code *",
-      floorPlaceholder: "Floor / Door (optional)",
-      timeLabel: "Requested time",
-      asap: "As soon as possible (ASAP)",
+      timeLabel: "Pickup time",
+      asap: "As soon as possible (approx. 15-20 min)",
       freqBought: "FREQUENTLY BOUGHT TOGETHER",
       genNoteTitle: "ORDER NOTES",
       notePlaceholder: "Allergies, instructions...",
-      payMethod: "PAYMENT METHOD",
+      payMethod: "PAYMENT AT PICKUP",
       cardPickup: "CARD / MOBILEPAY",
       cash: "CASH",
       subtotal: "Subtotal",
-      deliveryFee: "Delivery fee",
       momsIncluded: "Included 25% VAT (Moms)",
       loyaltyTitle: "LOYALTY POINTS",
       redeemText: `Redeem ${REWARD_THRESHOLD} points (-${REWARD_DISCOUNT_DKK} kr.)`,
-      fillRequired: "FILL REQUIRED DETAILS",
-      sendOrder: "PLACE ORDER",
+      fillRequired: "ENTER NAME & PHONE",
+      sendOrder: "ORDER FOR PICKUP",
       processing: "PROCESSING...",
       pausedMsg: "We are currently not accepting online orders.",
-      privacyLink: "Privacy Policy & Terms",
+      privacyLink: "Privacy Policy & Terms (Nordic-mythos 1 ApS)",
     },
     el: {
-      yourOrder: "Η ΠΑΡΑΓΓΕΛΙΑ ΣΑΣ",
-      takeaway: "ΠΑΡΑΛΑΒΗ (TAKEAWAY)",
-      delivery: "ΔΙΑΝΟΜΗ (DELIVERY)",
+      yourOrder: "ΠΑΡΑΓΓΕΛΙΑ TAKEAWAY",
+      takeawayBadge: "🛍️ ΠΑΡΑΛΑΒΗ ΑΠΟ ΤΟ ΚΑΤΑΣΤΗΜΑ",
+      woltPrompt: "Θέλετε Delivery; Παραγγείλτε μέσω Wolt 🛵",
       namePlaceholder: "Ονοματεπώνυμο *",
       phonePlaceholder: "Τηλέφωνο επικοινωνίας *",
-      addressPlaceholder: "Οδός και Αριθμός *",
-      postalPlaceholder: "Τ.Κ. *",
-      floorPlaceholder: "Όροφος / Κουδούνι",
-      timeLabel: "Επιθυμητή ώρα",
-      asap: "Το συντομότερο δυνατό (ASAP)",
+      timeLabel: "Ώρα παραλαβής",
+      asap: "Το συντομότερο δυνατό (περίπου 15-20 λεπτά)",
       freqBought: "ΣΥΝΟΔΕΥΣΤΕ ΜΕ",
       genNoteTitle: "ΣΧΟΛΙΑ ΠΑΡΑΓΓΕΛΙΑΣ",
       notePlaceholder: "Αλλεργίες, οδηγίες...",
-      payMethod: "ΤΡΟΠΟΣ ΠΛΗΡΩΜΗΣ",
+      payMethod: "ΠΛΗΡΩΜΗ ΚΑΤΑ ΤΗΝ ΠΑΡΑΛΑΒΗ",
       cardPickup: "ΚΑΡΤΑ / MOBILEPAY",
       cash: "ΜΕΤΡΗΤΑ",
       subtotal: "Μερικό Σύνολο",
-      deliveryFee: "Κόστος Διανομής",
       momsIncluded: "Περιλαμβάνει 25% ΦΠΑ (Moms)",
       loyaltyTitle: "ΠΟΝΤΟΙ LOYALTY",
       redeemText: `Εξαργύρωση ${REWARD_THRESHOLD} πόντων (-${REWARD_DISCOUNT_DKK} kr.)`,
-      fillRequired: "ΣΥΜΠΛΗΡΩΣΤΕ ΤΑ ΣΤΟΙΧΕΙΑ ΣΑΣ",
+      fillRequired: "ΣΥΜΠΛΗΡΩΣΤΕ ΟΝΟΜΑ & ΤΗΛΕΦΩΝΟ",
       sendOrder: "ΑΠΟΣΤΟΛΗ ΠΑΡΑΓΓΕΛΙΑΣ",
       processing: "ΑΠΟΣΤΟΛΗ...",
       pausedMsg: "Προς το παρόν δεν δεχόμαστε online παραγγελίες.",
-      privacyLink: "Πολιτική Απορρήτου & Όροι Χρήσης",
+      privacyLink: "Πολιτική Απορρήτου & Όροι (Nordic-mythos 1 ApS)",
     },
   };
 
   const ui = dict[lang] || dict.da;
 
-  // Helpers για τον πίνακα menu_items του Hellas Aalborg
   const getTitle = (item) =>
     item[`title_${lang}`] || item.title_da || item.title_en || item.title_el || item.name || "";
 
-  const getItemPrice = (item) => {
-    const rawPrice =
-      orderType === "delivery"
-        ? item.price_delivery || item.price_takeaway || item.price
-        : item.price_takeaway || item.price;
-    return parseFloat(rawPrice || 0);
-  };
+  // Διαβάζει αποκλειστικά την τιμή Takeaway από τον πίνακα menu_items
+  const getItemPrice = (item) => parseFloat(item.price_takeaway || item.price || 0);
 
-  // Υπολογισμός Συνόλων σε DKK
   const subtotalDkk = cart.reduce(
     (sum, item) => sum + getItemPrice(item) * (item.quantity || 1),
     0
   );
-  const deliveryFeeDkk = orderType === "delivery" ? 35 : 0; // Προσαρμόσιμο κόστος διανομής
   const canRedeem = loyaltyInfo && loyaltyInfo.points >= REWARD_THRESHOLD;
   const discountDkk = canRedeem && redeemReward ? REWARD_DISCOUNT_DKK : 0;
-  const finalTotalDkk = Math.max(0, subtotalDkk + deliveryFeeDkk - discountDkk);
-  const vatMomsDkk = finalTotalDkk * 0.2; // 25% ΦΠΑ επί της καθαρής αξίας = 20% της τελικής
+  const finalTotalDkk = Math.max(0, subtotalDkk - discountDkk);
+  const vatMomsDkk = finalTotalDkk * 0.2;
 
-  // Προτάσεις (Smart Upsell) από τις στήλες popular / featured του menu_items
   const cartItemIds = cart.map((item) => item.id);
   const recommendations = (products || [])
     .filter(
@@ -174,24 +146,18 @@ export default function CartModal({
     )
     .slice(0, 4);
 
-  // Έλεγχος εγκυρότητας φόρμας
   const isFormValid =
     cart.length > 0 &&
     customerName.trim().length >= 2 &&
     customerPhone.trim().length >= 6 &&
-    paymentMethod &&
-    (orderType === "takeaway" ||
-      (deliveryAddress.trim().length >= 4 && postalCode.trim().length >= 4));
+    paymentMethod;
 
   const triggerOrderSubmit = () => {
     if (!isFormValid || isSubmitting) return;
     onSubmitOrder({
-      order_type: orderType,
+      order_type: "takeaway",
       customer_name: customerName.trim(),
       customer_phone: customerPhone.trim(),
-      delivery_address: deliveryAddress.trim(),
-      postal_code: postalCode.trim(),
-      floor_door: floorDoor.trim(),
       requested_time: requestedTime,
       items: cart.map((item) => ({
         id: item.id,
@@ -203,7 +169,6 @@ export default function CartModal({
         selectedOptions: item.selectedOptions || [],
       })),
       subtotal_dkk: subtotalDkk,
-      delivery_fee_dkk: deliveryFeeDkk,
       discount_dkk: discountDkk,
       payment_method: paymentMethod,
       notes: generalNote,
@@ -231,33 +196,22 @@ export default function CartModal({
       {/* Main Content */}
       <div className={`flex-1 overflow-y-auto p-4 no-scrollbar pb-32 ${isDark ? "bg-gray-900" : "bg-gray-50"}`}>
         
-        {/* 1. Επιλογή Takeaway vs Delivery */}
-        <div className={`flex p-1.5 rounded-2xl mb-6 shadow-inner ${isDark ? "bg-gray-800" : "bg-gray-200"}`}>
-          <button
-            onClick={() => setOrderType && setOrderType("takeaway")}
-            className={`flex-1 py-3 rounded-xl font-black text-xs uppercase transition-all ${
-              orderType === "takeaway"
-                ? "bg-white text-gray-900 shadow-md scale-[1.01]"
-                : "text-gray-500"
-            }`}
-            style={orderType === "takeaway" ? { color: themeColor } : {}}
+        {/* Takeaway Banner + Wolt Link */}
+        <div className="mb-6 flex flex-col sm:flex-row items-center justify-between gap-2 p-3 rounded-2xl bg-sky-50 border border-sky-200">
+          <span className="font-black text-xs text-sky-900 tracking-wide">
+            {ui.takeawayBadge}
+          </span>
+          <a
+            href={woltUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[11px] font-black text-sky-600 hover:underline"
           >
-            🛍️ {ui.takeaway}
-          </button>
-          <button
-            onClick={() => setOrderType && setOrderType("delivery")}
-            className={`flex-1 py-3 rounded-xl font-black text-xs uppercase transition-all ${
-              orderType === "delivery"
-                ? "bg-white text-gray-900 shadow-md scale-[1.01]"
-                : "text-gray-500"
-            }`}
-            style={orderType === "delivery" ? { color: themeColor } : {}}
-          >
-            🛵 {ui.delivery}
-          </button>
+            {ui.woltPrompt}
+          </a>
         </div>
 
-        {/* 2. Λίστα Προϊόντων Καλαθιού */}
+        {/* Λίστα Προϊόντων */}
         <div className={`mb-6 bg-transparent rounded-2xl ${isDark ? "divide-gray-800" : "divide-gray-200"} divide-y`}>
           {cart.map((item) => {
             const unitPrice = getItemPrice(item);
@@ -315,7 +269,7 @@ export default function CartModal({
           })}
         </div>
 
-        {/* 3. Smart Upsell Προτάσεις */}
+        {/* Smart Upsell Προτάσεις */}
         {recommendations.length > 0 && (
           <div className="mb-6">
             <p className="font-black text-[10px] uppercase text-sky-600 mb-3 tracking-widest px-1">
@@ -344,7 +298,7 @@ export default function CartModal({
           </div>
         )}
 
-        {/* 4. Φόρμα Στοιχείων Πελάτη (Takeaway / Delivery) */}
+        {/* Φόρμα Στοιχείων Παραλαβής (Takeaway) */}
         <div className={`p-4 rounded-2xl border mb-6 space-y-3 ${isDark ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200 shadow-sm"}`}>
           <input
             type="text"
@@ -365,7 +319,7 @@ export default function CartModal({
             }`}
           />
 
-          {/* Εμφάνιση Πόντων Loyalty αν βρεθεί το τηλέφωνο */}
+          {/* Εμφάνιση Πόντων Loyalty */}
           {loyaltyInfo && (
             <div className="p-3 rounded-xl bg-sky-50 border border-sky-200 flex justify-between items-center">
               <div>
@@ -388,40 +342,6 @@ export default function CartModal({
             </div>
           )}
 
-          {orderType === "delivery" && (
-            <>
-              <input
-                type="text"
-                placeholder={ui.addressPlaceholder}
-                value={deliveryAddress}
-                onChange={(e) => setDeliveryAddress(e.target.value)}
-                className={`w-full border rounded-xl px-4 py-3 text-sm font-bold focus:outline-none ${
-                  isDark ? "bg-gray-900 border-gray-700 text-white" : "bg-gray-50 border-gray-200 text-gray-900"
-                }`}
-              />
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder={ui.postalPlaceholder}
-                  value={postalCode}
-                  onChange={(e) => setPostalCode(e.target.value)}
-                  className={`w-1/3 border rounded-xl px-4 py-3 text-sm font-bold focus:outline-none ${
-                    isDark ? "bg-gray-900 border-gray-700 text-white" : "bg-gray-50 border-gray-200 text-gray-900"
-                  }`}
-                />
-                <input
-                  type="text"
-                  placeholder={ui.floorPlaceholder}
-                  value={floorDoor}
-                  onChange={(e) => setFloorDoor(e.target.value)}
-                  className={`w-2/3 border rounded-xl px-4 py-3 text-sm font-bold focus:outline-none ${
-                    isDark ? "bg-gray-900 border-gray-700 text-white" : "bg-gray-50 border-gray-200 text-gray-900"
-                  }`}
-                />
-              </div>
-            </>
-          )}
-
           <div>
             <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">
               {ui.timeLabel}
@@ -434,6 +354,7 @@ export default function CartModal({
               }`}
             >
               <option value="ASAP">{ui.asap}</option>
+              <option value="In 20 mins">+20 min</option>
               <option value="In 30 mins">+30 min</option>
               <option value="In 45 mins">+45 min</option>
               <option value="In 60 mins">+60 min</option>
@@ -441,7 +362,7 @@ export default function CartModal({
           </div>
         </div>
 
-        {/* 5. Σχόλια Παραγγελίας */}
+        {/* Σχόλια Παραγγελίας */}
         <div className="mb-6">
           <p className="font-black text-[10px] uppercase text-gray-400 mb-2 tracking-widest px-1">
             {ui.genNoteTitle}
@@ -457,7 +378,7 @@ export default function CartModal({
           />
         </div>
 
-        {/* 6. Τρόπος Πληρωμής */}
+        {/* Τρόπος Πληρωμής */}
         <div className={`flex flex-col mb-6 p-3 rounded-2xl border shadow-sm ${isDark ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}`}>
           <span className="font-black text-[9px] uppercase text-gray-500 tracking-widest mb-2 text-center">
             {ui.payMethod} <span className="text-red-500">*</span>
@@ -490,18 +411,12 @@ export default function CartModal({
           </div>
         </div>
 
-        {/* 7. Ανάλυση Κόστους & 25% Δανέζικου ΦΠΑ (Moms) */}
+        {/* Ανάλυση Κόστους & 25% Moms */}
         <div className={`p-4 rounded-2xl border text-xs space-y-1.5 ${isDark ? "bg-gray-800 border-gray-700 text-gray-300" : "bg-white border-gray-200 text-gray-700"}`}>
           <div className="flex justify-between font-bold">
             <span>{ui.subtotal}</span>
             <span>{subtotalDkk.toFixed(2)} kr.</span>
           </div>
-          {orderType === "delivery" && (
-            <div className="flex justify-between font-bold">
-              <span>{ui.deliveryFee}</span>
-              <span>{deliveryFeeDkk.toFixed(2)} kr.</span>
-            </div>
-          )}
           {discountDkk > 0 && (
             <div className="flex justify-between font-black text-emerald-600">
               <span>Loyalty Discount</span>
