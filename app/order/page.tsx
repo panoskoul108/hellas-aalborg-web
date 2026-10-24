@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { supabase } from '../supabase';
-import ProductModal from './ProductModal'; 
+import ProductModal from './ProductModal';
 
 const MAX_ORDERS = 5;
 const LOCKOUT_MS = 5 * 60 * 1000;
@@ -50,7 +50,10 @@ export default function OrderPage() {
       payLabel: "Betalingsmetode", card: "Kort", cash: "Kontant",
       subtotal: "Subtotal", loyaltyDiscount: "Loyalty Rabat", vat: "Heraf 25% moms",
       totalPay: "Total at betale", back: "Tilbage", confirm: "Bekræft Bestilling", sending: "Sender...",
-      close: "Luk", loginTitle: "Log ind eller Opret", toCheckout: "Gå til Kassen", backToCart: "Tilbage til kurv"
+      close: "Luk", loginTitle: "Log ind eller Opret", toCheckout: "Gå til Kassen", backToCart: "Tilbage til kurv",
+      trackPendingTitle: "Afventer Godkendelse", trackPendingDesc: "Restauranten gennemgår din ordre...",
+      trackPrepTitle: "Tilberedes!", trackPrepTime: "Klar klokken:",
+      trackReadyTitle: "Klar til afhentning!", trackReadyDesc: "Din ordre venter på dig ved kassen."
     },
     en: { 
       menuTitle: "Choose your dishes", add: "Add", wolt: "Want delivery? Order via Wolt 🛵",
@@ -60,7 +63,10 @@ export default function OrderPage() {
       payLabel: "Payment Method", card: "Card", cash: "Cash",
       subtotal: "Subtotal", loyaltyDiscount: "Loyalty Discount", vat: "Includes 25% VAT",
       totalPay: "Total to pay", back: "Back", confirm: "Confirm Order", sending: "Sending...",
-      close: "Close", loginTitle: "Login or Register", toCheckout: "Proceed to Checkout", backToCart: "Back to Cart"
+      close: "Close", loginTitle: "Login or Register", toCheckout: "Proceed to Checkout", backToCart: "Back to Cart",
+      trackPendingTitle: "Awaiting Approval", trackPendingDesc: "The restaurant is reviewing your order...",
+      trackPrepTitle: "Preparing!", trackPrepTime: "Will be ready at:",
+      trackReadyTitle: "Ready for Pickup!", trackReadyDesc: "Your order is waiting for you at the counter."
     },
     el: { 
       menuTitle: "Επιλέξτε τα πιάτα σας", add: "Προσθήκη", wolt: "Θέλετε Delivery; Παραγγείλτε μέσω Wolt 🛵",
@@ -70,7 +76,10 @@ export default function OrderPage() {
       payLabel: "Τρόπος Πληρωμής", card: "Κάρτα (POS)", cash: "Μετρητά",
       subtotal: "Μερικό Σύνολο", loyaltyDiscount: "Έκπτωση Loyalty", vat: "Περιλαμβάνει 25% ΦΠΑ",
       totalPay: "Σύνολο Πληρωμής", back: "Πίσω", confirm: "Επιβεβαίωση", sending: "Αποστολή...",
-      close: "Κλείσιμο", loginTitle: "Σύνδεση ή Εγγραφή", toCheckout: "Ολοκλήρωση Παραγγελίας", backToCart: "Πίσω στο καλάθι"
+      close: "Κλείσιμο", loginTitle: "Σύνδεση ή Εγγραφή", toCheckout: "Ολοκλήρωση Παραγγελίας", backToCart: "Πίσω στο καλάθι",
+      trackPendingTitle: "Αναμονη Αποδοχης", trackPendingDesc: "Το κατάστημα εξετάζει την παραγγελία σας...",
+      trackPrepTitle: "Ετοιμαζεται!", trackPrepTime: "Θα ειναι ετοιμο στις:",
+      trackReadyTitle: "Ετοιμο για Παραλαβη!", trackReadyDesc: "Η παραγγελία σας περιμένει στο ταμείο."
     }
   };
   const ui = dict[lang];
@@ -217,7 +226,7 @@ export default function OrderPage() {
       const { data: orderData, error: orderError } = await supabase.from('orders').insert([payload]).select().single();
       if (orderError) throw orderError;
       
-      setPlacedOrder(orderData); // === ΑΠΟΘΗΚΕΥΣΗ ΓΙΑ ΤΟ TRACKER ===
+      setPlacedOrder(orderData); // ΑΠΟΘΗΚΕΥΣΗ ΓΙΑ ΤΟ TRACKER
 
       await supabase.from('action_logs').insert([{
         action_type: "TAKEAWAY_ORDER_CREATED",
@@ -330,22 +339,21 @@ export default function OrderPage() {
             <div className="flex-1 overflow-y-auto p-6">
               {checkoutStep === 'success' ? (
                 
-                // === ΝΕΑ ΟΘΟΝΗ LIVE TRACKER ===
                 <div className="text-center py-10 flex flex-col items-center">
                   {placedOrder?.status === 'pending' && (
                     <>
                       <div className="w-16 h-16 rounded-full border-4 border-[#38BDF8] border-t-transparent animate-spin mb-6"></div>
-                      <h3 className="text-2xl font-black text-white mb-2 uppercase">Αναμονη Αποδοχης</h3>
-                      <p className="text-gray-400 font-bold mb-8">Το κατάστημα εξετάζει την παραγγελία σας...</p>
+                      <h3 className="text-2xl font-black text-white mb-2 uppercase">{ui.trackPendingTitle}</h3>
+                      <p className="text-gray-400 font-bold mb-8">{ui.trackPendingDesc}</p>
                     </>
                   )}
 
                   {placedOrder?.status === 'preparing' && (
                     <div className="animate-fade-in-up">
                       <span className="text-6xl mb-4 block">🔥</span>
-                      <h3 className="text-2xl font-black text-white mb-2 uppercase">Ετοιμαζεται!</h3>
+                      <h3 className="text-2xl font-black text-white mb-2 uppercase">{ui.trackPrepTitle}</h3>
                       <div className="bg-[#38BDF8]/20 border border-[#38BDF8]/50 rounded-2xl p-6 mt-6 shadow-xl">
-                        <p className="text-sm font-black text-[#38BDF8] uppercase tracking-widest mb-1">Θα ειναι ετοιμο στις:</p>
+                        <p className="text-sm font-black text-[#38BDF8] uppercase tracking-widest mb-1">{ui.trackPrepTime}</p>
                         <p className="text-5xl font-black text-white">{placedOrder.requested_time}</p>
                       </div>
                     </div>
@@ -354,8 +362,8 @@ export default function OrderPage() {
                   {placedOrder?.status === 'completed' && (
                     <div className="animate-fade-in-up">
                       <span className="text-6xl mb-4 block">✅</span>
-                      <h3 className="text-2xl font-black text-emerald-400 mb-2 uppercase">Ετοιμο για Παραλαβη!</h3>
-                      <p className="text-gray-300 font-bold">Η παραγγελία σας σας περιμένει στο ταμείο.</p>
+                      <h3 className="text-2xl font-black text-emerald-400 mb-2 uppercase">{ui.trackReadyTitle}</h3>
+                      <p className="text-gray-300 font-bold">{ui.trackReadyDesc}</p>
                     </div>
                   )}
 
@@ -363,7 +371,6 @@ export default function OrderPage() {
                     {ui.close}
                   </button>
                 </div>
-                // ==============================
 
               ) : checkoutStep === 'auth' ? (
                 <div className="flex flex-col gap-5 py-4">
