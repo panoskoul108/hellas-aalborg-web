@@ -68,7 +68,6 @@ export default function AdminDashboard() {
     return () => { supabase.removeChannel(channel); };
   }, [user]);
 
-  // Παίζει τον ήχο καλώντας το HTML στοιχείο
   useEffect(() => {
     const pendingCount = orders.filter(o => o.status === 'pending').length;
     if (pendingCount > prevCount && !isMuted && audioUnlocked) {
@@ -92,24 +91,17 @@ export default function AdminDashboard() {
     }
   };
 
-  // Αποδοχή Παραγγελίας (Ορισμός Χρόνου & Εκτύπωση)
   const handleAcceptOrder = async (order: any, addedMins: number) => {
-    // Υπολογισμός νέας ώρας αν ήταν ASAP
     let confirmedTime = order.requested_time;
-    if (confirmedTime === "ASAP" || confirmedTime.includes("Hurtigst")) {
+    if (confirmedTime === "ASAP" || confirmedTime.includes("Hurtigst") || confirmedTime.includes("συντομότερο")) {
       const targetDate = new Date(new Date().getTime() + addedMins * 60000);
       confirmedTime = targetDate.toLocaleTimeString("da-DK", { hour: '2-digit', minute: '2-digit' });
     }
 
     const updatedOrder = { ...order, status: 'preparing', requested_time: confirmedTime };
-    
-    // Ακαριαία αλλαγή στην οθόνη
     setOrders(prev => prev.map(o => o.id === order.id ? updatedOrder : o));
-    
-    // Αποθήκευση στη βάση
     await supabase.from('orders').update({ status: 'preparing', requested_time: confirmedTime }).eq('id', order.id);
 
-    // Εκτύπωση με τη νέα ώρα
     setActivePrintOrder(updatedOrder);
     setIsPrinting(true);
   };
@@ -155,10 +147,9 @@ export default function AdminDashboard() {
           </div>
         </header>
 
-        {/* 3 ΣΤΗΛΕΣ (Νέες -> Προετοιμασία -> Ολοκληρωμένες) */}
         <main className="p-4 md:p-6 max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
           
-          {/* ΣΤΗΛΗ 1: ΝΕΕΣ (ΕΚΚΡΕΜΕΙΣ ΓΙΑ ΑΠΟΔΟΧΗ) */}
+          {/* ΣΤΗΛΗ 1: ΝΕΕΣ */}
           <div className="bg-[#0F172A]/80 border border-[#38BDF8]/30 rounded-[2rem] p-5 shadow-2xl min-h-[80vh]">
             <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
               <h2 className="font-black text-lg uppercase text-[#38BDF8] tracking-widest flex items-center gap-2">
@@ -247,8 +238,6 @@ const OrderCard = ({ order, onAccept, onPrint, onComplete }: any) => {
   const items = order.items || [];
   const isPending = order.status === 'pending';
   const isPreparing = order.status === 'preparing';
-  
-  const [prepTime, setPrepTime] = useState(10); // Προεπιλογή
 
   return (
     <div className={`bg-slate-800 border rounded-2xl p-5 shadow-lg relative overflow-hidden ${isPending ? "border-[#38BDF8]/50" : "border-orange-500/50"}`}>
@@ -276,7 +265,7 @@ const OrderCard = ({ order, onAccept, onPrint, onComplete }: any) => {
         {items.map((it: any, i: number) => (
           <li key={i} className="flex flex-col text-sm">
             <div className="flex justify-between font-bold text-gray-200">
-              <span><span className="text-[#38BDF8] mr-2 text-lg">{it.quantity || 1}x</span>{it.title_da || it.name}</span>
+              <span><span className="text-[#38BDF8] mr-2 text-lg">{it.quantity || 1}x</span>{it.title_da || it.title_el || it.name}</span>
               <span>{(it.unit_price_dkk * (it.quantity || 1)).toFixed(0)} kr.</span>
             </div>
             {it.selectedOptions?.length > 0 && <span className="text-xs text-gray-400 ml-6 block mt-0.5">+ {it.selectedOptions.map((o:any) => o.name || o).join(', ')}</span>}
@@ -292,27 +281,21 @@ const OrderCard = ({ order, onAccept, onPrint, onComplete }: any) => {
         </div>
       )}
 
-      {/* FOOTER ΓΙΑ "ΝΕΕΣ ΠΑΡΑΓΓΕΛΙΕΣ" (Αποδοχή & Ορισμός Χρόνου) */}
+      {/* FOOTER ΓΙΑ "ΝΕΕΣ ΠΑΡΑΓΓΕΛΙΕΣ" (Γρήγορη Αποδοχή με 1 Κλικ) */}
       {isPending && (
-        <div className="border-t border-slate-700 pt-4 flex gap-2 items-center">
-          <select 
-            value={prepTime} 
-            onChange={(e) => setPrepTime(Number(e.target.value))}
-            className="bg-slate-900 text-[#38BDF8] font-black p-3 rounded-xl outline-none border border-slate-700 flex-1 text-sm text-center"
-          >
-            <option value={5}>Σε 5'</option>
-            <option value={7}>Σε 7'</option>
-            <option value={10}>Σε 10'</option>
-            <option value={12}>Σε 12'</option>
-            <option value={15}>Σε 15'</option>
-            <option value={20}>Σε 20'</option>
-          </select>
-          <button 
-            onClick={() => onAccept(prepTime)} 
-            className="flex-[2] bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-black uppercase rounded-xl py-3 shadow-lg active:scale-95 transition-transform"
-          >
-            ΑΠΟΔΟΧΗ & ΕΚΤΥΠΩΣΗ
-          </button>
+        <div className="border-t border-slate-700 pt-4 flex flex-col gap-2">
+          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest text-center block">ΑΠΟΔΟΧΗ ΚΑΙ ΕΚΤΥΠΩΣΗ ΣΕ (ΛΕΠΤΑ):</span>
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+            {[5, 7, 10, 12, 15, 20].map((mins) => (
+              <button 
+                key={mins}
+                onClick={() => onAccept(mins)} 
+                className="bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-black text-sm rounded-xl py-2.5 shadow-md active:scale-95 transition-transform"
+              >
+                {mins}'
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
