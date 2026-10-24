@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { supabase } from '../supabase';
-import ProductModal from './ProductModal'; // ΠΡΟΣΟΧΗ: Βεβαιώσου ότι το αρχείο υπάρχει στον ίδιο φάκελο!
+import ProductModal from './ProductModal'; 
 
 const MAX_ORDERS = 5;
 const LOCKOUT_MS = 5 * 60 * 1000;
@@ -16,7 +16,6 @@ export default function OrderPage() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [lang, setLang] = useState<'da' | 'en' | 'el'>('da');
   
-  // State για το Product Modal
   const [activeProduct, setActiveProduct] = useState<any>(null);
   
   const [user, setUser] = useState<any>(null);
@@ -37,9 +36,11 @@ export default function OrderPage() {
   const [ordersPlaced, setOrdersPlaced] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
 
+  // === LIVE TRACKING STATE ===
+  const [placedOrder, setPlacedOrder] = useState<any>(null);
+
   const supabaseImageUrl = "https://keolpijcsvwsrzkjqtkc.supabase.co/storage/v1/object/public/menu-images/";
 
-  // ΠΛΗΡΕΣ ΛΕΞΙΚΟ ΓΙΑ ΟΛΟ ΤΟ UI
   const dict = {
     da: { 
       menuTitle: "Vælg dine retter", add: "Tilføj", wolt: "Ønsker du levering? Bestil via Wolt 🛵",
@@ -49,8 +50,7 @@ export default function OrderPage() {
       payLabel: "Betalingsmetode", card: "Kort", cash: "Kontant",
       subtotal: "Subtotal", loyaltyDiscount: "Loyalty Rabat", vat: "Heraf 25% moms",
       totalPay: "Total at betale", back: "Tilbage", confirm: "Bekræft Bestilling", sending: "Sender...",
-      successMsg: "Tak for din bestilling!", successDesc: "Din mad vil være klar til afhentning snart.", close: "Luk",
-      loginTitle: "Log ind eller Opret", toCheckout: "Gå til Kassen", backToCart: "Tilbage til kurv"
+      close: "Luk", loginTitle: "Log ind eller Opret", toCheckout: "Gå til Kassen", backToCart: "Tilbage til kurv"
     },
     en: { 
       menuTitle: "Choose your dishes", add: "Add", wolt: "Want delivery? Order via Wolt 🛵",
@@ -60,8 +60,7 @@ export default function OrderPage() {
       payLabel: "Payment Method", card: "Card", cash: "Cash",
       subtotal: "Subtotal", loyaltyDiscount: "Loyalty Discount", vat: "Includes 25% VAT",
       totalPay: "Total to pay", back: "Back", confirm: "Confirm Order", sending: "Sending...",
-      successMsg: "Thank you for your order!", successDesc: "Your food will be ready for pickup soon.", close: "Close",
-      loginTitle: "Login or Register", toCheckout: "Proceed to Checkout", backToCart: "Back to Cart"
+      close: "Close", loginTitle: "Login or Register", toCheckout: "Proceed to Checkout", backToCart: "Back to Cart"
     },
     el: { 
       menuTitle: "Επιλέξτε τα πιάτα σας", add: "Προσθήκη", wolt: "Θέλετε Delivery; Παραγγείλτε μέσω Wolt 🛵",
@@ -71,13 +70,11 @@ export default function OrderPage() {
       payLabel: "Τρόπος Πληρωμής", card: "Κάρτα (POS)", cash: "Μετρητά",
       subtotal: "Μερικό Σύνολο", loyaltyDiscount: "Έκπτωση Loyalty", vat: "Περιλαμβάνει 25% ΦΠΑ",
       totalPay: "Σύνολο Πληρωμής", back: "Πίσω", confirm: "Επιβεβαίωση", sending: "Αποστολή...",
-      successMsg: "Ευχαριστούμε για την παραγγελία!", successDesc: "Το φαγητό σας θα είναι σύντομα έτοιμο.", close: "Κλείσιμο",
-      loginTitle: "Σύνδεση ή Εγγραφή", toCheckout: "Ολοκλήρωση Παραγγελίας", backToCart: "Πίσω στο καλάθι"
+      close: "Κλείσιμο", loginTitle: "Σύνδεση ή Εγγραφή", toCheckout: "Ολοκλήρωση Παραγγελίας", backToCart: "Πίσω στο καλάθι"
     }
   };
   const ui = dict[lang];
 
-  // ΔΥΝΑΜΙΚΟΣ ΥΠΟΛΟΓΙΣΜΟΣ ΩΡΑΣ (Ανά 15 λεπτά)
   const generateTimeSlots = () => {
     const slots = [{ value: 'ASAP', label: `${ui.asap} (~15-20 min)` }];
     const now = new Date();
@@ -86,7 +83,7 @@ export default function OrderPage() {
     current.setMinutes(Math.ceil(current.getMinutes() / 15) * 15);
     
     const closeTime = new Date();
-    closeTime.setHours(22, 0, 0, 0); // Ρύθμισε εδώ την ώρα κλεισίματος
+    closeTime.setHours(22, 0, 0, 0); 
 
     while (current <= closeTime) {
       const timeString = current.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
@@ -127,22 +124,27 @@ export default function OrderPage() {
     return () => clearTimeout(timer);
   }, [customerPhone]);
 
+  // === LIVE TRACKING LISTENER ===
+  useEffect(() => {
+    if (!placedOrder?.id) return;
+    const channel = supabase
+      .channel(`public:orders:id=eq.${placedOrder.id}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${placedOrder.id}` }, (payload) => {
+        setPlacedOrder(payload.new); 
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [placedOrder?.id]);
+
   const getTitle = (item: any) => item[`title_${lang}`] || item.title_da;
   const getDesc = (item: any) => item[`desc_${lang}`] || item.desc_da;
-  
-  // Προσοχή: Εδώ τώρα παίρνουμε την `final_price` αν έχει έρθει από το Modal (με τα extras), αλλιώς τη βασική
   const getItemPrice = (item: any) => Number(item.final_price || item.price_takeaway || item.price || 0);
 
-  // ΑΝΑΝΕΩΜΕΝΗ: Δέχεται επιλογές (extras) από το ProductModal
   const addToCart = (item: any, quantity: number = 1) => {
     setCart(prev => {
-      // Το cartId εξασφαλίζει ότι το "Γύρος Χωρίς Κρεμμύδι" δεν θα συγχωνευτεί με το "Γύρος Με Κρεμμύδι"
       const cartId = item.id + (item.selectedOptions?.join('-') || '') + (item.note || '');
       const existing = prev.find(cartItem => cartItem.cartId === cartId);
-      
-      if (existing) {
-        return prev.map(cartItem => cartItem.cartId === cartId ? { ...cartItem, quantity: cartItem.quantity + quantity } : cartItem);
-      }
+      if (existing) return prev.map(cartItem => cartItem.cartId === cartId ? { ...cartItem, quantity: cartItem.quantity + quantity } : cartItem);
       return [...prev, { item, quantity, cartId }];
     });
   };
@@ -201,8 +203,8 @@ export default function OrderPage() {
           title_el: c.item.title_el,
           quantity: c.quantity,
           unit_price_dkk: getItemPrice(c.item),
-          selectedOptions: c.item.selectedOptions || [], // Στέλνουμε τα extras
-          note: c.item.note || "" // Στέλνουμε τις σημειώσεις
+          selectedOptions: c.item.selectedOptions || [],
+          note: c.item.note || "" 
         })),
         subtotal_dkk: subtotal,
         discount_dkk: discount,
@@ -214,6 +216,8 @@ export default function OrderPage() {
 
       const { data: orderData, error: orderError } = await supabase.from('orders').insert([payload]).select().single();
       if (orderError) throw orderError;
+      
+      setPlacedOrder(orderData); // === ΑΠΟΘΗΚΕΥΣΗ ΓΙΑ ΤΟ TRACKER ===
 
       await supabase.from('action_logs').insert([{
         action_type: "TAKEAWAY_ORDER_CREATED",
@@ -296,7 +300,6 @@ export default function OrderPage() {
                   <p className="text-sm text-gray-400 line-clamp-2 leading-relaxed mb-2">{getDesc(item)}</p>
                   <span className="font-bold text-[#38BDF8]">{getItemPrice(item)} DKK</span>
                 </div>
-                {/* ΑΛΛΑΓΗ: Το κουμπί τώρα ανοίγει το Modal αντί να το βάζει στο καλάθι */}
                 <button onClick={() => setActiveProduct(item)} className="bg-white hover:bg-gray-200 text-[#0B1120] font-bold p-3 md:px-6 md:py-2.5 rounded-xl shadow-md transition-transform active:scale-95 shrink-0 flex items-center gap-2">
                   <span className="hidden md:inline">{ui.add}</span> ➕
                 </button>
@@ -306,7 +309,6 @@ export default function OrderPage() {
         )}
       </main>
 
-      {/* ΤΟ MODAL ΤΩΝ ΠΡΟΪΟΝΤΩΝ ΓΙΑ EXTRAS (Ανοίγει όταν το activeProduct δεν είναι null) */}
       {activeProduct && (
         <ProductModal 
           activeProduct={activeProduct} 
@@ -317,7 +319,6 @@ export default function OrderPage() {
         />
       )}
 
-      {/* ΚΑΛΑΘΙ ΑΓΟΡΩΝ */}
       {isCartOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-end">
           <div className="w-full max-w-md bg-[#0F172A] h-full flex flex-col shadow-2xl border-l border-white/10 animate-fade-in-up">
@@ -328,12 +329,42 @@ export default function OrderPage() {
 
             <div className="flex-1 overflow-y-auto p-6">
               {checkoutStep === 'success' ? (
-                <div className="text-center py-20">
-                  <span className="text-6xl mb-4 block">✅</span>
-                  <h3 className="text-2xl font-bold text-white mb-2">{ui.successMsg}</h3>
-                  <p className="text-gray-400">{ui.successDesc}</p>
-                  <button onClick={() => { setIsCartOpen(false); setCheckoutStep('cart'); }} className="mt-8 bg-[#38BDF8] text-slate-900 font-bold px-8 py-3 rounded-xl hover:bg-sky-400 transition-colors">{ui.close}</button>
+                
+                // === ΝΕΑ ΟΘΟΝΗ LIVE TRACKER ===
+                <div className="text-center py-10 flex flex-col items-center">
+                  {placedOrder?.status === 'pending' && (
+                    <>
+                      <div className="w-16 h-16 rounded-full border-4 border-[#38BDF8] border-t-transparent animate-spin mb-6"></div>
+                      <h3 className="text-2xl font-black text-white mb-2 uppercase">Αναμονη Αποδοχης</h3>
+                      <p className="text-gray-400 font-bold mb-8">Το κατάστημα εξετάζει την παραγγελία σας...</p>
+                    </>
+                  )}
+
+                  {placedOrder?.status === 'preparing' && (
+                    <div className="animate-fade-in-up">
+                      <span className="text-6xl mb-4 block">🔥</span>
+                      <h3 className="text-2xl font-black text-white mb-2 uppercase">Ετοιμαζεται!</h3>
+                      <div className="bg-[#38BDF8]/20 border border-[#38BDF8]/50 rounded-2xl p-6 mt-6 shadow-xl">
+                        <p className="text-sm font-black text-[#38BDF8] uppercase tracking-widest mb-1">Θα ειναι ετοιμο στις:</p>
+                        <p className="text-5xl font-black text-white">{placedOrder.requested_time}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {placedOrder?.status === 'completed' && (
+                    <div className="animate-fade-in-up">
+                      <span className="text-6xl mb-4 block">✅</span>
+                      <h3 className="text-2xl font-black text-emerald-400 mb-2 uppercase">Ετοιμο για Παραλαβη!</h3>
+                      <p className="text-gray-300 font-bold">Η παραγγελία σας σας περιμένει στο ταμείο.</p>
+                    </div>
+                  )}
+
+                  <button onClick={() => { setIsCartOpen(false); setCheckoutStep('cart'); setPlacedOrder(null); }} className="mt-12 bg-white text-[#0B1120] font-black px-8 py-3 rounded-xl hover:bg-gray-200 transition-colors uppercase">
+                    {ui.close}
+                  </button>
                 </div>
+                // ==============================
+
               ) : checkoutStep === 'auth' ? (
                 <div className="flex flex-col gap-5 py-4">
                   <h3 className="text-2xl font-bold text-white text-center mb-2">{ui.loginTitle}</h3>
@@ -368,7 +399,6 @@ export default function OrderPage() {
                         </div>
                         <button onClick={() => removeFromCart(cartItem.cartId)} className="ml-3 text-red-400 hover:text-red-300 text-sm bg-red-500/10 p-2 rounded-lg">🗑️</button>
                       </div>
-                      {/* Εμφάνιση Extras στο Καλάθι */}
                       {cartItem.item.selectedOptions && cartItem.item.selectedOptions.length > 0 && (
                         <p className="text-[10px] text-gray-400 font-bold uppercase ml-1">
                           + {cartItem.item.selectedOptions.join(', ')}
