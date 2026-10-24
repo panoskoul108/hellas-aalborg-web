@@ -14,7 +14,6 @@ export const PrintTicket = ({
 
   useEffect(() => {
     if (!order || hasTriggeredPrint.current) return;
-
     hasTriggeredPrint.current = true;
 
     const timer = setTimeout(() => {
@@ -29,7 +28,6 @@ export const PrintTicket = ({
   if (!order) return null;
 
   const printDoubleTicket = hasKitchenEnabled === false && !isKitchenTicket;
-
   const fTitle = printDoubleTicket ? "20px" : "16px";
   const fOrderNum = printDoubleTicket ? "42px" : "34px";
   const fItems = printDoubleTicket ? "22px" : "18px";
@@ -78,10 +76,13 @@ export const PrintTicket = ({
             <div style={{ display: "inline-block", backgroundColor: "black", color: "white", padding: "2px 8px", fontSize: "16px", fontWeight: "900", marginTop: "6px" }}>🛍️ TAKEAWAY</div>
             <h1 style={{ margin: "6px 0 0 0", fontSize: fOrderNum, fontWeight: "900", lineHeight: "1" }}>#{orderNumberDisplay}</h1>
           </div>
+          
           <div style={{ textAlign: "right" }}>
             <p style={{ margin: 0, fontSize: "13px", fontWeight: "900" }}>{new Date(order.created_at || Date.now()).toLocaleString("da-DK", { dateStyle: "short", timeStyle: "short" })}</p>
-            <div style={{ marginTop: "8px", border: "2px solid black", padding: "4px 6px", fontSize: "14px", fontWeight: "900", textAlign: "center" }}>
-              ΩΡΑ / TID:<br /><span style={{ fontSize: "18px" }}>{order.requested_time || "ASAP"}</span>
+            {/* ΤΕΡΑΣΤΙΑ ΩΡΑ ΠΑΡΑΛΑΒΗΣ */}
+            <div style={{ marginTop: "12px", border: "4px solid black", backgroundColor: "black", color: "white", padding: "6px 12px", textAlign: "center", borderRadius: "6px" }}>
+              <div style={{ fontSize: "12px", fontWeight: "900" }}>ΠΑΡΑΛΑΒΗ / PICKUP:</div>
+              <div style={{ fontSize: "28px", fontWeight: "900", marginTop: "2px" }}>{order.requested_time || "ASAP"}</div>
             </div>
           </div>
         </div>
@@ -100,7 +101,7 @@ export const PrintTicket = ({
                 <tr key={i} style={{ borderBottom: "1px dotted #ccc" }}>
                   <td style={{ padding: "5px 0", verticalAlign: "top" }}>
                     <span style={{ fontSize: fItems, fontWeight: "900" }}>{item.quantity || 1}x {getTicketItemName(item)}</span>
-                    {item.selectedOptions && item.selectedOptions.length > 0 && <div style={{ fontSize: "14px", fontWeight: "bold", marginLeft: "12px", marginTop: "2px" }}>+ {item.selectedOptions.map((opt: any) => opt.name || opt).join(", ")}</div>}
+                    {item.selectedOptions && item.selectedOptions.length > 0 && <div style={{ fontSize: "16px", fontWeight: "900", marginLeft: "12px", marginTop: "2px" }}>+ {item.selectedOptions.map((opt: any) => opt.name || opt).join(", ")}</div>}
                     {item.note && <div style={{ fontSize: fNotes, fontWeight: "900", fontStyle: "italic", marginTop: "2px", backgroundColor: "#eee", padding: "2px 4px" }}>👉 ΣΗΜ: {item.note}</div>}
                   </td>
                   {!isKitchenTicket && <td style={{ textAlign: "right", verticalAlign: "top", paddingTop: "5px", fontSize: "16px", fontWeight: "900", minWidth: "65px" }}>{itemRowTotal.toFixed(0)} kr.</td>}
@@ -137,8 +138,8 @@ export const PrintTicket = ({
           <div style={{ textAlign: "center", borderBottom: "4px solid black", paddingBottom: "8px", marginBottom: "8px" }}>
             <div style={{ backgroundColor: "black", color: "white", display: "inline-block", padding: "4px 10px", fontSize: "20px", fontWeight: "900", marginBottom: "5px" }}>ΚΟΥΖΙΝΑ - TAKEAWAY</div>
             <h1 style={{ margin: "0", fontSize: fOrderNum, fontWeight: "900" }}>#{orderNumberDisplay}</h1>
-            <div style={{ fontSize: "18px", fontWeight: "900", marginTop: "4px" }}>🕒 ΠΑΡΑΛΑΒΗ: {order.requested_time || "ASAP"}</div>
-            <div style={{ fontSize: "15px", fontWeight: "bold", marginTop: "4px" }}>👤 {order.customer_name} ({order.customer_phone})</div>
+            <div style={{ fontSize: "24px", fontWeight: "900", marginTop: "4px", border: "2px solid black", padding: "4px" }}>🕒 ΠΑΡΑΛΑΒΗ: {order.requested_time || "ASAP"}</div>
+            <div style={{ fontSize: "16px", fontWeight: "bold", marginTop: "8px" }}>👤 {order.customer_name} ({order.customer_phone})</div>
           </div>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <tbody>
@@ -146,7 +147,7 @@ export const PrintTicket = ({
                 <tr key={idx} style={{ borderBottom: "1px dashed #999" }}>
                   <td style={{ padding: "8px 0", verticalAlign: "top" }}>
                     <span style={{ fontSize: fItems, fontWeight: "900" }}>• {getTicketItemName(item)}</span>
-                    {item.selectedOptions && item.selectedOptions.length > 0 && <div style={{ fontSize: "16px", fontWeight: "900", marginLeft: "12px", marginTop: "2px" }}>+ {item.selectedOptions.map((opt: any) => opt.name || opt).join(", ")}</div>}
+                    {item.selectedOptions && item.selectedOptions.length > 0 && <div style={{ fontSize: "18px", fontWeight: "900", marginLeft: "12px", marginTop: "2px" }}>+ {item.selectedOptions.map((opt: any) => opt.name || opt).join(", ")}</div>}
                     {item.note && <div style={{ fontSize: fNotes, fontWeight: "900", fontStyle: "italic", marginTop: "4px", backgroundColor: "#eee", padding: "4px" }}>👉 ΣΗΜ: {item.note}</div>}
                   </td>
                   <td style={{ textAlign: "right", verticalAlign: "top", paddingTop: "8px", fontSize: fItems, fontWeight: "900", minWidth: "45px" }}>{item.quantity || 1}x</td>
