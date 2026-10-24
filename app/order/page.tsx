@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { supabase } from '../supabase';
+import ProductModal from './ProductModal'; // ΠΡΟΣΟΧΗ: Βεβαιώσου ότι το αρχείο υπάρχει στον ίδιο φάκελο!
 
 const MAX_ORDERS = 5;
 const LOCKOUT_MS = 5 * 60 * 1000;
@@ -11,9 +12,12 @@ const REWARD_DISCOUNT_DKK = 35;
 export default function OrderPage() {
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [cart, setCart] = useState<{item: any, quantity: number}[]>([]);
+  const [cart, setCart] = useState<{ item: any, quantity: number, cartId: string }[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [lang, setLang] = useState<'da' | 'en' | 'el'>('da');
+  
+  // State για το Product Modal
+  const [activeProduct, setActiveProduct] = useState<any>(null);
   
   const [user, setUser] = useState<any>(null);
   const [authMode, setAuthMode] = useState<'signup' | 'login'>('signup');
@@ -125,20 +129,29 @@ export default function OrderPage() {
 
   const getTitle = (item: any) => item[`title_${lang}`] || item.title_da;
   const getDesc = (item: any) => item[`desc_${lang}`] || item.desc_da;
-  const getItemPrice = (item: any) => Number(item.price_takeaway || item.price || 0);
+  
+  // Προσοχή: Εδώ τώρα παίρνουμε την `final_price` αν έχει έρθει από το Modal (με τα extras), αλλιώς τη βασική
+  const getItemPrice = (item: any) => Number(item.final_price || item.price_takeaway || item.price || 0);
 
-  const addToCart = (item: any) => {
+  // ΑΝΑΝΕΩΜΕΝΗ: Δέχεται επιλογές (extras) από το ProductModal
+  const addToCart = (item: any, quantity: number = 1) => {
     setCart(prev => {
-      const existing = prev.find(cartItem => cartItem.item.id === item.id);
-      if (existing) return prev.map(cartItem => cartItem.item.id === item.id ? { ...cartItem, quantity: cartItem.quantity + 1 } : cartItem);
-      return [...prev, { item, quantity: 1 }];
+      // Το cartId εξασφαλίζει ότι το "Γύρος Χωρίς Κρεμμύδι" δεν θα συγχωνευτεί με το "Γύρος Με Κρεμμύδι"
+      const cartId = item.id + (item.selectedOptions?.join('-') || '') + (item.note || '');
+      const existing = prev.find(cartItem => cartItem.cartId === cartId);
+      
+      if (existing) {
+        return prev.map(cartItem => cartItem.cartId === cartId ? { ...cartItem, quantity: cartItem.quantity + quantity } : cartItem);
+      }
+      return [...prev, { item, quantity, cartId }];
     });
   };
 
-  const removeFromCart = (id: number) => setCart(prev => prev.filter(cartItem => cartItem.item.id !== id));
-  const updateQuantity = (id: number, delta: number) => {
+  const removeFromCart = (cartId: string) => setCart(prev => prev.filter(cartItem => cartItem.cartId !== cartId));
+  
+  const updateQuantity = (cartId: string, delta: number) => {
     setCart(prev => prev.map(cartItem => {
-      if (cartItem.item.id === id) {
+      if (cartItem.cartId === cartId) {
         const newQ = cartItem.quantity + delta;
         return newQ > 0 ? { ...cartItem, quantity: newQ } : cartItem;
       }
@@ -187,7 +200,9 @@ export default function OrderPage() {
           title_da: c.item.title_da,
           title_el: c.item.title_el,
           quantity: c.quantity,
-          unit_price_dkk: getItemPrice(c.item)
+          unit_price_dkk: getItemPrice(c.item),
+          selectedOptions: c.item.selectedOptions || [], // Στέλνουμε τα extras
+          note: c.item.note || "" // Στέλνουμε τις σημειώσεις
         })),
         subtotal_dkk: subtotal,
         discount_dkk: discount,
@@ -281,7 +296,8 @@ export default function OrderPage() {
                   <p className="text-sm text-gray-400 line-clamp-2 leading-relaxed mb-2">{getDesc(item)}</p>
                   <span className="font-bold text-[#38BDF8]">{getItemPrice(item)} DKK</span>
                 </div>
-                <button onClick={() => addToCart(item)} className="bg-white hover:bg-gray-200 text-[#0B1120] font-bold p-3 md:px-6 md:py-2.5 rounded-xl shadow-md transition-transform active:scale-95 shrink-0 flex items-center gap-2">
+                {/* ΑΛΛΑΓΗ: Το κουμπί τώρα ανοίγει το Modal αντί να το βάζει στο καλάθι */}
+                <button onClick={() => setActiveProduct(item)} className="bg-white hover:bg-gray-200 text-[#0B1120] font-bold p-3 md:px-6 md:py-2.5 rounded-xl shadow-md transition-transform active:scale-95 shrink-0 flex items-center gap-2">
                   <span className="hidden md:inline">{ui.add}</span> ➕
                 </button>
               </div>
@@ -290,6 +306,18 @@ export default function OrderPage() {
         )}
       </main>
 
+      {/* ΤΟ MODAL ΤΩΝ ΠΡΟΪΟΝΤΩΝ ΓΙΑ EXTRAS (Ανοίγει όταν το activeProduct δεν είναι null) */}
+      {activeProduct && (
+        <ProductModal 
+          activeProduct={activeProduct} 
+          lang={lang} 
+          closeModal={() => setActiveProduct(null)} 
+          addToCart={addToCart} 
+          supabaseImageUrl={supabaseImageUrl}
+        />
+      )}
+
+      {/* ΚΑΛΑΘΙ ΑΓΟΡΩΝ */}
       {isCartOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-end">
           <div className="w-full max-w-md bg-[#0F172A] h-full flex flex-col shadow-2xl border-l border-white/10 animate-fade-in-up">
@@ -326,18 +354,31 @@ export default function OrderPage() {
                   <a href="https://wolt.com" target="_blank" rel="noreferrer" className="block text-center bg-[#38BDF8]/10 border border-[#38BDF8]/30 text-[#38BDF8] text-xs font-bold p-3 rounded-xl hover:bg-[#38BDF8]/20 transition-colors">
                     {ui.wolt}
                   </a>
-                  {cart.map(cartItem => (
-                    <div key={cartItem.item.id} className="flex justify-between items-center bg-slate-800/30 p-3 rounded-xl border border-white/5">
-                      <div className="flex-1 pr-2">
-                        <p className="font-bold text-white text-sm">{getTitle(cartItem.item)}</p>
-                        <p className="text-xs text-[#38BDF8]">{getItemPrice(cartItem.item)} DKK</p>
+                  {cart.map((cartItem, idx) => (
+                    <div key={idx} className="flex flex-col bg-slate-800/30 p-3 rounded-xl border border-white/5">
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="flex-1 pr-2">
+                          <p className="font-bold text-white text-sm">{getTitle(cartItem.item)}</p>
+                          <p className="text-xs text-[#38BDF8]">{getItemPrice(cartItem.item)} DKK</p>
+                        </div>
+                        <div className="flex items-center gap-3 bg-slate-900 rounded-lg p-1 border border-white/5">
+                          <button onClick={() => updateQuantity(cartItem.cartId, -1)} className="w-7 h-7 flex items-center justify-center text-white bg-slate-800 hover:bg-slate-700 rounded-md font-bold">-</button>
+                          <span className="font-bold text-sm w-4 text-center">{cartItem.quantity}</span>
+                          <button onClick={() => updateQuantity(cartItem.cartId, 1)} className="w-7 h-7 flex items-center justify-center text-white bg-slate-800 hover:bg-slate-700 rounded-md font-bold">+</button>
+                        </div>
+                        <button onClick={() => removeFromCart(cartItem.cartId)} className="ml-3 text-red-400 hover:text-red-300 text-sm bg-red-500/10 p-2 rounded-lg">🗑️</button>
                       </div>
-                      <div className="flex items-center gap-3 bg-slate-900 rounded-lg p-1 border border-white/5">
-                        <button onClick={() => updateQuantity(cartItem.item.id, -1)} className="w-7 h-7 flex items-center justify-center text-white bg-slate-800 hover:bg-slate-700 rounded-md font-bold">-</button>
-                        <span className="font-bold text-sm w-4 text-center">{cartItem.quantity}</span>
-                        <button onClick={() => updateQuantity(cartItem.item.id, 1)} className="w-7 h-7 flex items-center justify-center text-white bg-slate-800 hover:bg-slate-700 rounded-md font-bold">+</button>
-                      </div>
-                      <button onClick={() => removeFromCart(cartItem.item.id)} className="ml-3 text-red-400 hover:text-red-300 text-sm bg-red-500/10 p-2 rounded-lg">🗑️</button>
+                      {/* Εμφάνιση Extras στο Καλάθι */}
+                      {cartItem.item.selectedOptions && cartItem.item.selectedOptions.length > 0 && (
+                        <p className="text-[10px] text-gray-400 font-bold uppercase ml-1">
+                          + {cartItem.item.selectedOptions.join(', ')}
+                        </p>
+                      )}
+                      {cartItem.item.note && (
+                        <p className="text-[10px] text-yellow-500 font-bold italic ml-1 mt-1">
+                          📝 {cartItem.item.note}
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>
