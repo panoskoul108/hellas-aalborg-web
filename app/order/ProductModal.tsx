@@ -99,21 +99,25 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
           <p className="text-[#38BDF8] font-black text-lg mb-2">{basePrice} DKK <span className="text-xs font-bold text-gray-500 line-through ml-2">ΒΑΣΙΚΗ ΤΙΜΗ</span></p>
           <p className="text-gray-400 text-sm mb-6 leading-relaxed">{desc}</p>
 
-          {Object.keys(extras).length > 0 && (
-            <div className="flex flex-col gap-6 mb-6">
-              {Object.keys(extras).map((groupKey) => {
-                const group = extras[groupKey];
-                const isSingle = group.type === 'single';
-                const currentSelections = selections[groupKey] || [];
+         {Object.keys(extras).length > 0 && (
+  <div className="flex flex-col gap-6 mb-6">
+    {Object.keys(extras).map((groupKey) => {
+      const group = extras[groupKey];
+      const isSingle = group.type === 'single';
+      const currentSelections = selections[groupKey] || [];
 
-                return (
-                  <div key={groupKey} className="bg-slate-900/50 p-4 rounded-2xl border border-white/5">
-                    <div className="flex justify-between items-center mb-3">
-                      <h3 className="font-bold text-white text-sm uppercase">{groupKey}</h3>
-                      <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-md ${isSingle ? 'bg-[#38BDF8]/20 text-[#38BDF8]' : 'bg-gray-800 text-gray-400'}`}>
-                        {isSingle ? 'ΥΠΟΧΡΕΩΤΙΚΟ (Επιλεξτε 1)' : group.max ? `ΕΩΣ ${group.max} ΕΠΙΛΟΓΕΣ` : 'ΠΡΟΑΙΡΕΤΙΚΟ'}
-                      </span>
-                    </div>
+      return (
+        <div key={groupKey} className="bg-slate-900/50 p-4 rounded-2xl border border-white/5">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="font-bold text-white text-sm uppercase">{groupKey}</h3>
+            <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-md ${isSingle ? 'bg-[#38BDF8]/20 text-[#38BDF8]' : 'bg-gray-800 text-gray-400'}`}>
+              {isSingle 
+                ? (lang === 'da' ? 'OBLIGATORISK (Vælg 1)' : lang === 'en' ? 'REQUIRED (Select 1)' : 'ΥΠΟΧΡΕΩΤΙΚΟ (Επιλέξτε 1)')
+                : group.max 
+                  ? (lang === 'da' ? `MAX ${group.max} VALG` : lang === 'en' ? `UP TO ${group.max} OPTIONS` : `ΕΩΣ ${group.max} ΕΠΙΛΟΓΕΣ`)
+                  : (lang === 'da' ? 'VALGFRIT' : lang === 'en' ? 'OPTIONAL' : 'ΠΡΟΑΙΡΕΤΙΚΟ')}
+            </span>
+          </div>
 
                     <div className="flex flex-col gap-2">
                       {group.options.map((opt: any, idx: number) => {
