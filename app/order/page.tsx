@@ -51,9 +51,11 @@ export default function OrderPage() {
       subtotal: "Subtotal", loyaltyDiscount: "Loyalty Rabat", vat: "Heraf 25% moms",
       totalPay: "Total at betale", back: "Tilbage", confirm: "Bekræft Bestilling", sending: "Sender...",
       close: "Luk", loginTitle: "Log ind eller Opret", toCheckout: "Gå til Kassen", backToCart: "Tilbage til kurv",
+      trackPending: "Afventer", trackPrep: "Tilberedes", trackReady: "Klar",
       trackPendingTitle: "Afventer Godkendelse", trackPendingDesc: "Restauranten gennemgår din ordre...",
       trackPrepTitle: "Tilberedes!", trackPrepTime: "Klar klokken:",
-      trackReadyTitle: "Klar til afhentning!", trackReadyDesc: "Din ordre venter på dig ved kassen."
+      trackReadyTitle: "Klar til afhentning!", trackReadyDesc: "Din ordre venter på dig ved kassen.",
+      summaryTitle: "Din Ordre", summaryTotal: "Total"
     },
     en: { 
       menuTitle: "Choose your dishes", add: "Add", wolt: "Want delivery? Order via Wolt 🛵",
@@ -64,9 +66,11 @@ export default function OrderPage() {
       subtotal: "Subtotal", loyaltyDiscount: "Loyalty Discount", vat: "Includes 25% VAT",
       totalPay: "Total to pay", back: "Back", confirm: "Confirm Order", sending: "Sending...",
       close: "Close", loginTitle: "Login or Register", toCheckout: "Proceed to Checkout", backToCart: "Back to Cart",
+      trackPending: "Pending", trackPrep: "Preparing", trackReady: "Ready",
       trackPendingTitle: "Awaiting Approval", trackPendingDesc: "The restaurant is reviewing your order...",
       trackPrepTitle: "Preparing!", trackPrepTime: "Will be ready at:",
-      trackReadyTitle: "Ready for Pickup!", trackReadyDesc: "Your order is waiting for you at the counter."
+      trackReadyTitle: "Ready for Pickup!", trackReadyDesc: "Your order is waiting for you at the counter.",
+      summaryTitle: "Your Order", summaryTotal: "Total"
     },
     el: { 
       menuTitle: "Επιλέξτε τα πιάτα σας", add: "Προσθήκη", wolt: "Θέλετε Delivery; Παραγγείλτε μέσω Wolt 🛵",
@@ -77,9 +81,11 @@ export default function OrderPage() {
       subtotal: "Μερικό Σύνολο", loyaltyDiscount: "Έκπτωση Loyalty", vat: "Περιλαμβάνει 25% ΦΠΑ",
       totalPay: "Σύνολο Πληρωμής", back: "Πίσω", confirm: "Επιβεβαίωση", sending: "Αποστολή...",
       close: "Κλείσιμο", loginTitle: "Σύνδεση ή Εγγραφή", toCheckout: "Ολοκλήρωση Παραγγελίας", backToCart: "Πίσω στο καλάθι",
+      trackPending: "Αναμονη", trackPrep: "Προετοιμασια", trackReady: "Ετοιμο",
       trackPendingTitle: "Αναμονη Αποδοχης", trackPendingDesc: "Το κατάστημα εξετάζει την παραγγελία σας...",
       trackPrepTitle: "Ετοιμαζεται!", trackPrepTime: "Θα ειναι ετοιμο στις:",
-      trackReadyTitle: "Ετοιμο για Παραλαβη!", trackReadyDesc: "Η παραγγελία σας περιμένει στο ταμείο."
+      trackReadyTitle: "Ετοιμο για Παραλαβη!", trackReadyDesc: "Η παραγγελία σας περιμένει στο ταμείο.",
+      summaryTitle: "Η Παραγγελια Σας", summaryTotal: "Συνολο"
     }
   };
   const ui = dict[lang];
@@ -87,13 +93,10 @@ export default function OrderPage() {
   const generateTimeSlots = () => {
     const slots = [{ value: 'ASAP', label: `${ui.asap} (~15-20 min)` }];
     const now = new Date();
-    
     let current = new Date(now.getTime() + 15 * 60000); 
     current.setMinutes(Math.ceil(current.getMinutes() / 15) * 15);
-    
     const closeTime = new Date();
     closeTime.setHours(22, 0, 0, 0); 
-
     while (current <= closeTime) {
       const timeString = current.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
       slots.push({ value: timeString, label: timeString });
@@ -222,13 +225,13 @@ export default function OrderPage() {
         vat_moms_dkk: vatMoms,
         total_price: finalTotal,
         payment_method: paymentMethod === 'card' ? 'ΚΑΡΤΑ' : 'ΜΕΤΡΗΤΑ',
-        status: 'pending'
+        status: 'pending' // Ξεκινάει ΠΑΝΤΑ ως pending
       };
 
       const { data: orderData, error: orderError } = await supabase.from('orders').insert([payload]).select().single();
       if (orderError) throw orderError;
       
-      setPlacedOrder(orderData); // ΑΠΟΘΗΚΕΥΣΗ ΓΙΑ ΤΟ TRACKER
+      setPlacedOrder(orderData); // Φορτώνει το Tracker
 
       await supabase.from('action_logs').insert([{
         action_type: "TAKEAWAY_ORDER_CREATED",
@@ -256,8 +259,7 @@ export default function OrderPage() {
       localStorage.setItem("servato_orders", newTotal.toString());
       localStorage.setItem("servato_time", Date.now().toString());
 
-      setCheckoutStep('success');
-      setCart([]);
+      setCheckoutStep('success'); // Πάει στην οθόνη Tracker
     } catch (error: any) { alert('Σφάλμα: ' + error.message); } finally { setIsSubmitting(false); }
   };
 
@@ -338,39 +340,96 @@ export default function OrderPage() {
               <button onClick={() => setIsCartOpen(false)} className="text-gray-400 hover:text-white text-2xl">&times;</button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-0 md:p-6">
               {checkoutStep === 'success' ? (
                 
-                <div className="text-center py-10 flex flex-col items-center">
-                  {placedOrder?.status === 'pending' && (
-                    <>
-                      <div className="w-16 h-16 rounded-full border-4 border-[#38BDF8] border-t-transparent animate-spin mb-6"></div>
-                      <h3 className="text-2xl font-black text-white mb-2 uppercase">{ui.trackPendingTitle}</h3>
-                      <p className="text-gray-400 font-bold mb-8">{ui.trackPendingDesc}</p>
-                    </>
-                  )}
+                // === ΠΛΗΡΕΣ LIVE TRACKER (PROGRESS BAR + ΣΥΝΟΨΗ) ===
+                <div className="flex flex-col items-center py-6 w-full px-4">
+                  
+                  <h2 className="text-xl md:text-2xl font-black text-white mb-8 uppercase tracking-widest italic text-center">
+                    # {placedOrder?.order_number || placedOrder?.id?.toString().slice(-4)}
+                  </h2>
 
-                  {placedOrder?.status === 'completed' && (
-                    <div className="animate-fade-in-up">
-                      <span className="text-6xl mb-4 block">🔥</span>
-                      <h3 className="text-2xl font-black text-white mb-2 uppercase">{ui.trackPrepTitle}</h3>
-                      <div className="bg-[#38BDF8]/20 border border-[#38BDF8]/50 rounded-2xl p-6 mt-6 shadow-xl">
-                        <p className="text-sm font-black text-[#38BDF8] uppercase tracking-widest mb-1">{ui.trackPrepTime}</p>
-                        <p className="text-5xl font-black text-white">
-                          {placedOrder?.requested_time && placedOrder.requested_time !== 'ASAP' ? placedOrder.requested_time : 'Υπολογίζεται...'}
-                        </p>
+                  {/* 3-STEP PROGRESS BAR */}
+                  <div className="w-full max-w-xs mb-10 relative">
+                    <div className="absolute top-4 left-0 h-1 bg-gray-700 w-full -z-10 rounded-full"></div>
+                    <div className={`absolute top-4 left-0 h-1 bg-[#38BDF8] -z-10 transition-all duration-500 rounded-full ${placedOrder?.status === 'pending' ? 'w-[15%]' : placedOrder?.status === 'preparing' ? 'w-[50%]' : 'w-full !bg-emerald-500'}`}></div>
+                    
+                    <div className="flex justify-between">
+                      <div className="flex flex-col items-center gap-2">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm transition-colors duration-500 ${placedOrder?.status === 'pending' || placedOrder?.status === 'preparing' || placedOrder?.status === 'completed' ? 'bg-[#38BDF8] text-[#0B1120]' : 'bg-gray-800 text-gray-500'}`}>1</div>
+                        <span className={`text-[9px] md:text-[10px] font-black uppercase ${placedOrder?.status === 'pending' ? 'text-white' : 'text-gray-500'}`}>{ui.trackPending}</span>
                       </div>
-                      <p className="text-gray-400 font-bold mt-6 text-sm">Προσέλθετε στο ταμείο την παραπάνω ώρα για παραλαβή.</p>
+                      <div className="flex flex-col items-center gap-2">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm transition-colors duration-500 ${placedOrder?.status === 'preparing' || placedOrder?.status === 'completed' ? 'bg-[#38BDF8] text-[#0B1120]' : 'bg-gray-800 text-gray-500'}`}>2</div>
+                        <span className={`text-[9px] md:text-[10px] font-black uppercase ${placedOrder?.status === 'preparing' ? 'text-white' : 'text-gray-500'}`}>{ui.trackPrep}</span>
+                      </div>
+                      <div className="flex flex-col items-center gap-2">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm transition-colors duration-500 ${placedOrder?.status === 'completed' ? 'bg-emerald-500 text-[#0B1120]' : 'bg-gray-800 text-gray-500'}`}>3</div>
+                        <span className={`text-[9px] md:text-[10px] font-black uppercase ${placedOrder?.status === 'completed' ? 'text-emerald-400' : 'text-gray-500'}`}>{ui.trackReady}</span>
+                      </div>
                     </div>
-                  )}
+                  </div>
 
-                  <button onClick={() => { setIsCartOpen(false); setCheckoutStep('cart'); setPlacedOrder(null); setCart([]); }} className="mt-12 bg-white text-[#0B1120] font-black px-8 py-3 rounded-xl hover:bg-gray-200 transition-colors uppercase">
+                  {/* ΜΗΝΥΜΑ ΚΑΤΑΣΤΑΣΗΣ */}
+                  <div className="w-full max-w-sm bg-slate-800/50 border border-slate-700 rounded-3xl p-6 mb-8 text-center shadow-xl">
+                    {placedOrder?.status === 'pending' && (
+                      <div className="animate-fade-in">
+                         <div className="w-12 h-12 rounded-full border-4 border-[#38BDF8] border-t-transparent animate-spin mx-auto mb-4"></div>
+                         <h3 className="text-xl font-black text-white mb-2 uppercase">{ui.trackPendingTitle}</h3>
+                         <p className="text-sm text-gray-400 font-bold">{ui.trackPendingDesc}</p>
+                      </div>
+                    )}
+                    
+                    {placedOrder?.status === 'preparing' && (
+                      <div className="animate-fade-in">
+                         <span className="text-6xl mb-4 block">🔥</span>
+                         <h3 className="text-xl font-black text-white mb-4 uppercase">{ui.trackPrepTitle}</h3>
+                         <div className="bg-[#38BDF8]/20 border border-[#38BDF8]/50 rounded-2xl p-4 inline-block">
+                           <p className="text-[10px] font-black text-[#38BDF8] uppercase tracking-widest mb-1">{ui.trackPrepTime}</p>
+                           <p className="text-4xl font-black text-white">
+                             {placedOrder?.requested_time && placedOrder.requested_time !== 'ASAP' ? placedOrder.requested_time : '...'}
+                           </p>
+                         </div>
+                      </div>
+                    )}
+
+                    {placedOrder?.status === 'completed' && (
+                      <div className="animate-fade-in">
+                         <span className="text-6xl mb-4 block">✅</span>
+                         <h3 className="text-xl font-black text-emerald-400 mb-2 uppercase">{ui.trackReadyTitle}</h3>
+                         <p className="text-sm text-gray-300 font-bold">{ui.trackReadyDesc}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ΣΥΝΟΨΗ ΠΑΡΑΓΓΕΛΙΑΣ */}
+                  <div className="w-full max-w-sm bg-slate-900 border border-slate-700 rounded-3xl p-6 text-left shadow-lg mb-8">
+                    <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4 border-b border-slate-700 pb-2">{ui.summaryTitle}</h4>
+                    <ul className="space-y-3 mb-4">
+                      {placedOrder?.items?.map((it: any, i: number) => (
+                        <li key={i} className="flex justify-between items-start text-sm">
+                          <div className="flex-1 pr-2">
+                            <span className="font-bold text-white"><span className="text-[#38BDF8] mr-2">{it.quantity || 1}x</span>{it.title_da || it.title_el || it.name}</span>
+                            {it.selectedOptions?.length > 0 && <span className="text-xs text-gray-400 block mt-0.5">+ {it.selectedOptions.join(', ')}</span>}
+                          </div>
+                          <span className="font-bold text-gray-300">{(it.unit_price_dkk * (it.quantity || 1)).toFixed(0)} kr.</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="flex justify-between items-center border-t border-slate-700 pt-3">
+                      <span className="text-xs font-bold text-gray-400 uppercase">{ui.summaryTotal} ({placedOrder?.payment_method}):</span>
+                      <span className="text-lg font-black text-[#38BDF8]">{placedOrder?.total_price} kr.</span>
+                    </div>
+                  </div>
+
+                  <button onClick={() => { setIsCartOpen(false); setCheckoutStep('cart'); setPlacedOrder(null); setCart([]); }} className="w-full max-w-sm bg-white text-[#0B1120] font-black py-4 rounded-2xl hover:bg-gray-200 transition-colors uppercase shadow-lg">
                     {ui.close}
                   </button>
                 </div>
 
               ) : checkoutStep === 'auth' ? (
-                <div className="flex flex-col gap-5 py-4">
+                <div className="flex flex-col gap-5 py-4 px-4 md:px-0">
                   <h3 className="text-2xl font-bold text-white text-center mb-2">{ui.loginTitle}</h3>
                   <form onSubmit={handleAuth} className="flex flex-col gap-4">
                     {authError && <div className="bg-red-500/10 border border-red-500 text-red-400 p-3 rounded-lg text-sm">{authError}</div>}
@@ -385,7 +444,7 @@ export default function OrderPage() {
               ) : cart.length === 0 ? (
                 <div className="text-center text-gray-500 mt-20"><span className="text-4xl mb-3 block">🛒</span><p>{ui.emptyCart}</p></div>
               ) : checkoutStep === 'cart' ? (
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-4 px-4 md:px-0">
                   <a href="https://wolt.com" target="_blank" rel="noreferrer" className="block text-center bg-[#38BDF8]/10 border border-[#38BDF8]/30 text-[#38BDF8] text-xs font-bold p-3 rounded-xl hover:bg-[#38BDF8]/20 transition-colors">
                     {ui.wolt}
                   </a>
@@ -417,7 +476,7 @@ export default function OrderPage() {
                   ))}
                 </div>
               ) : (
-                <form id="checkoutForm" onSubmit={submitOrder} className="flex flex-col gap-5">
+                <form id="checkoutForm" onSubmit={submitOrder} className="flex flex-col gap-5 px-4 md:px-0">
                   <h3 className="font-bold text-lg text-white border-b border-white/10 pb-2">{ui.detailsTitle}</h3>
                   <div>
                     <label className="text-xs text-gray-400 block mb-1">{ui.nameLabel}</label>
