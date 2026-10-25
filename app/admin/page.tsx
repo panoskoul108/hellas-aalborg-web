@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase'; 
 import { PrintTicket } from './PrintTicket'; 
-// Εισάγουμε την Κάρτα Παραγγελίας από τον νέο φάκελο components
 import { OrderCard } from '../../components/admin/OrderCard'; 
 
 export default function AdminDashboard() {
@@ -39,18 +38,16 @@ export default function AdminDashboard() {
     setIsLoading(false);
   };
 
-  // Zωντανή σύνδεση με το Supabase
   useEffect(() => {
     if (!user) return;
     const channel = supabase.channel('admin-orders-channel')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
-        fetchOrders(); // Φέρνει τα νέα δεδομένα αυτόματα
+        fetchOrders();
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [user]);
 
-  // Αναπαραγωγή Ήχου
   useEffect(() => {
     const pendingCount = orders.filter(o => o.status === 'pending').length;
     if (pendingCount > prevCount && !isMuted && audioUnlocked) {
@@ -74,17 +71,14 @@ export default function AdminDashboard() {
     setAudioUnlocked(true);
   };
 
-  // ΑΠΟΔΟΧΗ ΚΑΙ ΣΥΓΧΡΟΝΙΣΜΟΣ ΜΕ ΤΗ ΒΑΣΗ
   const handleAcceptOrder = async (order: any, addedMins: number) => {
     const targetDate = new Date(new Date().getTime() + addedMins * 60000);
     const confirmedTime = targetDate.toLocaleTimeString("da-DK", { hour: '2-digit', minute: '2-digit' });
     const completedAt = new Date().toISOString();
 
-    // 1. Ακαριαία τοπική ενημέρωση για να νιώθει γρήγορο
     const updatedOrder = { ...order, status: 'completed', requested_time: confirmedTime, completed_at: completedAt };
     setOrders(prev => prev.map(o => o.id === order.id ? updatedOrder : o));
     
-    // 2. Ενημέρωση Βάσης (ώστε να το δει το Live Tracker του πελάτη)
     const { error } = await supabase
       .from('orders')
       .update({ status: 'completed', requested_time: confirmedTime, completed_at: completedAt })
@@ -92,30 +86,15 @@ export default function AdminDashboard() {
 
     if (error) {
       alert("Σφάλμα συγχρονισμού με τη βάση: " + error.message);
-      fetchOrders(); // Αν απέτυχε, επαναφέρει την παλιά κατάσταση (pending)
+      fetchOrders(); 
       return;
     }
 
-    // 3. Αποστολή στον εκτυπωτή
     setActivePrintOrder(updatedOrder);
     setIsPrinting(true);
   };
 
   if (isLoading) return <div className="min-h-screen bg-[#0B1120] flex items-center justify-center text-[#38BDF8] font-bold text-xl animate-pulse">Φόρτωση Ταμείου...</div>;
-
-  // Υποχρεωτικό ξεκλείδωμα ήχου
-  if (!audioUnlocked) {
-    return (
-      <div className="min-h-screen bg-[#0B1120] flex flex-col items-center justify-center p-6 text-center">
-        <span className="text-7xl mb-6">🔊</span>
-        <h1 className="text-3xl font-black text-white uppercase tracking-widest mb-2">Ξεκλειδωμα Ηχου</h1>
-        <p className="text-gray-400 font-bold mb-8">Για να ακούγονται οι ειδοποιήσεις των νέων παραγγελιών, πρέπει να ξεκινήσετε τη βάρδια.</p>
-        <button onClick={unlockSystem} className="bg-emerald-500 hover:bg-emerald-400 text-[#0B1120] px-10 py-6 rounded-2xl font-black text-2xl uppercase shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-transform active:scale-95">
-          ▶ ΕΝΑΡΞΗ ΤΑΜΕΙΟΥ
-        </button>
-      </div>
-    );
-  }
 
   const pendingOrders = orders.filter(o => o.status === 'pending');
   const completedOrders = orders.filter(o => o.status === 'completed' && (new Date().getTime() - new Date(o.created_at).getTime() < 24 * 60 * 60 * 1000));
@@ -123,6 +102,16 @@ export default function AdminDashboard() {
   return (
     <>
       <audio id="notification-sound" src="/notification.mp3" preload="auto" />
+
+      {/* ΔΙΑΚΡΙΤΙΚΟ BANNER ΓΙΑ ΤΟΝ ΗΧΟ ΑΝΤΙ ΓΙΑ FULL SCREEN */}
+      {!audioUnlocked && (
+        <div className="bg-red-600 text-white p-3 text-center flex flex-col sm:flex-row justify-center items-center gap-4 z-50 relative">
+          <span className="font-bold text-sm">⚠️ Για να ακούγεται ο ήχος στις νέες παραγγελίες, πρέπει να πατήσετε το κουμπί:</span>
+          <button onClick={unlockSystem} className="bg-white text-red-600 font-black px-6 py-2 rounded-xl shadow-md hover:bg-gray-100 transition-colors">
+            🔊 ΕΝΕΡΓΟΠΟΙΗΣΗ ΗΧΟΥ
+          </button>
+        </div>
+      )}
 
       <div className={`min-h-screen font-sans bg-[#0B1120] text-gray-200 ${isPrinting ? "hidden" : "block"}`}>
         <header className="bg-[#0F172A] border-b border-white/10 p-4 md:p-6 sticky top-0 z-40 flex justify-between items-center shadow-lg">
@@ -143,7 +132,6 @@ export default function AdminDashboard() {
 
         <main className="p-4 md:p-6 max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
           
-          {/* ΣΤΗΛΗ 1: ΝΕΕΣ ΠΑΡΑΓΓΕΛΙΕΣ */}
           <div className="bg-[#0F172A]/80 border border-[#38BDF8]/30 rounded-[2rem] p-5 shadow-2xl min-h-[80vh]">
             <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
               <h2 className="font-black text-xl uppercase text-[#38BDF8] tracking-widest flex items-center gap-2">
@@ -166,7 +154,6 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* ΣΤΗΛΗ 2: ΟΛΟΚΛΗΡΩΜΕΝΕΣ / ΑΠΟΔΕΚΤΕΣ */}
           <div className="bg-slate-900/30 border border-white/5 rounded-[2rem] p-5 opacity-90 hover:opacity-100 transition-opacity min-h-[80vh]">
             <div className="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
               <h2 className="font-black text-xl uppercase text-gray-500 tracking-widest">Ετοιμάζονται / Ολοκληρωμένες</h2>
@@ -193,7 +180,6 @@ export default function AdminDashboard() {
         </main>
       </div>
 
-      {/* ΣΥΣΤΗΜΑ ΕΚΤΥΠΩΣΗΣ */}
       {isPrinting && (
         <div className="bg-white text-black w-full m-0 p-0">
           <PrintTicket 
