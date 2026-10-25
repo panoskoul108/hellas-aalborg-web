@@ -7,11 +7,10 @@ export default function AdminProducts({ theme }: { theme?: string }) {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [activeCategory, setActiveCategory] = useState("ΟΛΑ");
   const [searchQuery, setSearchQuery] = useState("");
-  const isDark = theme === "dark" || true; // Προεπιλογή Dark Theme για το Hellas
+  const isDark = theme === "dark" || true; 
   
   const [isAdding, setIsAdding] = useState(false);
   const [activeEditTab, setActiveEditTab] = useState("basic");
-  const [isUploading, setIsUploading] = useState(false);
 
   const [editForm, setEditForm] = useState({
     title_da: "", title_en: "", title_el: "",
@@ -22,7 +21,7 @@ export default function AdminProducts({ theme }: { theme?: string }) {
     popular: false,
     image_path: "",
     sort_order: 0,
-    options: [] as any[], // Εδώ θα αποθηκεύονται τα Extras/Υλικά σε JSON
+    extras: "{}" // Εδώ θα αποθηκεύεται το JSON ως κείμενο κατά την επεξεργασία
   });
 
   const [isCustomCategory, setIsCustomCategory] = useState(false);
@@ -61,11 +60,24 @@ export default function AdminProducts({ theme }: { theme?: string }) {
     }
   };
 
-  // Αποθήκευση ή Ενημέρωση (Save)
+  // Αποθήκευση ή Ενημέρωση (Save) - ΠΡΟΣΑΡΜΟΣΜΕΝΟ ΓΙΑ JSON
   const saveEdit = async () => {
     const safeCategory = editForm.category?.trim().toUpperCase() || "ΓΕΝΙΚΑ";
-    const finalData = { ...editForm, category: safeCategory, options: editForm.options || [] };
+    
+    // Έλεγχος & Μετατροπή του Extras κειμένου σε πραγματικό JSON
+    let parsedExtras = null;
+    if (editForm.extras && editForm.extras.trim() !== '') {
+      try {
+        parsedExtras = JSON.parse(editForm.extras);
+      } catch (err) {
+        alert("Σφάλμα: Το κείμενο στα ΥΛΙΚΑ (EXTRAS JSON) δεν είναι έγκυρο JSON. Ελέγξτε για κόμματα ή εισαγωγικά που λείπουν.");
+        return; // Σταματάει την αποθήκευση αν έχει συντακτικό λάθος
+      }
+    }
 
+    const finalData: any = { ...editForm, category: safeCategory, extras: parsedExtras };
+    // Αφαιρούμε το string extras για να πάει σωστά στη βάση
+    
     if (isAdding) {
       const { error } = await supabase.from("menu_items").insert([finalData]);
       if (error) alert("Σφάλμα Προσθήκης: " + error.message);
@@ -78,60 +90,6 @@ export default function AdminProducts({ theme }: { theme?: string }) {
     setIsAdding(false);
     setIsCustomCategory(false);
     fetchProducts();
-  };
-
-  // Διαχείριση Υλικών (Addons/Options)
-  const addOptionGroup = () => {
-    setEditForm(prev => ({
-      ...prev,
-      options: [...(prev.options || []), { id: Date.now(), name_da: "", name_en: "", name_el: "", isRequired: false, maxSelections: 1, items: [] }]
-    }));
-  };
-
-  const updateOptionGroup = (groupId: number, field: string, value: any) => {
-    setEditForm(prev => ({
-      ...prev,
-      options: prev.options.map(g => g.id === groupId ? { ...g, [field]: value } : g)
-    }));
-  };
-
-  const removeOptionGroup = (groupId: number) => {
-    setEditForm(prev => ({ ...prev, options: prev.options.filter(g => g.id !== groupId) }));
-  };
-
-  const addItemToGroup = (groupId: number) => {
-    setEditForm(prev => ({
-      ...prev,
-      options: prev.options.map(g => g.id === groupId ? { ...g, items: [...(g.items || []), { name_da: "", name_en: "", name_el: "", price: 0 }] } : g)
-    }));
-  };
-
-  const updateItemInGroup = (groupId: number, itemIndex: number, field: string, value: any) => {
-    setEditForm(prev => ({
-      ...prev,
-      options: prev.options.map(g => {
-        if (g.id === groupId) {
-          const newItems = [...g.items];
-          newItems[itemIndex][field] = value;
-          return { ...g, items: newItems };
-        }
-        return g;
-      })
-    }));
-  };
-
-  const removeItemFromGroup = (groupId: number, itemIndex: number) => {
-    setEditForm(prev => ({
-      ...prev,
-      options: prev.options.map(g => {
-        if (g.id === groupId) {
-          const newItems = [...g.items];
-          newItems.splice(itemIndex, 1);
-          return { ...g, items: newItems };
-        }
-        return g;
-      })
-    }));
   };
 
   // Φιλτράρισμα & Κατηγορίες
@@ -162,7 +120,7 @@ export default function AdminProducts({ theme }: { theme?: string }) {
           <button
             onClick={() => {
               setIsAdding(true); setEditingId(null); setIsCustomCategory(false); setActiveEditTab("basic");
-              setEditForm({ title_da: "", title_en: "", title_el: "", desc_da: "", desc_en: "", desc_el: "", price_takeaway: 0, category: displayCategories[0] || "", is_available: true, popular: false, image_path: "", sort_order: 0, options: [] });
+              setEditForm({ title_da: "", title_en: "", title_el: "", desc_da: "", desc_en: "", desc_el: "", price_takeaway: 0, category: displayCategories[0] || "", is_available: true, popular: false, image_path: "", sort_order: 0, extras: "{}" });
             }}
             className="bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] px-5 py-3 rounded-2xl font-black text-xs uppercase shadow-lg active:scale-95 whitespace-nowrap"
           >
@@ -206,7 +164,15 @@ export default function AdminProducts({ theme }: { theme?: string }) {
                   <input type="checkbox" checked={p.is_available} onChange={() => handleToggleAvailable(p)} className="w-5 h-5 accent-green-500 cursor-pointer" />
                 </div>
                 <button onClick={() => handleTogglePopular(p)} className={`w-12 h-12 rounded-xl text-xl ${p.popular ? "bg-yellow-900/30 text-yellow-500" : "bg-gray-900 text-gray-500"}`}>⭐</button>
-                <button onClick={() => { setEditingId(p.id); setActiveEditTab("basic"); setEditForm({ ...p, options: p.options || [] }); setIsCustomCategory(false); }} className="w-12 h-12 rounded-xl text-lg bg-blue-900/30 text-blue-400">✏️</button>
+                <button 
+                  onClick={() => { 
+                    setEditingId(p.id); 
+                    setActiveEditTab("basic"); 
+                    // Φορτώνουμε το JSON στο editForm μετατρέποντάς το σε κείμενο
+                    setEditForm({ ...p, extras: typeof p.extras === 'object' ? JSON.stringify(p.extras, null, 2) : p.extras || '{}' }); 
+                    setIsCustomCategory(false); 
+                  }} 
+                  className="w-12 h-12 rounded-xl text-lg bg-blue-900/30 text-blue-400">✏️</button>
                 <button onClick={() => handleDelete(p.id)} className="w-12 h-12 rounded-xl text-lg bg-red-900/30 text-red-400">🗑️</button>
               </div>
             </div>
@@ -226,7 +192,7 @@ export default function AdminProducts({ theme }: { theme?: string }) {
 
             <div className="shrink-0 flex overflow-x-auto border-b border-gray-800 px-6 pt-4 gap-4">
               <button onClick={() => setActiveEditTab("basic")} className={`pb-3 font-black text-xs uppercase tracking-widest border-b-4 ${activeEditTab === "basic" ? "border-[#38BDF8] text-[#38BDF8]" : "border-transparent text-gray-500"}`}>ΒΑΣΙΚΑ & ΤΙΜΗ</button>
-              <button onClick={() => setActiveEditTab("addons")} className={`pb-3 font-black text-xs uppercase tracking-widest border-b-4 ${activeEditTab === "addons" ? "border-[#38BDF8] text-[#38BDF8]" : "border-transparent text-gray-500"}`}>ΥΛΙΚΑ (OPTIONS)</button>
+              <button onClick={() => setActiveEditTab("addons")} className={`pb-3 font-black text-xs uppercase tracking-widest border-b-4 ${activeEditTab === "addons" ? "border-[#38BDF8] text-[#38BDF8]" : "border-transparent text-gray-500"}`}>ΥΛΙΚΑ (EXTRAS JSON)</button>
               <button onClick={() => setActiveEditTab("trans")} className={`pb-3 font-black text-xs uppercase tracking-widest border-b-4 ${activeEditTab === "trans" ? "border-[#38BDF8] text-[#38BDF8]" : "border-transparent text-gray-500"}`}>ΜΕΤΑΦΡΑΣΕΙΣ</button>
             </div>
 
@@ -275,43 +241,16 @@ export default function AdminProducts({ theme }: { theme?: string }) {
               )}
 
               {activeEditTab === "addons" && (
-                <div className="space-y-6">
-                  <div className="flex justify-between items-center">
-                    <h3 className="font-black text-sm text-[#38BDF8] uppercase">Υλικά / Επιλογές</h3>
-                    <button onClick={addOptionGroup} className="bg-[#38BDF8] text-[#0B1120] px-4 py-2 rounded-lg font-black text-[10px] uppercase">+ Νεα Ομαδα (π.χ. Υλικά, Extras)</button>
+                <div className="flex flex-col gap-4 h-full">
+                  <div className="bg-[#38BDF8]/10 border border-[#38BDF8]/30 text-[#38BDF8] p-4 rounded-xl text-xs font-bold leading-relaxed">
+                    Επικολλήστε εδώ το JSON των Extras (όπως το παράγει η βάση) για να δώσετε επιλογές (Κρέας, Σως κλπ).
                   </div>
-
-                  {(editForm.options || []).map((group, gIndex) => (
-                    <div key={group.id} className="p-4 bg-gray-800/50 border border-gray-700 rounded-2xl">
-                      <div className="flex justify-between items-start mb-3">
-                        <input type="text" placeholder="Όνομα (π.χ. Επιλέξτε Sauce)" className="p-2 border-b border-gray-600 bg-transparent text-white font-bold outline-none flex-1 mr-4" value={group.name_da} onChange={(e) => updateOptionGroup(group.id, "name_da", e.target.value)} />
-                        <button onClick={() => removeOptionGroup(group.id)} className="w-8 h-8 rounded-lg bg-red-900/30 text-red-500 font-bold shrink-0">✕</button>
-                      </div>
-                      
-                      <div className="flex items-center gap-4 mb-4 text-xs font-bold text-gray-400">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input type="checkbox" checked={group.isRequired} onChange={(e) => updateOptionGroup(group.id, "isRequired", e.target.checked)} className="accent-[#38BDF8] w-4 h-4" /> Υποχρεωτικό
-                        </label>
-                        <div className="flex items-center gap-2 border-l border-gray-700 pl-4">
-                          Μέγιστες: <input type="number" min="1" value={group.maxSelections} onChange={(e) => updateOptionGroup(group.id, "maxSelections", Number(e.target.value))} className="w-12 p-1 bg-gray-900 border border-gray-700 rounded text-center text-white" />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2 mb-3">
-                        {group.items.map((opt: any, oIndex: number) => (
-                          <div key={oIndex} className="flex items-center gap-2 bg-gray-900 p-2 rounded-xl">
-                            <input type="text" placeholder="Υλικό (π.χ. Τζατζίκι)" className="flex-1 p-2 text-sm bg-transparent text-white border-b border-gray-700 outline-none" value={opt.name_da} onChange={(e) => updateItemInGroup(group.id, oIndex, "name_da", e.target.value)} />
-                            <div className="w-20 flex items-center border border-gray-700 rounded-lg pr-1">
-                              <input type="number" placeholder="0" className="w-full bg-transparent text-[#38BDF8] text-center font-bold text-sm outline-none" value={opt.price} onChange={(e) => updateItemInGroup(group.id, oIndex, "price", Number(e.target.value))} />
-                              <span className="text-[10px] text-gray-500">DKK</span>
-                            </div>
-                            <button onClick={() => removeItemFromGroup(group.id, oIndex)} className="text-red-500 font-bold px-2">✕</button>
-                          </div>
-                        ))}
-                      </div>
-                      <button onClick={() => addItemToGroup(group.id)} className="w-full py-2 bg-gray-900/50 text-[#38BDF8] rounded-xl font-black text-[10px] uppercase border border-gray-700 hover:bg-gray-700">+ Νεο Υλικο</button>
-                    </div>
-                  ))}
+                  <textarea
+                    value={editForm.extras}
+                    onChange={(e) => setEditForm({ ...editForm, extras: e.target.value })}
+                    className="w-full h-80 bg-gray-950 border border-gray-700 text-green-400 font-mono text-[11px] p-4 rounded-xl outline-none focus:border-[#38BDF8]"
+                    spellCheck="false"
+                  />
                 </div>
               )}
             </div>
