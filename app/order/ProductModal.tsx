@@ -1,187 +1,193 @@
 'use client';
-import React, { useState } from "react";
+import React, { useState } from 'react';
 
-export default function ProductModal({
-  activeProduct,
-  lang,
-  closeModal,
-  addToCart,
-  supabaseImageUrl = "https://keolpijcsvwsrzkjqtkc.supabase.co/storage/v1/object/public/menu-images/",
-}: any) {
+export default function ProductModal({ activeProduct, lang, closeModal, addToCart, supabaseImageUrl }: any) {
   const [quantity, setQuantity] = useState(1);
-  const [note, setNote] = useState("");
-  // Κρατάει τα IDs των επιλεγμένων options
-  const [selections, setSelections] = useState<{ [groupId: number]: number[] }>({});
+  const [note, setNote] = useState('');
+  
+  // Αποθηκεύει τις επιλογές του χρήστη ανά κατηγορία (π.χ. { "Kød": ["Svinekød"], "Ekstra": ["Homemade chilli"] })
+  const [selections, setSelections] = useState<Record<string, string[]>>({});
 
-  if (!activeProduct) return null;
+  const title = activeProduct[`title_${lang}`] || activeProduct.title_da || activeProduct.title_el || activeProduct.name;
+  const desc = activeProduct[`desc_${lang}`] || activeProduct.desc_da;
+  const basePrice = Number(activeProduct.final_price || activeProduct.price_takeaway || activeProduct.price || 0);
 
-  // Μεταφράσεις
-  const dict: any = {
-    da: { add: "Tilføj", req: "Krævet", opt: "Valgfri", upTo: "Op til", select1: "Vælg 1", note: "Bemærkning", notePlace: "F.eks. uden løg...", free: "Gratis" },
-    en: { add: "Add", req: "Required", opt: "Optional", upTo: "Up to", select1: "Select 1", note: "Note", notePlace: "e.g. no onions...", free: "Free" },
-    el: { add: "Προσθήκη", req: "Υποχρεωτικό", opt: "Προαιρετικό", upTo: "Έως", select1: "Επιλέξτε 1", note: "Σχόλιο", notePlace: "π.χ. χωρίς κρεμμύδι...", free: "Δωρεάν" }
-  };
-  const ui = dict[lang] || dict.da;
+  // Ασφαλής ανάγνωση του JSON των extras
+  let extras: Record<string, any> = {};
+  try {
+    extras = typeof activeProduct.extras === 'string' ? JSON.parse(activeProduct.extras) : activeProduct.extras || {};
+  } catch (e) {
+    console.error("Error parsing extras", e);
+  }
 
-  const getTitle = (item: any) => item[`title_${lang}`] || item.title_da || item.name;
-  const getDesc = (item: any) => item[`desc_${lang}`] || item.desc_da || item.description;
-  const getOptName = (opt: any) => opt[`name_${lang}`] || opt.name_da || opt.name;
-  const basePrice = Number(activeProduct.price_takeaway || activeProduct.price || 0);
-
-  // Υπολογισμός Extra Κόστους
+  // Υπολογισμός συνολικής τιμής (Βασική τιμή + Τιμή επιλεγμένων Extras) * Ποσότητα
   let extraPrice = 0;
-  const addons = activeProduct.options || [];
-  addons.forEach((group: any) => {
-    const selectedIndexes = selections[group.id] || [];
-    selectedIndexes.forEach((idx) => {
-      extraPrice += Number(group.items[idx].price || 0);
+  Object.keys(extras).forEach(groupKey => {
+    const group = extras[groupKey];
+    const selectedOptions = selections[groupKey] || [];
+    selectedOptions.forEach(optName => {
+      const optionDef = group.options.find((o: any) => o.name === optName);
+      if (optionDef) extraPrice += Number(optionDef.price || 0);
     });
   });
+  
+  const totalPrice = (basePrice + extraPrice) * quantity;
 
-  const currentTotal = (basePrice + extraPrice) * quantity;
-
-  // Διαχείριση Επιλογών (Checkboxes / Radio)
-  const toggleSelection = (groupId: number, optionIndex: number, maxSel: number) => {
+  // Διαχείριση κλικ σε επιλογή
+  const handleSelect = (groupKey: string, optionName: string, isSingle: boolean, max?: number) => {
     setSelections(prev => {
-      const currentSel = prev[groupId] || [];
-      if (currentSel.includes(optionIndex)) {
-        // Αφαίρεση αν είναι ήδη επιλεγμένο
-        return { ...prev, [groupId]: currentSel.filter(i => i !== optionIndex) };
-      } else {
-        // Προσθήκη (με έλεγχο ορίου)
-        if (maxSel === 1) return { ...prev, [groupId]: [optionIndex] }; // Radio behavior
-        if (currentSel.length < maxSel) return { ...prev, [groupId]: [...currentSel, optionIndex] };
-        return prev;
+      const currentSelections = prev[groupKey] || [];
+      
+      // Αν είναι Υποχρεωτικό (Single) - π.χ. Κρέας (αλλάζει την επιλογή)
+      if (isSingle) {
+        return { ...prev, [groupKey]: [optionName] };
+      } 
+      // Αν είναι Πολλαπλό (Multiple) - π.χ. Extras
+      else {
+        if (currentSelections.includes(optionName)) {
+          // Αφαίρεση αν είναι ήδη επιλεγμένο
+          return { ...prev, [groupKey]: currentSelections.filter(n => n !== optionName) };
+        } else {
+          // Προσθήκη αν δεν έχει ξεπεράσει το όριο max
+          if (max && currentSelections.length >= max) return prev; 
+          return { ...prev, [groupKey]: [...currentSelections, optionName] };
+        }
       }
     });
   };
 
-  const handleConfirm = () => {
-    // Έλεγχος Υποχρεωτικών (Required)
-    for (const group of addons) {
-      if (group.isRequired && !(selections[group.id]?.length > 0)) {
-        alert(`Παρακαλώ επιλέξτε: ${getOptName(group)}`);
-        return;
+  const handleAdd = () => {
+    // 1. Έλεγχος αν έχει επιλέξει τα υποχρεωτικά
+    for (const groupKey of Object.keys(extras)) {
+      if (extras[groupKey].type === 'single') {
+        if (!selections[groupKey] || selections[groupKey].length === 0) {
+          alert(`Παρακαλώ επιλέξτε: ${groupKey}`);
+          return;
+        }
       }
     }
 
-    // Καταγραφή Επιλεγμένων Extras για να φαίνονται στο καλάθι και το χαρτάκι
-    const selectedExtras: string[] = [];
-    addons.forEach((group: any) => {
-      const selectedIndexes = selections[group.id] || [];
-      selectedIndexes.forEach((idx) => {
-        selectedExtras.push(getOptName(group.items[idx]));
+    // 2. Μετατροπή των επιλογών σε μια απλή λίστα για το καλάθι
+    const flatSelections: string[] = [];
+    Object.keys(selections).forEach(groupKey => {
+      selections[groupKey].forEach(optName => {
+        flatSelections.push(optName);
       });
     });
 
-    addToCart({
-      ...activeProduct,
-      final_price: basePrice + extraPrice, // Η νέα τιμή ΜΟΝΑΔΑΣ (Βάση + Extras)
-      selectedOptions: selectedExtras,
-      note: note
-    }, quantity);
+    // 3. Προσθήκη στο καλάθι
+    // Στέλνουμε το προϊόν με τη ΝΕΑ τελική τιμή μονάδας (Βασική + Extras)
+    const productForCart = { 
+      ...activeProduct, 
+      final_price: basePrice + extraPrice, 
+      price_takeaway: basePrice + extraPrice, // Fallbacks
+      selectedOptions: flatSelections, 
+      note 
+    };
     
+    addToCart(productForCart, quantity);
     closeModal();
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-[300] flex items-end sm:items-center justify-center animate-fade-in" onClick={closeModal}>
-      <div className="w-full max-w-lg max-h-[90vh] bg-[#0F172A] sm:rounded-[3rem] rounded-t-[3rem] flex flex-col shadow-2xl relative overflow-hidden" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in" onClick={closeModal}>
+      <div className="bg-[#0F172A] w-full max-w-lg rounded-3xl overflow-hidden flex flex-col max-h-[90vh] shadow-2xl border border-white/10" onClick={e => e.stopPropagation()}>
         
-        {activeProduct.image_path && (
-          <div className="relative h-48 sm:h-64 shrink-0 bg-gray-800">
-             <img src={`${supabaseImageUrl}${activeProduct.image_path}`} alt="" className="w-full h-full object-cover" />
-             <div className="absolute top-0 inset-x-0 h-24 bg-gradient-to-b from-black/60 to-transparent"></div>
-          </div>
-        )}
+        {/* Εικόνα και Κουμπί Κλεισίματος */}
+        <div className="relative h-48 sm:h-64 bg-slate-800 shrink-0">
+          <button onClick={closeModal} className="absolute top-4 right-4 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black transition-colors z-10">✕</button>
+          {activeProduct.image_path ? (
+            <img src={`${supabaseImageUrl}${activeProduct.image_path}`} alt={title} className="w-full h-full object-cover" />
+          ) : (
+             <div className="w-full h-full flex items-center justify-center text-5xl">🍽️</div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A] to-transparent"></div>
+        </div>
 
-        <button onClick={closeModal} className={`absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center text-xl transition-colors z-10 ${activeProduct.image_path ? "bg-black/40 text-white" : "bg-gray-800 text-gray-400"}`}>✕</button>
+        {/* Πληροφορίες Προϊόντος & Extras (Scrollable) */}
+        <div className="p-5 overflow-y-auto flex-1 pb-4">
+          <h2 className="text-2xl font-black text-white uppercase tracking-tight">{title}</h2>
+          <p className="text-[#38BDF8] font-black text-lg mb-2">{basePrice} DKK <span className="text-xs font-bold text-gray-500 line-through ml-2">ΒΑΣΙΚΗ ΤΙΜΗ</span></p>
+          <p className="text-gray-400 text-sm mb-6 leading-relaxed">{desc}</p>
 
-        <div className={`flex-1 overflow-y-auto px-6 no-scrollbar pb-24 ${!activeProduct.image_path ? 'pt-14' : 'pt-6'}`}>
-          <h2 className="text-2xl font-black uppercase mb-2 text-white pr-8">{getTitle(activeProduct)}</h2>
-          <p className="text-xl font-black mb-4 text-[#38BDF8]">{basePrice.toFixed(2)} DKK</p>
-          <p className="text-sm font-medium mb-6 text-gray-400 leading-relaxed">{getDesc(activeProduct)}</p>
+          {/* Rendering των Extras */}
+          {Object.keys(extras).length > 0 && (
+            <div className="flex flex-col gap-6 mb-6">
+              {Object.keys(extras).map((groupKey) => {
+                const group = extras[groupKey];
+                const isSingle = group.type === 'single';
+                const currentSelections = selections[groupKey] || [];
 
-          {/* ADD-ONS (ΥΛΙΚΑ) */}
-          {addons.map((group: any) => {
-            const groupName = getOptName(group);
-            const isReq = group.isRequired;
-            const maxSel = group.maxSelections || 1;
-            const selectedCount = (selections[group.id] || []).length;
-            
-            return (
-              <div key={group.id} className="mb-6">
-                <div className="flex justify-between items-end mb-3">
-                  <div>
-                    <h3 className="font-black uppercase text-sm text-gray-200">{groupName}</h3>
-                    <p className={`text-[10px] font-bold mt-1 uppercase ${isReq ? 'text-red-400' : 'text-gray-500'}`}>
-                      {isReq ? `* ${ui.req}` : ui.opt} {maxSel > 1 ? `(${ui.upTo} ${maxSel})` : `(${ui.select1})`}
-                    </p>
+                return (
+                  <div key={groupKey} className="bg-slate-900/50 p-4 rounded-2xl border border-white/5">
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="font-bold text-white text-sm uppercase">{groupKey}</h3>
+                      <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-md ${isSingle ? 'bg-[#38BDF8]/20 text-[#38BDF8]' : 'bg-gray-800 text-gray-400'}`}>
+                        {isSingle ? 'ΥΠΟΧΡΕΩΤΙΚΟ (Επιλεξτε 1)' : group.max ? `ΕΩΣ ${group.max} ΕΠΙΛΟΓΕΣ` : 'ΠΡΟΑΙΡΕΤΙΚΟ'}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      {group.options.map((opt: any, idx: number) => {
+                        const isSelected = currentSelections.includes(opt.name);
+                        // Αν είναι multiple και έχουμε φτάσει το max, απενεργοποιούμε τα υπόλοιπα
+                        const isDisabled = !isSingle && !isSelected && group.max && currentSelections.length >= group.max;
+
+                        return (
+                          <label key={idx} className={`flex items-center justify-between p-3 rounded-xl border transition-colors cursor-pointer ${isSelected ? 'border-[#38BDF8] bg-[#38BDF8]/10' : 'border-white/5 bg-slate-800/50 hover:bg-slate-800'} ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                            <div className="flex items-center gap-3">
+                              {/* Custom Checkbox/Radio UI */}
+                              <div className={`w-5 h-5 flex items-center justify-center border-2 transition-colors ${isSingle ? 'rounded-full' : 'rounded-md'} ${isSelected ? 'border-[#38BDF8] bg-[#38BDF8]' : 'border-gray-500'}`}>
+                                {isSelected && <span className={`bg-[#0F172A] ${isSingle ? 'w-2 h-2 rounded-full' : 'w-3 h-3'}`} style={!isSingle ? { clipPath: 'polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%)', backgroundColor: '#0F172A'} : {}}></span>}
+                              </div>
+                              <span className={`text-sm font-bold ${isSelected ? 'text-white' : 'text-gray-300'}`}>{opt.name}</span>
+                            </div>
+                            <span className="text-xs font-bold text-gray-400">{Number(opt.price) > 0 ? `+${opt.price} kr.` : ''}</span>
+                            
+                            {/* Κρυφό πραγματικό input για προσβασιμότητα/λειτουργικότητα */}
+                            <input 
+                              type={isSingle ? "radio" : "checkbox"} 
+                              name={groupKey} 
+                              checked={isSelected}
+                              disabled={isDisabled}
+                              onChange={() => handleSelect(groupKey, opt.name, isSingle, group.max)}
+                              className="hidden"
+                            />
+                          </label>
+                        );
+                      })}
+                    </div>
                   </div>
-                  {isReq && selectedCount === 0 && <span className="text-[10px] font-black text-white bg-red-500 px-2 py-1 rounded-lg uppercase">!</span>}
-                </div>
-                
-                <div className="space-y-2">
-                  {group.items.map((opt: any, idx: number) => {
-                    const optName = getOptName(opt);
-                    const optPrice = Number(opt.price || 0);
-                    const isSelected = (selections[group.id] || []).includes(idx);
-                    
-                    return (
-                      <div 
-                        key={idx} 
-                        onClick={() => toggleSelection(group.id, idx, maxSel)}
-                        className={`flex justify-between items-center p-4 rounded-2xl border-2 cursor-pointer transition-all active:scale-[0.98] ${isSelected ? 'border-[#38BDF8] bg-[#38BDF8]/10' : 'border-gray-700 bg-gray-800/50'}`}
-                      >
-                        <span className={`text-sm font-black uppercase ${isSelected ? 'text-[#38BDF8]' : 'text-gray-300'}`}>{optName}</span>
-                        <div className="flex items-center gap-3">
-                          <span className={`text-xs font-black ${isSelected ? 'text-[#38BDF8]' : 'text-gray-400'}`}>
-                            {optPrice > 0 ? `+${optPrice.toFixed(0)} DKK` : ui.free}
-                          </span>
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${isSelected ? 'border-[#38BDF8] bg-[#38BDF8]' : 'border-gray-600'}`}>
-                            {isSelected && <span className="text-[#0B1120] text-[10px]">✓</span>}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          )}
 
-          {/* NOTE */}
-          <div className="mt-8">
-            <h3 className="font-black uppercase text-sm mb-3 text-gray-200">{ui.note}</h3>
-            <textarea
-              className="w-full border border-gray-700 p-4 rounded-2xl text-sm font-bold bg-gray-800 text-white focus:border-[#38BDF8] outline-none resize-none"
-              rows={2}
-              placeholder={ui.notePlace}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
+          {/* Γενικό Σχόλιο */}
+          <div className="mb-2">
+            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2">ΣΧΟΛΙΑ / ΕΙΔΙΚΕΣ ΟΔΗΓΙΕΣ</label>
+            <textarea 
+              value={note} 
+              onChange={e => setNote(e.target.value)} 
+              placeholder="π.χ. Χωρίς σως..."
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white text-sm outline-none focus:border-[#38BDF8] resize-none h-20"
             />
           </div>
         </div>
 
-        {/* FOOTER - ΑΠΟΣΤΟΛΗ ΣΤΟ ΚΑΛΑΘΙ */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10 bg-[#0F172A]">
-          <div className="flex gap-4">
-            <div className="flex items-center justify-between px-2 rounded-2xl border border-gray-700 bg-gray-800 w-32">
-              <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-10 h-10 text-xl font-black text-gray-400">−</button>
-              <span className="text-lg font-black text-white">{quantity}</span>
-              <button onClick={() => setQuantity(quantity + 1)} className="w-10 h-10 text-xl font-black text-[#38BDF8]">+</button>
-            </div>
-            
-            <button 
-              onClick={handleConfirm}
-              className="flex-1 bg-[#38BDF8] text-[#0B1120] rounded-2xl font-black uppercase text-sm shadow-xl flex items-center justify-between px-6 transition-transform active:scale-95"
-            >
-              <span>{ui.add}</span>
-              <span>{currentTotal.toFixed(0)} DKK</span>
-            </button>
+        {/* Footer (Ποσότητα & Προσθήκη) */}
+        <div className="p-4 border-t border-slate-700 bg-slate-900 shrink-0 flex items-center gap-4">
+          <div className="flex items-center gap-3 bg-slate-800 rounded-xl p-1.5 border border-white/5">
+            <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-10 h-10 flex items-center justify-center text-white hover:bg-slate-700 rounded-lg font-black text-xl transition-colors">-</button>
+            <span className="font-black text-lg w-6 text-center">{quantity}</span>
+            <button onClick={() => setQuantity(q => q + 1)} className="w-10 h-10 flex items-center justify-center text-white hover:bg-slate-700 rounded-lg font-black text-xl transition-colors">+</button>
           </div>
+          
+          <button onClick={handleAdd} className="flex-1 bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-black py-4 rounded-xl shadow-lg transition-transform active:scale-95 flex justify-between px-6 uppercase tracking-wider items-center">
+            <span>{ui?.add || 'ΠΡΟΣΘΗΚΗ'}</span>
+            <span className="bg-[#0B1120]/10 px-2 py-1 rounded-lg">{totalPrice} DKK</span>
+          </button>
         </div>
-
       </div>
     </div>
   );
