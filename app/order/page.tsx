@@ -418,7 +418,9 @@ export default function OrderPage() {
                       ))}
                     </ul>
                     <div className="flex justify-between items-center border-t border-slate-700 pt-3">
-                      <span className="text-xs font-bold text-gray-400 uppercase">{ui.summaryTotal} ({placedOrder?.payment_method}):</span>
+                    <span className="text-xs font-bold text-gray-400 uppercase">
+  {ui.summaryTotal} ({placedOrder?.payment_method === 'ΚΑΡΤΑ' ? ui.card : ui.cash}):
+</span>
                       <span className="text-lg font-black text-[#38BDF8]">{placedOrder?.total_price} kr.</span>
                     </div>
                   </div>
