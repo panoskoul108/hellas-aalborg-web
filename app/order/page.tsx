@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { supabase } from '../supabase';
 import ProductModal from './ProductModal'; 
 
-const MAX_ORDERS = 5;
+const MAX_ORDERS = 50; // Προσωρινά αυξημένο για δοκιμές
 const LOCKOUT_MS = 5 * 60 * 1000;
 const REWARD_THRESHOLD = 40;
 const REWARD_DISCOUNT_DKK = 35;
@@ -36,9 +36,7 @@ export default function OrderPage() {
   const [ordersPlaced, setOrdersPlaced] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
 
-  // === LIVE TRACKING STATE ===
   const [placedOrder, setPlacedOrder] = useState<any>(null);
-
   const supabaseImageUrl = "https://keolpijcsvwsrzkjqtkc.supabase.co/storage/v1/object/public/menu-images/";
 
   const dict = {
@@ -55,7 +53,8 @@ export default function OrderPage() {
       trackPendingTitle: "Afventer Godkendelse", trackPendingDesc: "Restauranten gennemgår din ordre...",
       trackPrepTitle: "Tilberedes!", trackPrepTime: "Klar klokken:",
       trackReadyTitle: "Klar til afhentning!", trackReadyDesc: "Din ordre venter på dig ved kassen.",
-      summaryTitle: "Din Ordre", summaryTotal: "Total"
+      summaryTitle: "Din Ordre", summaryTotal: "Total",
+      guestCheckout: "Fortsæt som gæst", or: "ELLER"
     },
     en: { 
       menuTitle: "Choose your dishes", add: "Add", wolt: "Want delivery? Order via Wolt 🛵",
@@ -70,7 +69,8 @@ export default function OrderPage() {
       trackPendingTitle: "Awaiting Approval", trackPendingDesc: "The restaurant is reviewing your order...",
       trackPrepTitle: "Preparing!", trackPrepTime: "Will be ready at:",
       trackReadyTitle: "Ready for Pickup!", trackReadyDesc: "Your order is waiting for you at the counter.",
-      summaryTitle: "Your Order", summaryTotal: "Total"
+      summaryTitle: "Your Order", summaryTotal: "Total",
+      guestCheckout: "Continue as Guest", or: "OR"
     },
     el: { 
       menuTitle: "Επιλέξτε τα πιάτα σας", add: "Προσθήκη", wolt: "Θέλετε Delivery; Παραγγείλτε μέσω Wolt 🛵",
@@ -85,7 +85,8 @@ export default function OrderPage() {
       trackPendingTitle: "Αναμονη Αποδοχης", trackPendingDesc: "Το κατάστημα εξετάζει την παραγγελία σας...",
       trackPrepTitle: "Ετοιμαζεται!", trackPrepTime: "Θα ειναι ετοιμο στις:",
       trackReadyTitle: "Ετοιμο για Παραλαβη!", trackReadyDesc: "Η παραγγελία σας περιμένει στο ταμείο.",
-      summaryTitle: "Η Παραγγελια Σας", summaryTotal: "Συνολο"
+      summaryTitle: "Η Παραγγελια Σας", summaryTotal: "Συνολο",
+      guestCheckout: "Συνεχεια ως Επισκεπτης", or: "Η"
     }
   };
   const ui = dict[lang];
@@ -136,15 +137,12 @@ export default function OrderPage() {
     return () => clearTimeout(timer);
   }, [customerPhone]);
 
-  // === ΑΛΕΞΙΣΦΑΙΡΟ LIVE TRACKING LISTENER ===
   useEffect(() => {
     if (!placedOrder?.id) return;
     const channel = supabase
       .channel(`public:orders:id=eq.${placedOrder.id}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${placedOrder.id}` }, async (payload) => {
         setPlacedOrder((prev: any) => ({ ...prev, ...payload.new })); 
-        const { data } = await supabase.from('orders').select('*').eq('id', placedOrder.id).single();
-        if (data) setPlacedOrder(data);
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -164,16 +162,7 @@ export default function OrderPage() {
   };
 
   const removeFromCart = (cartId: string) => setCart(prev => prev.filter(cartItem => cartItem.cartId !== cartId));
-  
-  const updateQuantity = (cartId: string, delta: number) => {
-    setCart(prev => prev.map(cartItem => {
-      if (cartItem.cartId === cartId) {
-        const newQ = cartItem.quantity + delta;
-        return newQ > 0 ? { ...cartItem, quantity: newQ } : cartItem;
-      }
-      return cartItem;
-    }));
-  };
+  const updateQuantity = (cartId: string, delta: number) => setCart(prev => prev.map(cartItem => cartItem.cartId === cartId ? (cartItem.quantity + delta > 0 ? { ...cartItem, quantity: cartItem.quantity + delta } : cartItem) : cartItem));
 
   const subtotal = cart.reduce((total, cartItem) => total + (getItemPrice(cartItem.item) * cartItem.quantity), 0);
   const canRedeem = loyaltyInfo && loyaltyInfo.points >= REWARD_THRESHOLD;
@@ -200,13 +189,14 @@ export default function OrderPage() {
   const submitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isLocked) return alert("Limit reached.");
-    if (!customerName || !customerPhone || !user) return alert('Λείπουν στοιχεία.');
+    // Αφαιρέσαμε τον έλεγχο !user για να επιτρέπουμε Guest Checkout
+    if (!customerName || !customerPhone) return alert('Λείπουν στοιχεία.');
     
     setIsSubmitting(true);
     try {
       const cleanPhone = customerPhone.replace(/\s+/g, "");
       const payload = {
-        user_id: user.id,
+        user_id: user?.id || null, // Αν δεν υπάρχει χρήστης, πάει null
         order_type: 'takeaway',
         customer_name: customerName,
         customer_phone: cleanPhone,
@@ -225,18 +215,18 @@ export default function OrderPage() {
         vat_moms_dkk: vatMoms,
         total_price: finalTotal,
         payment_method: paymentMethod === 'card' ? 'ΚΑΡΤΑ' : 'ΜΕΤΡΗΤΑ',
-        status: 'pending' // Ξεκινάει ΠΑΝΤΑ ως pending
+        status: 'pending'
       };
 
       const { data: orderData, error: orderError } = await supabase.from('orders').insert([payload]).select().single();
       if (orderError) throw orderError;
       
-      setPlacedOrder(orderData); // Φορτώνει το Tracker
+      setPlacedOrder(orderData);
 
       await supabase.from('action_logs').insert([{
         action_type: "TAKEAWAY_ORDER_CREATED",
         order_id: orderData.id,
-        details: { company: "Nordic-mythos 1 ApS", user: user.email, total_dkk: finalTotal }
+        details: { company: "Nordic-mythos 1 ApS", user: user?.email || "Guest", total_dkk: finalTotal }
       }]);
 
       const earnedPoints = Math.floor(finalTotal / 10);
@@ -259,7 +249,7 @@ export default function OrderPage() {
       localStorage.setItem("servato_orders", newTotal.toString());
       localStorage.setItem("servato_time", Date.now().toString());
 
-      setCheckoutStep('success'); // Πάει στην οθόνη Tracker
+      setCheckoutStep('success');
     } catch (error: any) { alert('Σφάλμα: ' + error.message); } finally { setIsSubmitting(false); }
   };
 
@@ -323,34 +313,22 @@ export default function OrderPage() {
       </main>
 
       {activeProduct && (
-        <ProductModal 
-          activeProduct={activeProduct} 
-          lang={lang} 
-          closeModal={() => setActiveProduct(null)} 
-          addToCart={addToCart} 
-          supabaseImageUrl={supabaseImageUrl}
-        />
+        <ProductModal activeProduct={activeProduct} lang={lang} closeModal={() => setActiveProduct(null)} addToCart={addToCart} supabaseImageUrl={supabaseImageUrl} />
       )}
 
       {isCartOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-end">
-          <div className="w-full max-w-md bg-[#0F172A] h-full flex flex-col shadow-2xl border-l border-white/10 animate-fade-in-up">
+          {/* MOBILE UI POLISH: w-full md:max-w-md (Πιάνει όλη την οθόνη στα κινητά, μένει 450px στα PC) */}
+          <div className="w-full md:max-w-md bg-[#0F172A] h-full flex flex-col shadow-2xl md:border-l border-white/10 animate-fade-in-up md:animate-slide-in-right">
             <div className="p-6 border-b border-white/10 flex justify-between items-center bg-slate-900">
               <h2 className="text-xl font-bold text-white">{ui.cartTitle}</h2>
-              <button onClick={() => setIsCartOpen(false)} className="text-gray-400 hover:text-white text-2xl">&times;</button>
+              <button onClick={() => setIsCartOpen(false)} className="text-gray-400 hover:text-white text-3xl md:text-2xl font-light">&times;</button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-0 md:p-6">
+            <div className="flex-1 overflow-y-auto p-4 md:p-6">
               {checkoutStep === 'success' ? (
-                
-                // === ΠΛΗΡΕΣ LIVE TRACKER (PROGRESS BAR + ΣΥΝΟΨΗ) ===
-                <div className="flex flex-col items-center py-6 w-full px-4">
-                  
-                  <h2 className="text-xl md:text-2xl font-black text-white mb-8 uppercase tracking-widest italic text-center">
-                    # {placedOrder?.order_number || placedOrder?.id?.toString().slice(-4)}
-                  </h2>
-
-                  {/* 3-STEP PROGRESS BAR */}
+                <div className="flex flex-col items-center py-6 w-full">
+                  <h2 className="text-xl md:text-2xl font-black text-white mb-8 uppercase tracking-widest italic text-center"># {placedOrder?.order_number || placedOrder?.id?.toString().slice(-4)}</h2>
                   <div className="w-full max-w-xs mb-10 relative">
                     <div className="absolute top-4 left-0 h-1 bg-gray-700 w-full -z-10 rounded-full"></div>
                     <div className={`absolute top-4 left-0 h-1 bg-[#38BDF8] -z-10 transition-all duration-500 rounded-full ${placedOrder?.status === 'pending' ? 'w-[15%]' : placedOrder?.status === 'preparing' ? 'w-[50%]' : 'w-full !bg-emerald-500'}`}></div>
@@ -371,85 +349,65 @@ export default function OrderPage() {
                     </div>
                   </div>
 
-                  {/* ΜΗΝΥΜΑ ΚΑΤΑΣΤΑΣΗΣ */}
-                  <div className="w-full max-w-sm bg-slate-800/50 border border-slate-700 rounded-3xl p-6 mb-8 text-center shadow-xl">
+                  <div className="w-full bg-slate-800/50 border border-slate-700 rounded-3xl p-6 mb-8 text-center shadow-xl">
                     {placedOrder?.status === 'pending' && (
-                      <div className="animate-fade-in">
-                         <div className="w-12 h-12 rounded-full border-4 border-[#38BDF8] border-t-transparent animate-spin mx-auto mb-4"></div>
-                         <h3 className="text-xl font-black text-white mb-2 uppercase">{ui.trackPendingTitle}</h3>
-                         <p className="text-sm text-gray-400 font-bold">{ui.trackPendingDesc}</p>
-                      </div>
+                      <div className="animate-fade-in"><div className="w-12 h-12 rounded-full border-4 border-[#38BDF8] border-t-transparent animate-spin mx-auto mb-4"></div><h3 className="text-xl font-black text-white mb-2 uppercase">{ui.trackPendingTitle}</h3><p className="text-sm text-gray-400 font-bold">{ui.trackPendingDesc}</p></div>
                     )}
-                    
                     {placedOrder?.status === 'preparing' && (
-                      <div className="animate-fade-in">
-                         <span className="text-6xl mb-4 block">🔥</span>
-                         <h3 className="text-xl font-black text-white mb-4 uppercase">{ui.trackPrepTitle}</h3>
-                         <div className="bg-[#38BDF8]/20 border border-[#38BDF8]/50 rounded-2xl p-4 inline-block">
-                           <p className="text-[10px] font-black text-[#38BDF8] uppercase tracking-widest mb-1">{ui.trackPrepTime}</p>
-                           <p className="text-4xl font-black text-white">
-                             {placedOrder?.requested_time && placedOrder.requested_time !== 'ASAP' ? placedOrder.requested_time : '...'}
-                           </p>
-                         </div>
+                      <div className="animate-fade-in"><span className="text-6xl mb-4 block">🔥</span><h3 className="text-xl font-black text-white mb-4 uppercase">{ui.trackPrepTitle}</h3>
+                         <div className="bg-[#38BDF8]/20 border border-[#38BDF8]/50 rounded-2xl p-4 inline-block"><p className="text-[10px] font-black text-[#38BDF8] uppercase tracking-widest mb-1">{ui.trackPrepTime}</p><p className="text-4xl font-black text-white">{placedOrder?.requested_time && placedOrder.requested_time !== 'ASAP' ? placedOrder.requested_time : '...'}</p></div>
                       </div>
                     )}
-
                     {placedOrder?.status === 'completed' && (
-                      <div className="animate-fade-in">
-                         <span className="text-6xl mb-4 block">✅</span>
-                         <h3 className="text-xl font-black text-emerald-400 mb-2 uppercase">{ui.trackReadyTitle}</h3>
-                         <p className="text-sm text-gray-300 font-bold">{ui.trackReadyDesc}</p>
-                      </div>
+                      <div className="animate-fade-in"><span className="text-6xl mb-4 block">✅</span><h3 className="text-xl font-black text-emerald-400 mb-2 uppercase">{ui.trackReadyTitle}</h3><p className="text-sm text-gray-300 font-bold">{ui.trackReadyDesc}</p></div>
                     )}
                   </div>
 
-                  {/* ΣΥΝΟΨΗ ΠΑΡΑΓΓΕΛΙΑΣ */}
-                  <div className="w-full max-w-sm bg-slate-900 border border-slate-700 rounded-3xl p-6 text-left shadow-lg mb-8">
+                  <div className="w-full bg-slate-900 border border-slate-700 rounded-3xl p-6 text-left shadow-lg mb-8">
                     <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4 border-b border-slate-700 pb-2">{ui.summaryTitle}</h4>
                     <ul className="space-y-3 mb-4">
                       {placedOrder?.items?.map((it: any, i: number) => (
                         <li key={i} className="flex justify-between items-start text-sm">
-                          <div className="flex-1 pr-2">
-                            <span className="font-bold text-white"><span className="text-[#38BDF8] mr-2">{it.quantity || 1}x</span>{it.title_da || it.title_el || it.name}</span>
-                            {it.selectedOptions?.length > 0 && <span className="text-xs text-gray-400 block mt-0.5">+ {it.selectedOptions.join(', ')}</span>}
-                          </div>
+                          <div className="flex-1 pr-2"><span className="font-bold text-white"><span className="text-[#38BDF8] mr-2">{it.quantity || 1}x</span>{it.title_da || it.title_el || it.name}</span>{it.selectedOptions?.length > 0 && <span className="text-xs text-gray-400 block mt-0.5">+ {it.selectedOptions.join(', ')}</span>}</div>
                           <span className="font-bold text-gray-300">{(it.unit_price_dkk * (it.quantity || 1)).toFixed(0)} kr.</span>
                         </li>
                       ))}
                     </ul>
                     <div className="flex justify-between items-center border-t border-slate-700 pt-3">
-                    <span className="text-xs font-bold text-gray-400 uppercase">
-  {ui.summaryTotal} ({placedOrder?.payment_method === 'ΚΑΡΤΑ' ? ui.card : ui.cash}):
-</span>
+                      <span className="text-xs font-bold text-gray-400 uppercase">{ui.summaryTotal} ({placedOrder?.payment_method === 'ΚΑΡΤΑ' ? ui.card : ui.cash}):</span>
                       <span className="text-lg font-black text-[#38BDF8]">{placedOrder?.total_price} kr.</span>
                     </div>
                   </div>
 
-                  <button onClick={() => { setIsCartOpen(false); setCheckoutStep('cart'); setPlacedOrder(null); setCart([]); }} className="w-full max-w-sm bg-white text-[#0B1120] font-black py-4 rounded-2xl hover:bg-gray-200 transition-colors uppercase shadow-lg">
-                    {ui.close}
-                  </button>
+                  <button onClick={() => { setIsCartOpen(false); setCheckoutStep('cart'); setPlacedOrder(null); setCart([]); }} className="w-full bg-white text-[#0B1120] font-black py-4 rounded-2xl hover:bg-gray-200 transition-colors uppercase shadow-lg">{ui.close}</button>
                 </div>
-
               ) : checkoutStep === 'auth' ? (
-                <div className="flex flex-col gap-5 py-4 px-4 md:px-0">
+                <div className="flex flex-col gap-5">
                   <h3 className="text-2xl font-bold text-white text-center mb-2">{ui.loginTitle}</h3>
                   <form onSubmit={handleAuth} className="flex flex-col gap-4">
                     {authError && <div className="bg-red-500/10 border border-red-500 text-red-400 p-3 rounded-lg text-sm">{authError}</div>}
-                    <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white outline-none focus:border-[#38BDF8]" />
-                    <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white outline-none focus:border-[#38BDF8]" />
-                    <button type="submit" className="w-full bg-[#38BDF8] hover:bg-sky-400 text-slate-900 font-bold py-4 rounded-xl shadow-lg mt-2">Submit</button>
+                    <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" />
+                    <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" />
+                    <button type="submit" className="w-full bg-[#38BDF8] hover:bg-sky-400 text-slate-900 font-bold py-4 rounded-xl shadow-lg mt-2 uppercase">{authMode === 'signup' ? 'REGISTER' : 'LOGIN'}</button>
                   </form>
-                  <button type="button" onClick={() => setAuthMode(authMode === 'signup' ? 'login' : 'signup')} className="text-sm text-gray-400 hover:text-white underline text-center">
-                    Toggle Login / Register
+                  <button type="button" onClick={() => setAuthMode(authMode === 'signup' ? 'login' : 'signup')} className="text-sm text-gray-400 hover:text-white underline text-center pb-2">Toggle Login / Register</button>
+                  
+                  {/* GUEST CHECKOUT BUTTON */}
+                  <div className="flex items-center gap-4 my-2">
+                    <hr className="flex-1 border-slate-700" />
+                    <span className="text-xs text-gray-500 font-bold uppercase">{ui.or}</span>
+                    <hr className="flex-1 border-slate-700" />
+                  </div>
+                  <button onClick={() => setCheckoutStep('checkout')} className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-4 rounded-xl shadow-lg border border-white/10 uppercase transition-colors">
+                    {ui.guestCheckout}
                   </button>
+
                 </div>
               ) : cart.length === 0 ? (
                 <div className="text-center text-gray-500 mt-20"><span className="text-4xl mb-3 block">🛒</span><p>{ui.emptyCart}</p></div>
               ) : checkoutStep === 'cart' ? (
-                <div className="flex flex-col gap-4 px-4 md:px-0">
-                  <a href="https://wolt.com" target="_blank" rel="noreferrer" className="block text-center bg-[#38BDF8]/10 border border-[#38BDF8]/30 text-[#38BDF8] text-xs font-bold p-3 rounded-xl hover:bg-[#38BDF8]/20 transition-colors">
-                    {ui.wolt}
-                  </a>
+                <div className="flex flex-col gap-4">
+                  <a href="https://wolt.com" target="_blank" rel="noreferrer" className="block text-center bg-[#38BDF8]/10 border border-[#38BDF8]/30 text-[#38BDF8] text-xs font-bold p-3 rounded-xl hover:bg-[#38BDF8]/20 transition-colors">{ui.wolt}</a>
                   {cart.map((cartItem, idx) => (
                     <div key={idx} className="flex flex-col bg-slate-800/30 p-3 rounded-xl border border-white/5">
                       <div className="flex justify-between items-center mb-2">
@@ -458,65 +416,48 @@ export default function OrderPage() {
                           <p className="text-xs text-[#38BDF8]">{getItemPrice(cartItem.item)} DKK</p>
                         </div>
                         <div className="flex items-center gap-3 bg-slate-900 rounded-lg p-1 border border-white/5">
-                          <button onClick={() => updateQuantity(cartItem.cartId, -1)} className="w-7 h-7 flex items-center justify-center text-white bg-slate-800 hover:bg-slate-700 rounded-md font-bold">-</button>
+                          <button onClick={() => updateQuantity(cartItem.cartId, -1)} className="w-8 h-8 flex items-center justify-center text-white bg-slate-800 hover:bg-slate-700 rounded-md font-bold text-lg">-</button>
                           <span className="font-bold text-sm w-4 text-center">{cartItem.quantity}</span>
-                          <button onClick={() => updateQuantity(cartItem.cartId, 1)} className="w-7 h-7 flex items-center justify-center text-white bg-slate-800 hover:bg-slate-700 rounded-md font-bold">+</button>
+                          <button onClick={() => updateQuantity(cartItem.cartId, 1)} className="w-8 h-8 flex items-center justify-center text-white bg-slate-800 hover:bg-slate-700 rounded-md font-bold text-lg">+</button>
                         </div>
-                        <button onClick={() => removeFromCart(cartItem.cartId)} className="ml-3 text-red-400 hover:text-red-300 text-sm bg-red-500/10 p-2 rounded-lg">🗑️</button>
+                        <button onClick={() => removeFromCart(cartItem.cartId)} className="ml-3 text-red-400 hover:text-red-300 text-lg bg-red-500/10 w-10 h-10 flex items-center justify-center rounded-lg">🗑️</button>
                       </div>
-                      {cartItem.item.selectedOptions && cartItem.item.selectedOptions.length > 0 && (
-                        <p className="text-[10px] text-gray-400 font-bold uppercase ml-1">
-                          + {cartItem.item.selectedOptions.join(', ')}
-                        </p>
-                      )}
-                      {cartItem.item.note && (
-                        <p className="text-[10px] text-yellow-500 font-bold italic ml-1 mt-1">
-                          📝 {cartItem.item.note}
-                        </p>
-                      )}
+                      {cartItem.item.selectedOptions?.length > 0 && <p className="text-[10px] text-gray-400 font-bold uppercase ml-1">+ {cartItem.item.selectedOptions.join(', ')}</p>}
+                      {cartItem.item.note && <p className="text-[10px] text-yellow-500 font-bold italic ml-1 mt-1">📝 {cartItem.item.note}</p>}
                     </div>
                   ))}
                 </div>
               ) : (
-                <form id="checkoutForm" onSubmit={submitOrder} className="flex flex-col gap-5 px-4 md:px-0">
+                <form id="checkoutForm" onSubmit={submitOrder} className="flex flex-col gap-5">
                   <h3 className="font-bold text-lg text-white border-b border-white/10 pb-2">{ui.detailsTitle}</h3>
                   <div>
                     <label className="text-xs text-gray-400 block mb-1">{ui.nameLabel}</label>
-                    <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white outline-none focus:border-[#38BDF8]" />
+                    <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" />
                   </div>
                   <div>
                     <label className="text-xs text-gray-400 block mb-1">{ui.phoneLabel} (Loyalty)</label>
-                    <input type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white outline-none focus:border-[#38BDF8]" />
+                    <input type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" />
                   </div>
 
                   {loyaltyInfo && (
-                    <div className="bg-emerald-900/30 border border-emerald-500/50 p-3 rounded-xl flex justify-between items-center">
-                      <div>
-                        <p className="text-[10px] uppercase text-emerald-400 font-bold">Loyalty Points</p>
-                        <p className="text-sm font-bold text-white">⭐ {loyaltyInfo.points} / {REWARD_THRESHOLD}</p>
-                      </div>
-                      {canRedeem && (
-                        <button type="button" onClick={() => setRedeemReward(!redeemReward)} className={`text-xs px-3 py-1.5 rounded-lg font-bold transition-colors ${redeemReward ? 'bg-emerald-500 text-slate-900' : 'bg-slate-800 text-emerald-400 border border-emerald-500/50'}`}>
-                          {redeemReward ? "✓" : "Brug (-35 kr)"}
-                        </button>
-                      )}
+                    <div className="bg-emerald-900/30 border border-emerald-500/50 p-4 rounded-xl flex justify-between items-center">
+                      <div><p className="text-[10px] uppercase text-emerald-400 font-bold">Loyalty Points</p><p className="text-sm font-bold text-white">⭐ {loyaltyInfo.points} / {REWARD_THRESHOLD}</p></div>
+                      {canRedeem && <button type="button" onClick={() => setRedeemReward(!redeemReward)} className={`text-xs px-4 py-2 rounded-lg font-bold transition-colors ${redeemReward ? 'bg-emerald-500 text-slate-900' : 'bg-slate-800 text-emerald-400 border border-emerald-500/50'}`}>{redeemReward ? "✓" : "Brug (-35 kr)"}</button>}
                     </div>
                   )}
 
                   <div>
                     <label className="text-xs text-gray-400 block mb-1">{ui.timeLabel}</label>
-                    <select value={requestedTime} onChange={e => setRequestedTime(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white outline-none focus:border-[#38BDF8]">
-                      {generateTimeSlots().map((slot, i) => (
-                        <option key={i} value={slot.value}>{slot.label}</option>
-                      ))}
+                    <select value={requestedTime} onChange={e => setRequestedTime(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]">
+                      {generateTimeSlots().map((slot, i) => <option key={i} value={slot.value}>{slot.label}</option>)}
                     </select>
                   </div>
 
                   <div className="mt-2">
                     <label className="text-xs text-gray-400 block mb-2">{ui.payLabel}</label>
                     <div className="grid grid-cols-2 gap-3">
-                      <div onClick={() => setPaymentMethod('card')} className={`cursor-pointer p-4 rounded-xl border text-center transition-all ${paymentMethod === 'card' ? 'bg-[#38BDF8]/10 border-[#38BDF8] text-[#38BDF8]' : 'bg-slate-800 border-white/5 text-gray-400'}`}>💳 {ui.card}</div>
-                      <div onClick={() => setPaymentMethod('cash')} className={`cursor-pointer p-4 rounded-xl border text-center transition-all ${paymentMethod === 'cash' ? 'bg-[#38BDF8]/10 border-[#38BDF8] text-[#38BDF8]' : 'bg-slate-800 border-white/5 text-gray-400'}`}>💵 {ui.cash}</div>
+                      <div onClick={() => setPaymentMethod('card')} className={`cursor-pointer p-4 rounded-xl border text-center transition-all font-bold ${paymentMethod === 'card' ? 'bg-[#38BDF8]/10 border-[#38BDF8] text-[#38BDF8]' : 'bg-slate-800 border-white/5 text-gray-400'}`}>💳 {ui.card}</div>
+                      <div onClick={() => setPaymentMethod('cash')} className={`cursor-pointer p-4 rounded-xl border text-center transition-all font-bold ${paymentMethod === 'cash' ? 'bg-[#38BDF8]/10 border-[#38BDF8] text-[#38BDF8]' : 'bg-slate-800 border-white/5 text-gray-400'}`}>💵 {ui.cash}</div>
                     </div>
                   </div>
                 </form>
@@ -525,21 +466,18 @@ export default function OrderPage() {
 
             {cart.length > 0 && checkoutStep !== 'success' && (
               <div className="p-6 bg-slate-900 border-t border-white/10">
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-gray-400">{ui.subtotal}</span><span className="text-white font-bold">{subtotal} DKK</span>
-                </div>
-                {discount > 0 && <div className="flex justify-between items-center mb-1 text-emerald-400"><span className="text-xs">{ui.loyaltyDiscount}</span><span className="font-bold">-{discount} DKK</span></div>}
-                <div className="flex justify-between items-center mb-1 text-gray-500 text-xs"><span>{ui.vat}</span><span>{vatMoms} DKK</span></div>
-                <div className="flex justify-between items-center mt-4 mb-6 border-t border-white/10 pt-4"><span className="text-gray-200 font-bold">{ui.totalPay}</span><span className="text-2xl font-bold text-[#38BDF8]">{finalTotal} DKK</span></div>
+                <div className="flex justify-between items-center mb-1"><span className="text-gray-400">{ui.subtotal}</span><span className="text-white font-bold">{subtotal} kr.</span></div>
+                {discount > 0 && <div className="flex justify-between items-center mb-1 text-emerald-400"><span className="text-xs">{ui.loyaltyDiscount}</span><span className="font-bold">-{discount} kr.</span></div>}
+                <div className="flex justify-between items-center mt-4 mb-6 border-t border-white/10 pt-4"><span className="text-gray-200 font-bold">{ui.totalPay}</span><span className="text-2xl font-black text-[#38BDF8]">{finalTotal} kr.</span></div>
                 
                 {checkoutStep === 'cart' ? (
-                  <button onClick={proceedToCheckout} className="w-full bg-[#38BDF8] text-slate-900 font-bold py-4 rounded-xl shadow-lg">{ui.toCheckout}</button>
+                  <button onClick={proceedToCheckout} className="w-full bg-[#38BDF8] text-slate-900 font-black uppercase tracking-wider py-4 rounded-xl shadow-lg">{ui.toCheckout}</button>
                 ) : checkoutStep === 'auth' ? (
-                  <button type="button" onClick={() => setCheckoutStep('cart')} className="w-full px-6 py-4 rounded-xl bg-slate-800 text-white font-bold border border-white/5">{ui.backToCart}</button>
+                  <button type="button" onClick={() => setCheckoutStep('cart')} className="w-full px-6 py-4 rounded-xl bg-slate-800 text-white font-bold border border-white/5 uppercase">{ui.backToCart}</button>
                 ) : (
                   <div className="flex gap-3">
-                    <button type="button" onClick={() => setCheckoutStep('cart')} className="px-6 py-4 rounded-xl bg-slate-800 text-white font-bold border border-white/5">{ui.back}</button>
-                    <button type="submit" form="checkoutForm" disabled={isSubmitting} className="flex-1 bg-green-500 text-white font-bold py-4 rounded-xl disabled:opacity-50">{isSubmitting ? ui.sending : ui.confirm}</button>
+                    <button type="button" onClick={() => setCheckoutStep('cart')} className="px-6 py-4 rounded-xl bg-slate-800 text-white font-bold border border-white/5 uppercase">{ui.back}</button>
+                    <button type="submit" form="checkoutForm" disabled={isSubmitting} className="flex-1 bg-emerald-500 text-white font-black py-4 rounded-xl disabled:opacity-50 uppercase tracking-wider">{isSubmitting ? ui.sending : ui.confirm}</button>
                   </div>
                 )}
               </div>
