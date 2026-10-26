@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase'; 
 import { PrintTicket } from './PrintTicket'; 
-import OrderTimer from '@/components/admin/OrderTimer'; // (Προσάρμοσε το path αν το έβαλες αλλού)
+import OrderTimer from '@/components/admin/OrderTimer'; 
 import { OrderCard } from '../../components/admin/OrderCard'; 
 
 export default function AdminDashboard() {
@@ -16,7 +16,6 @@ export default function AdminDashboard() {
   const [isPrinting, setIsPrinting] = useState(false);
   const [activePrintOrder, setActivePrintOrder] = useState<any>(null);
 
-  // State για το Modal Αναλυτικής Προβολής
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
 
   useEffect(() => {
@@ -50,12 +49,11 @@ export default function AdminDashboard() {
     return () => { supabase.removeChannel(channel); };
   }, [user]);
 
-  // Παραγωγή Ήχου (Χρησιμοποιεί το κρυφό audio tag)
   const playSound = () => {
     const audioEl = document.getElementById('notification-sound') as HTMLAudioElement;
     if (audioEl) {
       audioEl.currentTime = 0;
-      audioEl.play().catch(e => console.log("Αναμονή αλληλεπίδρασης για ήχο", e));
+      audioEl.play().catch(e => console.log("Αναμονή αλληλεπίδρασης", e));
     }
   };
 
@@ -68,36 +66,41 @@ export default function AdminDashboard() {
   }, [orders, prevCount, audioUnlocked]);
 
   const unlockSystem = () => {
-    playSound(); // Παίζει μια φορά κενά για να πάρει άδεια από τον browser
+    playSound(); 
     setAudioUnlocked(true);
   };
 
-  // Αποδοχή Παραγγελίας (Μετάβαση σε "Προετοιμασία")
+  // ΕΞΥΠΝΟΣ ΥΠΟΛΟΓΙΣΜΟΣ ΧΡΟΝΟΥ
   const handleAcceptOrder = async (order: any, exactTime: string | null, addedMins: number = 0) => {
     let confirmedTime = exactTime;
     
-    // Αν δεν δόθηκε ακριβής ώρα (π.χ. ήταν ASAP και πάτησε "15'"), υπολογίζουμε την ώρα
     if (!confirmedTime) {
-      const targetDate = new Date(new Date().getTime() + addedMins * 60000);
-      confirmedTime = targetDate.toLocaleTimeString("da-DK", { hour: '2-digit', minute: '2-digit' });
+      const targetDate = new Date();
+      targetDate.setMinutes(targetDate.getMinutes() + addedMins);
+      
+      // ΚΟΛΠΟ: Στρογγυλοποίηση προς τα πάνω αν είμαστε στη μέση του λεπτού,
+      // ώστε η κουζίνα να μην χάνει ποτέ δευτερόλεπτα (το ρολόι θα ξεκινάει π.χ. στο 05:15)
+      if (targetDate.getSeconds() > 0) {
+        targetDate.setMinutes(targetDate.getMinutes() + 1);
+      }
+      
+      const hh = targetDate.getHours().toString().padStart(2, '0');
+      const mm = targetDate.getMinutes().toString().padStart(2, '0');
+      confirmedTime = `${hh}:${mm}`;
     }
 
     const updatedOrder = { ...order, status: 'preparing', requested_time: confirmedTime };
     
-    // 1. Τοπική Ενημέρωση
     setOrders(prev => prev.map(o => o.id === order.id ? updatedOrder : o));
     
-    // 2. Ενημέρωση Βάσης
     const { error } = await supabase.from('orders').update({ status: 'preparing', requested_time: confirmedTime }).eq('id', order.id);
     if (error) { alert("Σφάλμα: " + error.message); fetchOrders(); return; }
 
-    // 3. Εκτύπωση
     setActivePrintOrder(updatedOrder);
     setIsPrinting(true);
-    setSelectedOrder(null); // Κλείνει το modal αν ήταν ανοιχτό
+    setSelectedOrder(null); 
   };
 
-  // Ολοκλήρωση Παραγγελίας (Μετάβαση σε "Ολοκληρωμένες")
   const handleCompleteOrder = async (order: any) => {
     const completedAt = new Date().toISOString();
     const updatedOrder = { ...order, status: 'completed', completed_at: completedAt };
@@ -147,7 +150,6 @@ export default function AdminDashboard() {
           </div>
         </header>
 
-        {/* 3 ΣΤΗΛΕΣ (Νέες -> Προετοιμασία -> Ολοκληρωμένες) */}
         <main className="p-4 md:p-6 max-w-[1800px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
           
           <div className="bg-[#0F172A]/80 border border-[#38BDF8]/30 rounded-[2rem] p-5 shadow-2xl min-h-[80vh]">
@@ -218,7 +220,7 @@ export default function AdminDashboard() {
                     <span className="text-emerald-400 font-bold">{order.requested_time}</span>
                   </div>
                   <div className="flex justify-between items-center mt-1">
-                    <p className="text-xs text-gray-500 font-bold">{order.total_price} DKK ({order.payment_method})</p>
+                    <p className="text-xs text-gray-500 font-bold">{order.total_price} kr. ({order.payment_method})</p>
                     <div className="flex items-center gap-3">
                       <OrderTimer createdAt={order.created_at} requestedTime={order.requested_time} status={order.status} />
                       <button onClick={() => setSelectedOrder(order)} className="text-xs bg-gray-700 hover:bg-gray-600 transition-colors px-3 py-1.5 rounded text-white font-bold">Προβολή</button>
@@ -232,7 +234,6 @@ export default function AdminDashboard() {
         </main>
       </div>
 
-      {/* ΣΥΣΤΗΜΑ ΕΚΤΥΠΩΣΗΣ */}
       {isPrinting && (
         <div className="bg-white text-black w-full m-0 p-0">
           <PrintTicket 
@@ -242,7 +243,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* MODAL ΑΝΑΛΥΤΙΚΗΣ ΠΡΟΒΟΛΗΣ */}
       {selectedOrder && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setSelectedOrder(null)}>
           <div className="bg-slate-800 border border-slate-600 w-full max-w-xl rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
@@ -279,7 +279,7 @@ export default function AdminDashboard() {
                   <li key={i} className="flex flex-col bg-slate-900/50 p-4 rounded-xl border border-white/5">
                     <div className="flex justify-between font-bold text-lg text-white">
                       <span><span className="text-[#38BDF8] mr-2">{it.quantity || 1}x</span>{it.title_da || it.title_el || it.name}</span>
-                      <span>{(it.unit_price_dkk * (it.quantity || 1)).toFixed(0)} DKK</span>
+                      <span>{(it.unit_price_dkk * (it.quantity || 1)).toFixed(0)} kr.</span>
                     </div>
                     {it.selectedOptions?.length > 0 && <span className="text-sm text-gray-400 mt-1">+ {it.selectedOptions.map((o:any) => o.name || o).join(', ')}</span>}
                     {it.note && <span className="text-sm bg-yellow-900/40 text-yellow-500 border border-yellow-700/50 px-3 py-1.5 rounded-lg mt-2 inline-block w-fit font-bold italic">📝 {it.note}</span>}
@@ -298,7 +298,7 @@ export default function AdminDashboard() {
             <div className="p-6 border-t border-slate-700 bg-slate-900 flex justify-between items-center">
               <div>
                 <p className="text-xs text-gray-400 font-bold uppercase">Πληρωμή: {selectedOrder.payment_method}</p>
-                <p className="text-2xl font-black text-white">{selectedOrder.total_price} DKK</p>
+                <p className="text-2xl font-black text-white">{selectedOrder.total_price} kr.</p>
               </div>
               <div className="flex gap-2">
                 <button onClick={() => { setActivePrintOrder(selectedOrder); setIsPrinting(true); }} className="bg-slate-700 text-white font-bold px-6 py-3 rounded-xl hover:bg-slate-600 transition-colors shadow-lg">
