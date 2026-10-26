@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { supabase } from '../supabase';
 import ProductModal from './ProductModal'; 
+import { isStoreOpen } from '../../lib/storeHours';
 
 const MAX_ORDERS = 50; // Προσωρινά αυξημένο για δοκιμές
 const LOCKOUT_MS = 5 * 60 * 1000;
@@ -35,6 +36,7 @@ export default function OrderPage() {
   const [redeemReward, setRedeemReward] = useState(false);
   const [ordersPlaced, setOrdersPlaced] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
+  const [storeOpen, setStoreOpen] = useState(true);
 
   const [placedOrder, setPlacedOrder] = useState<any>(null);
   const supabaseImageUrl = "https://keolpijcsvwsrzkjqtkc.supabase.co/storage/v1/object/public/menu-images/";
@@ -122,7 +124,16 @@ export default function OrderPage() {
     if (Date.now() - lastTime > LOCKOUT_MS) localStorage.setItem("servato_orders", "0");
     else { setOrdersPlaced(storedOrders); if (storedOrders >= MAX_ORDERS) setIsLocked(true); }
 
-    return () => subscription.unsubscribe();
+    // Store Hours Check
+    setStoreOpen(isStoreOpen());
+    const interval = setInterval(() => {
+      setStoreOpen(isStoreOpen());
+    }, 60000);
+    
+    return () => {
+      subscription.unsubscribe();
+      clearInterval(interval);
+    };
   }, []);
 
   useEffect(() => {
@@ -189,14 +200,13 @@ export default function OrderPage() {
   const submitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isLocked) return alert("Limit reached.");
-    // Αφαιρέσαμε τον έλεγχο !user για να επιτρέπουμε Guest Checkout
     if (!customerName || !customerPhone) return alert('Λείπουν στοιχεία.');
     
     setIsSubmitting(true);
     try {
       const cleanPhone = customerPhone.replace(/\s+/g, "");
       const payload = {
-        user_id: user?.id || null, // Αν δεν υπάρχει χρήστης, πάει null
+        user_id: user?.id || null, 
         order_type: 'takeaway',
         customer_name: customerName,
         customer_phone: cleanPhone,
@@ -318,7 +328,6 @@ export default function OrderPage() {
 
       {isCartOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-end">
-          {/* MOBILE UI POLISH: w-full md:max-w-md (Πιάνει όλη την οθόνη στα κινητά, μένει 450px στα PC) */}
           <div className="w-full md:max-w-md bg-[#0F172A] h-full flex flex-col shadow-2xl md:border-l border-white/10 animate-fade-in-up md:animate-slide-in-right">
             <div className="p-6 border-b border-white/10 flex justify-between items-center bg-slate-900">
               <h2 className="text-xl font-bold text-white">{ui.cartTitle}</h2>
@@ -392,7 +401,6 @@ export default function OrderPage() {
                   </form>
                   <button type="button" onClick={() => setAuthMode(authMode === 'signup' ? 'login' : 'signup')} className="text-sm text-gray-400 hover:text-white underline text-center pb-2">Toggle Login / Register</button>
                   
-                  {/* GUEST CHECKOUT BUTTON */}
                   <div className="flex items-center gap-4 my-2">
                     <hr className="flex-1 border-slate-700" />
                     <span className="text-xs text-gray-500 font-bold uppercase">{ui.or}</span>
@@ -401,7 +409,6 @@ export default function OrderPage() {
                   <button onClick={() => setCheckoutStep('checkout')} className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-4 rounded-xl shadow-lg border border-white/10 uppercase transition-colors">
                     {ui.guestCheckout}
                   </button>
-
                 </div>
               ) : cart.length === 0 ? (
                 <div className="text-center text-gray-500 mt-20"><span className="text-4xl mb-3 block">🛒</span><p>{ui.emptyCart}</p></div>
@@ -471,13 +478,19 @@ export default function OrderPage() {
                 <div className="flex justify-between items-center mt-4 mb-6 border-t border-white/10 pt-4"><span className="text-gray-200 font-bold">{ui.totalPay}</span><span className="text-2xl font-black text-[#38BDF8]">{finalTotal} kr.</span></div>
                 
                 {checkoutStep === 'cart' ? (
-                  <button onClick={proceedToCheckout} className="w-full bg-[#38BDF8] text-slate-900 font-black uppercase tracking-wider py-4 rounded-xl shadow-lg">{ui.toCheckout}</button>
+                  storeOpen ? (
+                    <button onClick={proceedToCheckout} className="w-full bg-[#38BDF8] text-slate-900 font-black uppercase tracking-wider py-4 rounded-xl shadow-lg">{ui.toCheckout}</button>
+                  ) : (
+                    <div className="w-full bg-red-900/50 border border-red-500 text-red-400 font-black uppercase tracking-wider py-4 rounded-xl text-center shadow-lg">
+                      {lang === 'da' ? 'RESTAURANTEN ER LUKKET' : lang === 'en' ? 'RESTAURANT IS CLOSED' : 'ΤΟ ΚΑΤΑΣΤΗΜΑ ΕΙΝΑΙ ΚΛΕΙΣΤΟ'}
+                    </div>
+                  )
                 ) : checkoutStep === 'auth' ? (
                   <button type="button" onClick={() => setCheckoutStep('cart')} className="w-full px-6 py-4 rounded-xl bg-slate-800 text-white font-bold border border-white/5 uppercase">{ui.backToCart}</button>
                 ) : (
                   <div className="flex gap-3">
                     <button type="button" onClick={() => setCheckoutStep('cart')} className="px-6 py-4 rounded-xl bg-slate-800 text-white font-bold border border-white/5 uppercase">{ui.back}</button>
-                    <button type="submit" form="checkoutForm" disabled={isSubmitting} className="flex-1 bg-emerald-500 text-white font-black py-4 rounded-xl disabled:opacity-50 uppercase tracking-wider">{isSubmitting ? ui.sending : ui.confirm}</button>
+                    <button type="submit" form="checkoutForm" disabled={isSubmitting || !storeOpen} className="flex-1 bg-emerald-500 text-white font-black py-4 rounded-xl disabled:opacity-50 uppercase tracking-wider">{isSubmitting ? ui.sending : ui.confirm}</button>
                   </div>
                 )}
               </div>
