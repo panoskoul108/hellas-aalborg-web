@@ -45,11 +45,14 @@ export default function OrderTimer({ createdAt, requestedTime, status }: OrderTi
         targetDate.setMinutes(targetDate.getMinutes() + 20);
       } else {
         const cleanTime = requestedTime.replace('.', ':');
-        const [hours, minutes] = cleanTime.split(':').map(Number);
+        // Διαβάζει πλέον Ώρες, Λεπτά ΚΑΙ Δευτερόλεπτα
+        const parts = cleanTime.split(':').map(Number);
+        const hours = parts[0];
+        const minutes = parts[1];
+        const seconds = parts.length > 2 ? parts[2] : 0;
         
         if (!isNaN(hours) && !isNaN(minutes)) {
-          // Μηδενίζουμε τα δευτερόλεπτα για να πέσουμε ΑΚΡΙΒΩΣ πάνω στη στρογγυλοποίηση
-          targetDate.setHours(hours, minutes, 0, 0); 
+          targetDate.setHours(hours, minutes, seconds, 0); 
         } else {
           targetDate = new Date(createdAt);
           targetDate.setMinutes(targetDate.getMinutes() + 20);
