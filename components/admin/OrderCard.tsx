@@ -1,13 +1,11 @@
 'use client';
 import React from 'react';
-import { LiveTimer } from '../shared/LiveTimer';
 
 export const OrderCard = ({ order, onAccept, onPrint, onComplete, onView }: any) => {
   const items = order.items || [];
   const isPending = order.status === 'pending';
   const isPreparing = order.status === 'preparing';
 
-  // Ελέγχουμε αν ζήτησε ASAP ή συγκεκριμένη ώρα (π.χ. 20:30)
   const isASAP = order.requested_time === 'ASAP' || order.requested_time?.includes('Hurtigst') || !order.requested_time;
 
   return (
@@ -20,14 +18,12 @@ export const OrderCard = ({ order, onAccept, onPrint, onComplete, onView }: any)
           <p className="text-xs font-bold text-gray-400 mt-1 uppercase">Πελάτης: <span className="text-white">{order.customer_name}</span> ({order.customer_phone})</p>
         </div>
         <div className="flex flex-col items-end gap-2">
-          {isPending && <LiveTimer createdAt={order.created_at} />}
           <button onClick={onView} className="bg-gray-700 hover:bg-gray-600 text-white text-[10px] font-black uppercase px-3 py-1 rounded-md transition-colors border border-gray-600 mt-1">
             👁️ ΠΡΟΒΟΛΗ
           </button>
         </div>
       </div>
 
-      {/* Περιληπτική Λίστα - Μόνο τα 2 πρώτα είδη (τα υπόλοιπα στο Modal) */}
       <ul className="space-y-2 mb-5">
         {items.slice(0, 2).map((it: any, i: number) => (
           <li key={i} className="flex flex-col text-sm">
@@ -42,11 +38,9 @@ export const OrderCard = ({ order, onAccept, onPrint, onComplete, onView }: any)
         )}
       </ul>
 
-      {/* FOOTER ΓΙΑ "ΝΕΕΣ ΠΑΡΑΓΓΕΛΙΕΣ" */}
       {isPending && (
         <div className="border-t border-slate-700 pt-4 flex flex-col gap-3">
-          <div className="flex justify-between items-center">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Ζητηθηκε: <span className="text-white text-sm">{order.requested_time}</span></span>
+          <div className="flex justify-end items-center">
             <span className="text-[10px] font-bold text-[#38BDF8] uppercase tracking-widest block">Σύνολο: {order.total_price} kr.</span>
           </div>
           
@@ -61,10 +55,10 @@ export const OrderCard = ({ order, onAccept, onPrint, onComplete, onView }: any)
           ) : (
             <div className="flex flex-col gap-2 mt-1">
               <button onClick={() => onAccept(order.requested_time, 0)} className="w-full bg-emerald-500 hover:bg-emerald-400 text-[#0B1120] font-black text-sm uppercase rounded-xl py-3 shadow-md active:scale-95 transition-transform">
-                ✅ ΑΠΟΔΟΧΗ ΓΙΑ {order.requested_time}
+                ✅ ΑΠΟΔΟΧΗ
               </button>
               <div className="flex justify-between items-center mt-2 border-t border-slate-700 pt-2">
-                <span className="text-[9px] text-gray-500 font-bold uppercase">Ή αλλαγη (λεπτα απο τωρα):</span>
+                <span className="text-[9px] text-gray-500 font-bold uppercase">Ή αλλαγη (λεπτα):</span>
                 <div className="flex gap-1">
                   {[10, 15, 20, 30].map(mins => (
                     <button key={mins} onClick={() => onAccept(null, mins)} className="bg-slate-700 text-gray-300 text-[10px] font-bold px-2 py-1 rounded hover:bg-slate-600">
@@ -78,7 +72,6 @@ export const OrderCard = ({ order, onAccept, onPrint, onComplete, onView }: any)
         </div>
       )}
 
-      {/* FOOTER ΓΙΑ "ΣΕ ΠΡΟΕΤΟΙΜΑΣΙΑ" */}
       {isPreparing && (
         <div className="flex items-center justify-between border-t border-slate-700 pt-4 mt-auto">
           <div>
