@@ -21,8 +21,6 @@ export const OrderCard = ({ order, onAccept, onPrint, onComplete, onView }: any)
         </div>
         <div className="flex flex-col items-end gap-2">
           {isPending && <LiveTimer createdAt={order.created_at} />}
-          {isPreparing && (
-          )}
           <button onClick={onView} className="bg-gray-700 hover:bg-gray-600 text-white text-[10px] font-black uppercase px-3 py-1 rounded-md transition-colors border border-gray-600 mt-1">
             👁️ ΠΡΟΒΟΛΗ
           </button>
@@ -62,12 +60,11 @@ export const OrderCard = ({ order, onAccept, onPrint, onComplete, onView }: any)
             </div>
           ) : (
             <div className="flex flex-col gap-2 mt-1">
-              {/* Αν ζήτησε συγκεκριμένη ώρα, μεγάλο κουμπί Αποδοχής για ΕΚΕΙΝΗ την ώρα */}
               <button onClick={() => onAccept(order.requested_time, 0)} className="w-full bg-emerald-500 hover:bg-emerald-400 text-[#0B1120] font-black text-sm uppercase rounded-xl py-3 shadow-md active:scale-95 transition-transform">
                 ✅ ΑΠΟΔΟΧΗ ΓΙΑ {order.requested_time}
               </button>
               <div className="flex justify-between items-center mt-2 border-t border-slate-700 pt-2">
-                <span className="text-[9px] text-gray-500 font-bold uppercase">Ή αλλαγη (λεπτα απο τωρα):</span>
+                <span className="text-[9px] text-gray-500 font-bold uppercase">Ή αλλαγη (λεπτα απο τωρα):</span>
                 <div className="flex gap-1">
                   {[10, 15, 20, 30].map(mins => (
                     <button key={mins} onClick={() => onAccept(null, mins)} className="bg-slate-700 text-gray-300 text-[10px] font-bold px-2 py-1 rounded hover:bg-slate-600">
