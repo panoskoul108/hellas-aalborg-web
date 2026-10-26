@@ -4,6 +4,7 @@ import { supabase } from '../supabase';
 import { PrintTicket } from './PrintTicket'; 
 import OrderTimer from '@/components/admin/OrderTimer'; 
 import { OrderCard } from '../../components/admin/OrderCard'; 
+import HistoryPanel from '../../components/admin/HistoryPanel'; 
 
 export default function AdminDashboard() {
   const [orders, setOrders] = useState<any[]>([]);
