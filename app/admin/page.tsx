@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase'; 
 import { PrintTicket } from './PrintTicket'; 
+import OrderTimer from '@/components/admin/OrderTimer'; // (Προσάρμοσε το path αν το έβαλες αλλού)
 import { OrderCard } from '../../components/admin/OrderCard'; 
 
 export default function AdminDashboard() {
@@ -162,11 +163,19 @@ export default function AdminDashboard() {
             </div>
             <div className="flex flex-col gap-4">
               {pendingOrders.map(order => (
-                <OrderCard 
-                  key={order.id} order={order} 
-                  onAccept={(exactTime: string | null, mins: number) => handleAcceptOrder(order, exactTime, mins)} 
-                  onView={() => setSelectedOrder(order)}
-                />
+                <div key={order.id} className="flex flex-col gap-2 bg-slate-800/30 p-2 rounded-3xl border border-white/5 shadow-sm">
+                  <div className="flex justify-between items-center px-4 pt-2">
+                    <span className="text-xs text-gray-500 font-bold uppercase tracking-widest">
+                      Ληψη: {new Date(order.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    <OrderTimer createdAt={order.created_at} requestedTime={order.requested_time} status={order.status} />
+                  </div>
+                  <OrderCard 
+                    order={order} 
+                    onAccept={(exactTime: string | null, mins: number) => handleAcceptOrder(order, exactTime, mins)} 
+                    onView={() => setSelectedOrder(order)}
+                  />
+                </div>
               ))}
             </div>
           </div>
@@ -178,12 +187,20 @@ export default function AdminDashboard() {
             </div>
             <div className="flex flex-col gap-4">
               {preparingOrders.map(order => (
-                <OrderCard 
-                  key={order.id} order={order} 
-                  onComplete={() => handleCompleteOrder(order)} 
-                  onPrint={() => { setActivePrintOrder(order); setIsPrinting(true); }}
-                  onView={() => setSelectedOrder(order)}
-                />
+                <div key={order.id} className="flex flex-col gap-2 bg-slate-800/30 p-2 rounded-3xl border border-orange-500/10 shadow-sm">
+                  <div className="flex justify-between items-center px-4 pt-2">
+                    <span className="text-xs text-gray-500 font-bold uppercase tracking-widest">
+                      Ληψη: {new Date(order.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    <OrderTimer createdAt={order.created_at} requestedTime={order.requested_time} status={order.status} />
+                  </div>
+                  <OrderCard 
+                    order={order} 
+                    onComplete={() => handleCompleteOrder(order)} 
+                    onPrint={() => { setActivePrintOrder(order); setIsPrinting(true); }}
+                    onView={() => setSelectedOrder(order)}
+                  />
+                </div>
               ))}
             </div>
           </div>
@@ -202,7 +219,10 @@ export default function AdminDashboard() {
                   </div>
                   <div className="flex justify-between items-center mt-1">
                     <p className="text-xs text-gray-500 font-bold">{order.total_price} DKK ({order.payment_method})</p>
-                    <button onClick={() => setSelectedOrder(order)} className="text-xs bg-gray-700 px-3 py-1.5 rounded text-white">Προβολή</button>
+                    <div className="flex items-center gap-3">
+                      <OrderTimer createdAt={order.created_at} requestedTime={order.requested_time} status={order.status} />
+                      <button onClick={() => setSelectedOrder(order)} className="text-xs bg-gray-700 hover:bg-gray-600 transition-colors px-3 py-1.5 rounded text-white font-bold">Προβολή</button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -233,7 +253,7 @@ export default function AdminDashboard() {
                   {selectedOrder.status}
                 </span>
               </div>
-              <button onClick={() => setSelectedOrder(null)} className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white">✕</button>
+              <button onClick={() => setSelectedOrder(null)} className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white transition-colors">✕</button>
             </div>
             
             <div className="p-6 overflow-y-auto flex-1">
@@ -245,8 +265,11 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Χρονος (Ζητηθηκε)</p>
-                  <p className="text-2xl font-black text-[#38BDF8]">{selectedOrder.requested_time}</p>
-                  <p className="text-xs text-gray-400">Λήψη: {new Date(selectedOrder.created_at).toLocaleTimeString('el-GR')}</p>
+                  <div className="flex items-center gap-3">
+                    <p className="text-2xl font-black text-[#38BDF8]">{selectedOrder.requested_time}</p>
+                    <OrderTimer createdAt={selectedOrder.created_at} requestedTime={selectedOrder.requested_time} status={selectedOrder.status} />
+                  </div>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase mt-2">Λήψη: {new Date(selectedOrder.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}</p>
                 </div>
               </div>
 
@@ -278,7 +301,7 @@ export default function AdminDashboard() {
                 <p className="text-2xl font-black text-white">{selectedOrder.total_price} DKK</p>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => { setActivePrintOrder(selectedOrder); setIsPrinting(true); }} className="bg-slate-700 text-white font-bold px-6 py-3 rounded-xl hover:bg-slate-600 transition-colors">
+                <button onClick={() => { setActivePrintOrder(selectedOrder); setIsPrinting(true); }} className="bg-slate-700 text-white font-bold px-6 py-3 rounded-xl hover:bg-slate-600 transition-colors shadow-lg">
                   🖨️ ΕΚΤΥΠΩΣΗ
                 </button>
               </div>
