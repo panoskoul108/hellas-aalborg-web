@@ -16,8 +16,10 @@ export default function AdminDashboard() {
 
   const [isPrinting, setIsPrinting] = useState(false);
   const [activePrintOrder, setActivePrintOrder] = useState<any>(null);
-
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+
+  // State για την εναλλαγή Tabs (Live Ταμείο vs Ιστορικό)
+  const [activeTab, setActiveTab] = useState<'live' | 'history'>('live');
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -80,7 +82,7 @@ export default function AdminDashboard() {
       
       const hh = targetDate.getHours().toString().padStart(2, '0');
       const mm = targetDate.getMinutes().toString().padStart(2, '0');
-      const ss = targetDate.getSeconds().toString().padStart(2, '0'); // ΠΡΟΣΘΗΚΗ ΔΕΥΤΕΡΟΛΕΠΤΩΝ
+      const ss = targetDate.getSeconds().toString().padStart(2, '0'); 
       
       confirmedTime = `${hh}:${mm}:${ss}`; 
     }
@@ -131,11 +133,28 @@ export default function AdminDashboard() {
 
       <div className={`min-h-screen font-sans bg-[#0B1120] text-gray-200 ${isPrinting ? "hidden" : "block"}`}>
         <header className="bg-[#0F172A] border-b border-white/10 p-4 md:p-6 sticky top-0 z-40 flex justify-between items-center shadow-lg">
-          <div>
+          <div className="flex items-center gap-6">
             <h1 className="text-xl md:text-2xl font-black text-white italic tracking-tight">HELLAS AALBORG <span className="text-[#38BDF8]">ADMIN</span></h1>
+            
+            {/* TABS ΕΝΑΛΛΑΓΗΣ */}
+            <div className="hidden md:flex bg-slate-900 rounded-xl p-1 border border-slate-700">
+              <button 
+                onClick={() => setActiveTab('live')} 
+                className={`px-5 py-2 rounded-lg text-xs font-black uppercase transition-colors ${activeTab === 'live' ? 'bg-[#38BDF8] text-[#0B1120]' : 'text-gray-400 hover:text-white'}`}
+              >
+                LIVE ΤΑΜΕΙΟ
+              </button>
+              <button 
+                onClick={() => setActiveTab('history')} 
+                className={`px-5 py-2 rounded-lg text-xs font-black uppercase transition-colors ${activeTab === 'history' ? 'bg-[#38BDF8] text-[#0B1120]' : 'text-gray-400 hover:text-white'}`}
+              >
+                ΙΣΤΟΡΙΚΟ & Z
+              </button>
+            </div>
           </div>
+
           <div className="flex items-center gap-4">
-            <button onClick={playSound} className="bg-gray-800 text-gray-300 border border-gray-600 px-3 py-2 rounded-xl text-xs font-bold hover:bg-gray-700">
+            <button onClick={playSound} className="hidden sm:block bg-gray-800 text-gray-300 border border-gray-600 px-3 py-2 rounded-xl text-xs font-bold hover:bg-gray-700">
               🔊 Δοκιμή Ήχου
             </button>
             <a href="/admin/products" className="hidden sm:block bg-purple-600 hover:bg-purple-500 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase shadow-lg transition-colors">
@@ -146,89 +165,95 @@ export default function AdminDashboard() {
           </div>
         </header>
 
-        <main className="p-4 md:p-6 max-w-[1800px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          <div className="bg-[#0F172A]/80 border border-[#38BDF8]/30 rounded-[2rem] p-5 shadow-2xl min-h-[80vh]">
-            <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
-              <h2 className="font-black text-lg uppercase text-[#38BDF8] tracking-widest flex items-center gap-2">
-                <span className="relative flex h-3 w-3">
-                  {pendingOrders.length > 0 && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>}
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-[#38BDF8]"></span>
-                </span>
-                Νέες
-              </h2>
-              <span className="bg-[#38BDF8] text-[#0B1120] font-black px-3 py-1 rounded-lg text-sm">{pendingOrders.length}</span>
-            </div>
-            <div className="flex flex-col gap-4">
-              {pendingOrders.map(order => (
-                <div key={order.id} className="flex flex-col gap-2 bg-slate-800/30 p-2 rounded-3xl border border-white/5 shadow-sm">
-                  <div className="flex justify-between items-center px-4 pt-2">
-                    <span className="text-xs text-gray-500 font-bold uppercase tracking-widest">
-                      Ληψη: {new Date(order.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                    <OrderTimer createdAt={order.created_at} requestedTime={order.requested_time} status={order.status} />
-                  </div>
-                  <OrderCard 
-                    order={order} 
-                    onAccept={(exactTime: string | null, mins: number) => handleAcceptOrder(order, exactTime, mins)} 
-                    onView={() => setSelectedOrder(order)}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="bg-[#0F172A]/50 border border-orange-500/30 rounded-[2rem] p-5 shadow-xl min-h-[80vh]">
-            <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
-              <h2 className="font-black text-lg uppercase text-orange-400 tracking-widest">Σε Προετοιμασία</h2>
-              <span className="bg-orange-500 text-black font-black px-3 py-1 rounded-lg text-sm">{preparingOrders.length}</span>
-            </div>
-            <div className="flex flex-col gap-4">
-              {preparingOrders.map(order => (
-                <div key={order.id} className="flex flex-col gap-2 bg-slate-800/30 p-2 rounded-3xl border border-orange-500/10 shadow-sm">
-                  <div className="flex justify-between items-center px-4 pt-2">
-                    <span className="text-xs text-gray-500 font-bold uppercase tracking-widest">
-                      Ληψη: {new Date(order.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                    <OrderTimer createdAt={order.created_at} requestedTime={order.requested_time} status={order.status} />
-                  </div>
-                  <OrderCard 
-                    order={order} 
-                    onComplete={() => handleCompleteOrder(order)} 
-                    onPrint={() => { setActivePrintOrder(order); setIsPrinting(true); }}
-                    onView={() => setSelectedOrder(order)}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="bg-slate-900/30 border border-white/5 rounded-[2rem] p-5 opacity-90 hover:opacity-100 transition-opacity min-h-[80vh]">
-            <div className="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
-              <h2 className="font-black text-lg uppercase text-gray-500 tracking-widest">Ολοκληρωμένες</h2>
-              <span className="bg-gray-800 text-gray-400 border border-gray-700 font-black px-3 py-1 rounded-lg text-sm">{completedOrders.length}</span>
-            </div>
-            <div className="flex flex-col gap-3">
-              {completedOrders.slice(0, 20).map(order => (
-                <div key={order.id} className="bg-slate-800/40 p-4 rounded-2xl border border-white/5 flex flex-col gap-2">
-                  <div className="flex justify-between">
-                    <h3 className="font-black text-gray-300">#{order.order_number || order.id.toString().slice(-4)} - {order.customer_name}</h3>
-                    {/* Απόκρυψη δευτερολέπτων */}
-                    <span className="text-emerald-400 font-bold">{order.requested_time?.slice(0, 5)}</span>
-                  </div>
-                  <div className="flex justify-between items-center mt-1">
-                    <p className="text-xs text-gray-500 font-bold">{order.total_price} kr. ({order.payment_method})</p>
-                    <div className="flex items-center gap-3">
+        {/* ΕΜΦΑΝΙΣΗ LIVE ΤΑΜΕΙΟΥ Ή ΙΣΤΟΡΙΚΟΥ ΑΝΑΛΟΓΑ ΜΕ ΤΟ TAB */}
+        {activeTab === 'live' ? (
+          <main className="p-4 md:p-6 max-w-[1800px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
+            
+            <div className="bg-[#0F172A]/80 border border-[#38BDF8]/30 rounded-[2rem] p-5 shadow-2xl min-h-[80vh]">
+              <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
+                <h2 className="font-black text-lg uppercase text-[#38BDF8] tracking-widest flex items-center gap-2">
+                  <span className="relative flex h-3 w-3">
+                    {pendingOrders.length > 0 && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>}
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-[#38BDF8]"></span>
+                  </span>
+                  Νέες
+                </h2>
+                <span className="bg-[#38BDF8] text-[#0B1120] font-black px-3 py-1 rounded-lg text-sm">{pendingOrders.length}</span>
+              </div>
+              <div className="flex flex-col gap-4">
+                {pendingOrders.map(order => (
+                  <div key={order.id} className="flex flex-col gap-2 bg-slate-800/30 p-2 rounded-3xl border border-white/5 shadow-sm">
+                    <div className="flex justify-between items-center px-4 pt-2">
+                      <span className="text-xs text-gray-500 font-bold uppercase tracking-widest">
+                        Ληψη: {new Date(order.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
                       <OrderTimer createdAt={order.created_at} requestedTime={order.requested_time} status={order.status} />
-                      <button onClick={() => setSelectedOrder(order)} className="text-xs bg-gray-700 hover:bg-gray-600 transition-colors px-3 py-1.5 rounded text-white font-bold">Προβολή</button>
+                    </div>
+                    <OrderCard 
+                      order={order} 
+                      onAccept={(exactTime: string | null, mins: number) => handleAcceptOrder(order, exactTime, mins)} 
+                      onView={() => setSelectedOrder(order)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-[#0F172A]/50 border border-orange-500/30 rounded-[2rem] p-5 shadow-xl min-h-[80vh]">
+              <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
+                <h2 className="font-black text-lg uppercase text-orange-400 tracking-widest">Σε Προετοιμασία</h2>
+                <span className="bg-orange-500 text-black font-black px-3 py-1 rounded-lg text-sm">{preparingOrders.length}</span>
+              </div>
+              <div className="flex flex-col gap-4">
+                {preparingOrders.map(order => (
+                  <div key={order.id} className="flex flex-col gap-2 bg-slate-800/30 p-2 rounded-3xl border border-orange-500/10 shadow-sm">
+                    <div className="flex justify-between items-center px-4 pt-2">
+                      <span className="text-xs text-gray-500 font-bold uppercase tracking-widest">
+                        Ληψη: {new Date(order.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                      <OrderTimer createdAt={order.created_at} requestedTime={order.requested_time} status={order.status} />
+                    </div>
+                    <OrderCard 
+                      order={order} 
+                      onComplete={() => handleCompleteOrder(order)} 
+                      onPrint={() => { setActivePrintOrder(order); setIsPrinting(true); }}
+                      onView={() => setSelectedOrder(order)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-slate-900/30 border border-white/5 rounded-[2rem] p-5 opacity-90 hover:opacity-100 transition-opacity min-h-[80vh]">
+              <div className="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
+                <h2 className="font-black text-lg uppercase text-gray-500 tracking-widest">Ολοκληρωμένες</h2>
+                <span className="bg-gray-800 text-gray-400 border border-gray-700 font-black px-3 py-1 rounded-lg text-sm">{completedOrders.length}</span>
+              </div>
+              <div className="flex flex-col gap-3">
+                {completedOrders.slice(0, 20).map(order => (
+                  <div key={order.id} className="bg-slate-800/40 p-4 rounded-2xl border border-white/5 flex flex-col gap-2">
+                    <div className="flex justify-between">
+                      <h3 className="font-black text-gray-300">#{order.order_number || order.id.toString().slice(-4)} - {order.customer_name}</h3>
+                      <span className="text-emerald-400 font-bold">{order.requested_time?.slice(0, 5)}</span>
+                    </div>
+                    <div className="flex justify-between items-center mt-1">
+                      <p className="text-xs text-gray-500 font-bold">{order.total_price} kr. ({order.payment_method})</p>
+                      <div className="flex items-center gap-3">
+                        <OrderTimer createdAt={order.created_at} requestedTime={order.requested_time} status={order.status} />
+                        <button onClick={() => setSelectedOrder(order)} className="text-xs bg-gray-700 hover:bg-gray-600 transition-colors px-3 py-1.5 rounded text-white font-bold">Προβολή</button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
 
-        </main>
+          </main>
+        ) : (
+          <div className="p-4 md:p-6 max-w-[1800px] mx-auto">
+            <HistoryPanel />
+          </div>
+        )}
       </div>
 
       {isPrinting && (
@@ -263,7 +288,6 @@ export default function AdminDashboard() {
                 <div>
                   <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Χρονος (Ζητηθηκε)</p>
                   <div className="flex items-center gap-3">
-                    {/* Απόκρυψη δευτερολέπτων */}
                     <p className="text-2xl font-black text-[#38BDF8]">{selectedOrder.requested_time?.slice(0, 5)}</p>
                     <OrderTimer createdAt={selectedOrder.created_at} requestedTime={selectedOrder.requested_time} status={selectedOrder.status} />
                   </div>
