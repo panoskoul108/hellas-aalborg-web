@@ -23,7 +23,6 @@ export default function OrderTimer({ createdAt, requestedTime, status }: OrderTi
     const calculateTime = () => {
       const now = new Date();
 
-      // ΣΤΑΔΙΟ 1: ΝΕΑ ΠΑΡΑΓΓΕΛΙΑ (Μετράει πόση ώρα περιμένει - Count UP)
       if (status === 'pending') {
         setIsPending(true);
         const createdDate = new Date(createdAt);
@@ -33,30 +32,24 @@ export default function OrderTimer({ createdAt, requestedTime, status }: OrderTi
         const secs = Math.floor((diffMs % 60000) / 1000);
         setTimeLeft(`+${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`);
         
-        // Αν έχουν περάσει 5 λεπτά και δεν την έχεις αποδεχτεί, κοκκινίζει (Warning)
-        if (mins >= 5) {
-          setIsOverdue(true);
-        } else {
-          setIsOverdue(false);
-        }
+        if (mins >= 5) setIsOverdue(true);
+        else setIsOverdue(false);
         return;
       }
 
-      // ΣΤΑΔΙΟ 2: ΣΕ ΠΡΟΕΤΟΙΜΑΣΙΑ (Αντίστροφη μέτρηση μέχρι την ώρα παράδοσης - Count DOWN)
       setIsPending(false);
       let targetDate = new Date();
 
       if (!requestedTime || requestedTime === 'ASAP' || requestedTime.includes('Hurtigst')) {
-        // Ασφάλεια: Αν δεν υπάρχει ώρα (αν και πλέον πάντα βάζουμε), υποθέτει 20' από τη λήψη
         targetDate = new Date(createdAt);
         targetDate.setMinutes(targetDate.getMinutes() + 20);
       } else {
-        // Διαβάζει την ακριβή ώρα που όρισες όταν πάτησες το κουμπί (π.χ. "20:45")
         const cleanTime = requestedTime.replace('.', ':');
         const [hours, minutes] = cleanTime.split(':').map(Number);
         
         if (!isNaN(hours) && !isNaN(minutes)) {
-          targetDate.setHours(hours, minutes, 0, 0);
+          // Μηδενίζουμε τα δευτερόλεπτα για να πέσουμε ΑΚΡΙΒΩΣ πάνω στη στρογγυλοποίηση
+          targetDate.setHours(hours, minutes, 0, 0); 
         } else {
           targetDate = new Date(createdAt);
           targetDate.setMinutes(targetDate.getMinutes() + 20);
@@ -66,14 +59,12 @@ export default function OrderTimer({ createdAt, requestedTime, status }: OrderTi
       const diffMs = targetDate.getTime() - now.getTime();
       
       if (diffMs <= 0) {
-        // Άργησε (Κόκκινο Αρνητικό)
         setIsOverdue(true);
         const absDiff = Math.abs(diffMs);
         const mins = Math.floor(absDiff / 60000);
         const secs = Math.floor((absDiff % 60000) / 1000);
         setTimeLeft(`-${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`);
       } else {
-        // Κανονική Αντίστροφη Μέτρηση
         setIsOverdue(false);
         const mins = Math.floor(diffMs / 60000);
         const secs = Math.floor((diffMs % 60000) / 1000);
@@ -95,8 +86,8 @@ export default function OrderTimer({ createdAt, requestedTime, status }: OrderTi
       isOverdue 
         ? 'bg-red-900/40 border-red-500 text-red-400 animate-pulse' 
         : isPending 
-          ? 'bg-blue-900/30 border-blue-500 text-blue-400' // Μπλε χρώμα για το "Περιμένει"
-          : 'bg-slate-800 border-slate-600 text-white' // Κανονικό χρώμα για αντίστροφη μέτρηση
+          ? 'bg-blue-900/30 border-blue-500 text-blue-400' 
+          : 'bg-slate-800 border-slate-600 text-white' 
     }`}>
       <span className={isOverdue ? 'animate-bounce' : ''}>
         {isPending ? '🔔' : '⏳'}
