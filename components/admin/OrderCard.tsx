@@ -22,9 +22,6 @@ export const OrderCard = ({ order, onAccept, onPrint, onComplete, onView }: any)
         <div className="flex flex-col items-end gap-2">
           {isPending && <LiveTimer createdAt={order.created_at} />}
           {isPreparing && (
-            <span className="bg-orange-500 text-[#0B1120] text-xs font-black px-3 py-1.5 rounded-lg uppercase shadow-md flex items-center gap-1 border-2 border-orange-400">
-              🕒 ΠΑΡΑΛΑΒΗ: {order.requested_time}
-            </span>
           )}
           <button onClick={onView} className="bg-gray-700 hover:bg-gray-600 text-white text-[10px] font-black uppercase px-3 py-1 rounded-md transition-colors border border-gray-600 mt-1">
             👁️ ΠΡΟΒΟΛΗ
