@@ -70,7 +70,6 @@ export default function AdminDashboard() {
     setAudioUnlocked(true);
   };
 
-  // ΕΞΥΠΝΟΣ ΥΠΟΛΟΓΙΣΜΟΣ ΧΡΟΝΟΥ
   const handleAcceptOrder = async (order: any, exactTime: string | null, addedMins: number = 0) => {
     let confirmedTime = exactTime;
     
@@ -78,15 +77,11 @@ export default function AdminDashboard() {
       const targetDate = new Date();
       targetDate.setMinutes(targetDate.getMinutes() + addedMins);
       
-      // ΚΟΛΠΟ: Στρογγυλοποίηση προς τα πάνω αν είμαστε στη μέση του λεπτού,
-      // ώστε η κουζίνα να μην χάνει ποτέ δευτερόλεπτα (το ρολόι θα ξεκινάει π.χ. στο 05:15)
-      if (targetDate.getSeconds() > 0) {
-        targetDate.setMinutes(targetDate.getMinutes() + 1);
-      }
-      
       const hh = targetDate.getHours().toString().padStart(2, '0');
       const mm = targetDate.getMinutes().toString().padStart(2, '0');
-      confirmedTime = `${hh}:${mm}`;
+      const ss = targetDate.getSeconds().toString().padStart(2, '0'); // ΠΡΟΣΘΗΚΗ ΔΕΥΤΕΡΟΛΕΠΤΩΝ
+      
+      confirmedTime = `${hh}:${mm}:${ss}`; 
     }
 
     const updatedOrder = { ...order, status: 'preparing', requested_time: confirmedTime };
@@ -217,7 +212,8 @@ export default function AdminDashboard() {
                 <div key={order.id} className="bg-slate-800/40 p-4 rounded-2xl border border-white/5 flex flex-col gap-2">
                   <div className="flex justify-between">
                     <h3 className="font-black text-gray-300">#{order.order_number || order.id.toString().slice(-4)} - {order.customer_name}</h3>
-                    <span className="text-emerald-400 font-bold">{order.requested_time}</span>
+                    {/* Απόκρυψη δευτερολέπτων */}
+                    <span className="text-emerald-400 font-bold">{order.requested_time?.slice(0, 5)}</span>
                   </div>
                   <div className="flex justify-between items-center mt-1">
                     <p className="text-xs text-gray-500 font-bold">{order.total_price} kr. ({order.payment_method})</p>
@@ -266,7 +262,8 @@ export default function AdminDashboard() {
                 <div>
                   <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Χρονος (Ζητηθηκε)</p>
                   <div className="flex items-center gap-3">
-                    <p className="text-2xl font-black text-[#38BDF8]">{selectedOrder.requested_time}</p>
+                    {/* Απόκρυψη δευτερολέπτων */}
+                    <p className="text-2xl font-black text-[#38BDF8]">{selectedOrder.requested_time?.slice(0, 5)}</p>
                     <OrderTimer createdAt={selectedOrder.created_at} requestedTime={selectedOrder.requested_time} status={selectedOrder.status} />
                   </div>
                   <p className="text-[10px] text-gray-400 font-bold uppercase mt-2">Λήψη: {new Date(selectedOrder.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}</p>
