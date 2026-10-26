@@ -12,7 +12,6 @@ export default function OrderTimer({ createdAt, requestedTime, status }: OrderTi
   const [isOverdue, setIsOverdue] = useState(false);
 
   useEffect(() => {
-    // Αν η παραγγελία ολοκληρώθηκε, σταματάμε το χρονόμετρο
     if (status === 'completed') {
       setTimeLeft('ΕΤΟΙΜΟ');
       setIsOverdue(false);
@@ -22,28 +21,31 @@ export default function OrderTimer({ createdAt, requestedTime, status }: OrderTi
     const calculateTime = () => {
       let targetDate = new Date(createdAt);
       
-      if (requestedTime === 'ASAP' || !requestedTime) {
-        // ASAP: Στόχος 20 λεπτά μετά τη δημιουργία της παραγγελίας
+      if (!requestedTime || requestedTime === 'ASAP') {
         targetDate.setMinutes(targetDate.getMinutes() + 20);
       } else {
-        // Συγκεκριμένη ώρα (π.χ. "18:45")
-        const [hours, minutes] = requestedTime.split(':').map(Number);
-        targetDate = new Date(); // Σημερινή μέρα
-        targetDate.setHours(hours, minutes, 0, 0);
+        // Μετατρέπουμε την τελεία (Δανέζικο format 20.44) σε άνω-κάτω τελεία (20:44)
+        const cleanTime = requestedTime.replace('.', ':');
+        const [hours, minutes] = cleanTime.split(':').map(Number);
+        
+        targetDate = new Date();
+        if (!isNaN(hours) && !isNaN(minutes)) {
+           targetDate.setHours(hours, minutes, 0, 0);
+        } else {
+           targetDate.setMinutes(targetDate.getMinutes() + 20); // Fallback αν κάτι πάει στραβά
+        }
       }
 
       const now = new Date();
       const diffMs = targetDate.getTime() - now.getTime();
       
       if (diffMs <= 0) {
-        // Καθυστέρηση (Κόκκινο αρνητικό)
         setIsOverdue(true);
         const absDiff = Math.abs(diffMs);
         const mins = Math.floor(absDiff / 60000);
         const secs = Math.floor((absDiff % 60000) / 1000);
         setTimeLeft(`-${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`);
       } else {
-        // Κανονική αντίστροφη μέτρηση
         setIsOverdue(false);
         const mins = Math.floor(diffMs / 60000);
         const secs = Math.floor((diffMs % 60000) / 1000);
@@ -51,7 +53,7 @@ export default function OrderTimer({ createdAt, requestedTime, status }: OrderTi
       }
     };
 
-    calculateTime(); // Άμεσος υπολογισμός για να μην περιμένουμε 1 δευτερόλεπτο
+    calculateTime(); 
     const interval = setInterval(calculateTime, 1000);
     return () => clearInterval(interval);
   }, [createdAt, requestedTime, status]);
