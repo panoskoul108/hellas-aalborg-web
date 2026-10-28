@@ -5,7 +5,7 @@ import { supabase } from '../supabase';
 import ProductModal from './ProductModal'; 
 import { isStoreOpen } from '../../lib/storeHours';
 
-const MAX_ORDERS = 50; // Προσωρινά αυξημένο για δοκιμές
+const MAX_ORDERS = 50; 
 const LOCKOUT_MS = 5 * 60 * 1000;
 const REWARD_THRESHOLD = 40;
 const REWARD_DISCOUNT_DKK = 35;
@@ -56,7 +56,8 @@ export default function OrderPage() {
       trackPrepTitle: "Tilberedes!", trackPrepTime: "Klar klokken:",
       trackReadyTitle: "Klar til afhentning!", trackReadyDesc: "Din ordre venter på dig ved kassen.",
       summaryTitle: "Din Ordre", summaryTotal: "Total",
-      guestCheckout: "Fortsæt som gæst", or: "ELLER"
+      guestCheckout: "Fortsæt som gæst", or: "ELLER",
+      pickedUpBtn: "JEG HAR MODTAGET ORDREN" // ΝΕΟ
     },
     en: { 
       menuTitle: "Choose your dishes", add: "Add", wolt: "Want delivery? Order via Wolt 🛵",
@@ -72,7 +73,8 @@ export default function OrderPage() {
       trackPrepTitle: "Preparing!", trackPrepTime: "Will be ready at:",
       trackReadyTitle: "Ready for Pickup!", trackReadyDesc: "Your order is waiting for you at the counter.",
       summaryTitle: "Your Order", summaryTotal: "Total",
-      guestCheckout: "Continue as Guest", or: "OR"
+      guestCheckout: "Continue as Guest", or: "OR",
+      pickedUpBtn: "I PICKED UP MY ORDER" // ΝΕΟ
     },
     el: { 
       menuTitle: "Επιλέξτε τα πιάτα σας", add: "Προσθήκη", wolt: "Θέλετε Delivery; Παραγγείλτε μέσω Wolt 🛵",
@@ -88,7 +90,8 @@ export default function OrderPage() {
       trackPrepTitle: "Ετοιμαζεται!", trackPrepTime: "Θα ειναι ετοιμο στις:",
       trackReadyTitle: "Ετοιμο για Παραλαβη!", trackReadyDesc: "Η παραγγελία σας περιμένει στο ταμείο.",
       summaryTitle: "Η Παραγγελια Σας", summaryTotal: "Συνολο",
-      guestCheckout: "Συνεχεια ως Επισκεπτης", or: "Η"
+      guestCheckout: "Συνεχεια ως Επισκεπτης", or: "Η",
+      pickedUpBtn: "ΠΑΡΕΛΑΒΑ ΤΗΝ ΠΑΡΑΓΓΕΛΙΑ" // ΝΕΟ
     }
   };
   const ui = dict[lang];
@@ -124,7 +127,23 @@ export default function OrderPage() {
     if (Date.now() - lastTime > LOCKOUT_MS) localStorage.setItem("servato_orders", "0");
     else { setOrdersPlaced(storedOrders); if (storedOrders >= MAX_ORDERS) setIsLocked(true); }
 
-    // Store Hours Check
+    // --- ΣΥΣΤΗΜΑ ΜΝΗΜΗΣ (PERSISTENCE) ΓΙΑ ΝΑ ΜΗΝ ΧΑΝΕΤΑΙ Η ΟΘΟΝΗ ---
+    const checkSavedOrder = async () => {
+      const savedOrderId = localStorage.getItem('hellas_active_order');
+      if (savedOrderId) {
+        const { data } = await supabase.from('orders').select('*').eq('id', savedOrderId).single();
+        // Αν η παραγγελία υπάρχει και ΔΕΝ έχει παραδοθεί ακόμα, την εμφανίζουμε!
+        if (data && data.status !== 'delivered') {
+          setPlacedOrder(data);
+          setCheckoutStep('success');
+          setIsCartOpen(true); // Ανοίγει κατευθείαν το πλάγιο μενού
+        } else {
+          localStorage.removeItem('hellas_active_order');
+        }
+      }
+    };
+    checkSavedOrder();
+
     setStoreOpen(isStoreOpen());
     const interval = setInterval(() => {
       setStoreOpen(isStoreOpen());
@@ -232,6 +251,9 @@ export default function OrderPage() {
       if (orderError) throw orderError;
       
       setPlacedOrder(orderData);
+      
+      // ΑΠΟΘΗΚΕΥΣΗ ΣΤΟ LOCALSTORAGE ΓΙΑ ΝΑ ΜΗΝ ΧΑΘΕΙ Η ΟΘΟΝΗ ΑΝ ΚΑΝΕΙ REFRESH Ο ΠΕΛΑΤΗΣ
+      localStorage.setItem('hellas_active_order', orderData.id);
 
       await supabase.from('action_logs').insert([{
         action_type: "TAKEAWAY_ORDER_CREATED",
@@ -261,6 +283,21 @@ export default function OrderPage() {
 
       setCheckoutStep('success');
     } catch (error: any) { alert('Σφάλμα: ' + error.message); } finally { setIsSubmitting(false); }
+  };
+
+  // --- ΣΥΝΑΡΤΗΣΗ ΓΙΑ ΤΟ ΚΟΥΜΠΙ ΠΑΡΕΛΑΒΑ (ΠΕΛΑΤΗΣ) ---
+  const handleCustomerPickup = async () => {
+    if (!placedOrder) return;
+    
+    // Αλλάζει το status στη βάση (έτσι θα φύγει αυτόματα από το Live Ταμείο σου!)
+    await supabase.from('orders').update({ status: 'delivered' }).eq('id', placedOrder.id);
+    
+    // Καθαρίζει τη μνήμη και κλείνει το καλάθι
+    localStorage.removeItem('hellas_active_order');
+    setPlacedOrder(null);
+    setCheckoutStep('cart');
+    setCart([]);
+    setIsCartOpen(false);
   };
 
   return (
@@ -331,7 +368,10 @@ export default function OrderPage() {
           <div className="w-full md:max-w-md bg-[#0F172A] h-full flex flex-col shadow-2xl md:border-l border-white/10 animate-fade-in-up md:animate-slide-in-right">
             <div className="p-6 border-b border-white/10 flex justify-between items-center bg-slate-900">
               <h2 className="text-xl font-bold text-white">{ui.cartTitle}</h2>
-              <button onClick={() => setIsCartOpen(false)} className="text-gray-400 hover:text-white text-3xl md:text-2xl font-light">&times;</button>
+              {/* Αν είναι στο success step (έχει ενεργή παραγγελία), κρύβουμε το X για να μην το κλείσει καταλάθος */}
+              {checkoutStep !== 'success' && (
+                <button onClick={() => setIsCartOpen(false)} className="text-gray-400 hover:text-white text-3xl md:text-2xl font-light">&times;</button>
+              )}
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 md:p-6">
@@ -364,11 +404,28 @@ export default function OrderPage() {
                     )}
                     {placedOrder?.status === 'preparing' && (
                       <div className="animate-fade-in"><span className="text-6xl mb-4 block">🔥</span><h3 className="text-xl font-black text-white mb-4 uppercase">{ui.trackPrepTitle}</h3>
-                         <div className="bg-[#38BDF8]/20 border border-[#38BDF8]/50 rounded-2xl p-4 inline-block"><p className="text-[10px] font-black text-[#38BDF8] uppercase tracking-widest mb-1">{ui.trackPrepTime}</p><p className="text-4xl font-black text-white">{placedOrder?.requested_time && placedOrder.requested_time !== 'ASAP' ? placedOrder.requested_time : '...'}</p></div>
+                         <div className="bg-[#38BDF8]/20 border border-[#38BDF8]/50 rounded-2xl p-4 inline-block">
+                           <p className="text-[10px] font-black text-[#38BDF8] uppercase tracking-widest mb-1">{ui.trackPrepTime}</p>
+                           {/* ΑΠΟΚΡΥΨΗ ΔΕΥΤΕΡΟΛΕΠΤΩΝ: .slice(0, 5) για να δείχνει "12:34" αντί για "12:34:00" */}
+                           <p className="text-4xl font-black text-white">{placedOrder?.requested_time && placedOrder.requested_time !== 'ASAP' ? placedOrder.requested_time.slice(0, 5) : '...'}</p>
+                         </div>
                       </div>
                     )}
+                    
+                    {/* ΝΕΟ ΚΟΥΜΠΙ ΠΑΡΕΛΑΒΑ (ΕΜΦΑΝΙΖΕΤΑΙ ΟΤΑΝ Η ΠΑΡΑΓΓΕΛΙΑ ΕΙΝΑΙ ΕΤΟΙΜΗ) */}
                     {placedOrder?.status === 'completed' && (
-                      <div className="animate-fade-in"><span className="text-6xl mb-4 block">✅</span><h3 className="text-xl font-black text-emerald-400 mb-2 uppercase">{ui.trackReadyTitle}</h3><p className="text-sm text-gray-300 font-bold">{ui.trackReadyDesc}</p></div>
+                      <div className="animate-fade-in">
+                        <span className="text-6xl mb-4 block">✅</span>
+                        <h3 className="text-xl font-black text-emerald-400 mb-2 uppercase">{ui.trackReadyTitle}</h3>
+                        <p className="text-sm text-gray-300 font-bold mb-6">{ui.trackReadyDesc}</p>
+                        
+                        <button 
+                          onClick={handleCustomerPickup}
+                          className="w-full bg-emerald-500 hover:bg-emerald-400 text-[#0B1120] font-black text-sm uppercase py-4 rounded-xl shadow-lg active:scale-95 transition-transform"
+                        >
+                          🖐️ {ui.pickedUpBtn}
+                        </button>
+                      </div>
                     )}
                   </div>
 
@@ -388,7 +445,6 @@ export default function OrderPage() {
                     </div>
                   </div>
 
-                  <button onClick={() => { setIsCartOpen(false); setCheckoutStep('cart'); setPlacedOrder(null); setCart([]); }} className="w-full bg-white text-[#0B1120] font-black py-4 rounded-2xl hover:bg-gray-200 transition-colors uppercase shadow-lg">{ui.close}</button>
                 </div>
               ) : checkoutStep === 'auth' ? (
                 <div className="flex flex-col gap-5">
