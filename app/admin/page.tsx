@@ -6,6 +6,8 @@ import OrderTimer from '@/components/admin/OrderTimer';
 import { OrderCard } from '../../components/admin/OrderCard'; 
 import HistoryPanel from '../../components/admin/HistoryPanel'; 
 
+const NOTIFICATION_SOUND = "/notification.mp3"; // Βεβαιώσου ότι το αρχείο υπάρχει στο φάκελο public
+
 export default function AdminDashboard() {
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -18,7 +20,6 @@ export default function AdminDashboard() {
   const [activePrintOrder, setActivePrintOrder] = useState<any>(null);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
 
-  // State για την εναλλαγή Tabs (Live Ταμείο vs Ιστορικό)
   const [activeTab, setActiveTab] = useState<'live' | 'history'>('live');
 
   useEffect(() => {
@@ -42,35 +43,39 @@ export default function AdminDashboard() {
     setIsLoading(false);
   };
 
+  // --- ΣΩΣΤΟΣ ΣΥΓΧΡΟΝΙΣΜΟΣ SUPABASE ---
   useEffect(() => {
     if (!user) return;
     const channel = supabase.channel('admin-orders-channel')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
-        fetchOrders();
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setOrders(prev => [payload.new, ...prev]);
+        } else if (payload.eventType === 'UPDATE') {
+          setOrders(prev => prev.map(o => o.id === payload.new.id ? payload.new : o));
+        } else if (payload.eventType === 'DELETE') {
+          setOrders(prev => prev.filter(o => o.id !== payload.old.id));
+        }
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [user]);
 
-  const playSound = () => {
-    const audioEl = document.getElementById('notification-sound') as HTMLAudioElement;
-    if (audioEl) {
-      audioEl.currentTime = 0;
-      audioEl.play().catch(e => console.log("Αναμονή αλληλεπίδρασης", e));
-    }
-  };
-
+  // --- ΣΙΓΟΥΡΟΣ ΗΧΟΣ ---
   useEffect(() => {
     const pendingCount = orders.filter(o => o.status === 'pending').length;
     if (pendingCount > prevCount && audioUnlocked) {
-      playSound();
+      new Audio(NOTIFICATION_SOUND).play().catch(e => console.log("Audio block:", e));
     }
     setPrevCount(pendingCount);
   }, [orders, prevCount, audioUnlocked]);
 
   const unlockSystem = () => {
-    playSound(); 
+    new Audio(NOTIFICATION_SOUND).play().catch(() => {}); 
     setAudioUnlocked(true);
+  };
+
+  const playSound = () => {
+    new Audio(NOTIFICATION_SOUND).play().catch(e => console.log("Αναμονή αλληλεπίδρασης", e));
   };
 
   const handleAcceptOrder = async (order: any, exactTime: string | null, addedMins: number = 0) => {
@@ -89,6 +94,7 @@ export default function AdminDashboard() {
 
     const updatedOrder = { ...order, status: 'preparing', requested_time: confirmedTime };
     
+    // Τοπική ακαριαία ενημέρωση
     setOrders(prev => prev.map(o => o.id === order.id ? updatedOrder : o));
     
     const { error } = await supabase.from('orders').update({ status: 'preparing', requested_time: confirmedTime }).eq('id', order.id);
@@ -129,14 +135,11 @@ export default function AdminDashboard() {
 
   return (
     <>
-      <audio id="notification-sound" src="/notification.mp3" preload="auto" />
-
       <div className={`min-h-screen font-sans bg-[#0B1120] text-gray-200 ${isPrinting ? "hidden" : "block"}`}>
         <header className="bg-[#0F172A] border-b border-white/10 p-4 md:p-6 sticky top-0 z-40 flex justify-between items-center shadow-lg">
           <div className="flex items-center gap-6">
             <h1 className="text-xl md:text-2xl font-black text-white italic tracking-tight">HELLAS AALBORG <span className="text-[#38BDF8]">ADMIN</span></h1>
             
-            {/* TABS ΕΝΑΛΛΑΓΗΣ */}
             <div className="hidden md:flex bg-slate-900 rounded-xl p-1 border border-slate-700">
               <button 
                 onClick={() => setActiveTab('live')} 
@@ -165,7 +168,6 @@ export default function AdminDashboard() {
           </div>
         </header>
 
-        {/* ΕΜΦΑΝΙΣΗ LIVE ΤΑΜΕΙΟΥ Ή ΙΣΤΟΡΙΚΟΥ ΑΝΑΛΟΓΑ ΜΕ ΤΟ TAB */}
         {activeTab === 'live' ? (
           <main className="p-4 md:p-6 max-w-[1800px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
             
@@ -250,7 +252,7 @@ export default function AdminDashboard() {
 
           </main>
         ) : (
-          <div className="p-4 md:p-6 max-w-[1800px] mx-auto">
+          <div className="p-4 md:p-6 max-w-[1800px] mx-auto animate-fade-in">
             <HistoryPanel />
           </div>
         )}
