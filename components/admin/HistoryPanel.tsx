@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from "react";
-import { supabase } from '../../app/supabase'; // Προσαρμόστε το path αν χρειάζεται
+import { supabase } from '../../app/supabase'; 
 
 export default function HistoryPanel() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -10,9 +10,7 @@ export default function HistoryPanel() {
   const [paymentFilter, setPaymentFilter] = useState("ALL"); 
   const [historySearch, setHistorySearch] = useState("");
   const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
-  const [viewingOrder, setViewingOrder] = useState<any>(null);
 
-  // Φόρτωση δεδομένων βάσει ημερομηνίας
   useEffect(() => {
     const fetchHistory = async () => {
       setIsLoading(true);
@@ -43,7 +41,6 @@ export default function HistoryPanel() {
     fetchHistory();
   }, [dateRange, specificDate]);
 
-  // Υπολογισμοί Στατιστικών
   const displayedOrders = orders.filter((o) => {
     if (paymentFilter !== "ALL" && o.payment_method !== paymentFilter) return false;
     if (historySearch && !o.customer_name?.toLowerCase().includes(historySearch.toLowerCase()) && !o.id.toString().includes(historySearch)) return false;
@@ -57,7 +54,6 @@ export default function HistoryPanel() {
   const cashTotal = displayedOrders.filter(o => o.payment_method === 'ΜΕΤΡΗΤΑ').reduce((sum, o) => sum + Number(o.total_price || 0), 0);
   const cardTotal = displayedOrders.filter(o => o.payment_method === 'ΚΑΡΤΑ').reduce((sum, o) => sum + Number(o.total_price || 0), 0);
 
-  // Top 5 Products
   const productCounts: Record<string, number> = {};
   displayedOrders.forEach(o => {
     (o.items || []).forEach((it: any) => {
@@ -68,7 +64,6 @@ export default function HistoryPanel() {
   const topProducts = Object.entries(productCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const maxProductCount = topProducts.length > 0 ? topProducts[0][1] : 1;
 
-  // Peak Hours
   const hourCounts: Record<string, number> = {};
   displayedOrders.forEach(o => {
     const h = new Date(o.created_at).getHours().toString().padStart(2, '0');
@@ -86,13 +81,13 @@ export default function HistoryPanel() {
   };
 
   const handlePrintZ = () => {
-    window.print(); // Απλή κλήση εκτύπωσης browser για το Ζ report
+    window.print();
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 pb-20 mt-6 animate-fade-in">
+    <div className="max-w-7xl mx-auto space-y-6 pb-20 mt-6">
       
-      <div className="p-4 rounded-[2rem] shadow-sm flex flex-col md:flex-row gap-4 justify-between border bg-slate-800 border-slate-700">
+      <div className="p-4 rounded-[2rem] shadow-sm flex flex-col md:flex-row gap-4 justify-between border bg-slate-800 border-slate-700 print:hidden">
         <div className="flex p-1 rounded-2xl gap-1 overflow-x-auto no-scrollbar bg-slate-900">
           {["today", "week", "month", "all"].map((r) => (
             <button
@@ -122,10 +117,10 @@ export default function HistoryPanel() {
       </div>
 
       {isLoading ? (
-        <div className="text-center text-[#38BDF8] py-20 font-bold animate-pulse">Ανάκτηση Δεδομένων...</div>
+        <div className="text-center text-[#38BDF8] py-20 font-bold animate-pulse print:hidden">Ανάκτηση Δεδομένων...</div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 print:hidden">
             <div className="bg-sky-900/40 border border-sky-800 text-white p-6 rounded-[2rem] shadow-lg flex flex-col justify-between">
               <span className="text-[10px] font-black uppercase tracking-widest text-[#38BDF8]">Συνολικός Τζίρος</span>
               <span className="text-4xl font-black italic mt-2 text-white">{totalRevenue.toFixed(2)} kr.</span>
@@ -140,7 +135,7 @@ export default function HistoryPanel() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 print:hidden">
             <div className="p-4 rounded-[2rem] flex justify-between items-center shadow-sm border bg-emerald-900/20 border-emerald-900/50 text-emerald-400">
               <span className="font-black text-[10px] uppercase">💵 ΜΕΤΡΗΤΑ</span>
               <span className="font-black text-2xl">{cashTotal.toFixed(2)} kr.</span>
@@ -157,7 +152,7 @@ export default function HistoryPanel() {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:hidden">
             <div className="p-6 rounded-[2rem] shadow-sm border bg-slate-800 border-slate-700">
               <h3 className="text-[11px] font-black uppercase mb-4 border-b pb-2 text-gray-500 border-slate-700">Top 5 Προϊόντα</h3>
               <div className="space-y-4">
@@ -194,7 +189,7 @@ export default function HistoryPanel() {
             </div>
           </div>
 
-          <div className="pt-8">
+          <div className="pt-8 print:hidden">
             <div className="flex flex-col md:flex-row justify-between md:items-center mb-4 px-2 gap-4">
               <h3 className="text-lg font-black italic uppercase tracking-tighter text-white">Λίστα Παραγγελιών</h3>
               <div className="flex items-center gap-2">
@@ -256,6 +251,57 @@ export default function HistoryPanel() {
           </div>
         </>
       )}
+
+      {/* --------------------------------------------------- */}
+      {/* ΚΡΥΦΟ TEMPLATE ΓΙΑ ΤΗΝ ΕΚΤΥΠΩΣΗ ΤΟΥ Ζ (ΘΕΡΜΙΚΟΣ ΕΚΤΥΠΩΤΗΣ) */}
+      {/* --------------------------------------------------- */}
+      <div className="hidden print:block thermal-container" style={{ width: "100%", padding: "0", margin: "0", backgroundColor: "white", color: "black", fontFamily: "monospace", lineHeight: "1.2" }}>
+        <style>
+          {`
+            @media print {
+              @page { margin: 0 !important; size: auto; }
+              body { margin: 0 !important; padding: 0 !important; background-color: white; }
+              /* Κρύβουμε όλο το υπόλοιπο UI κατά την εκτύπωση */
+              body > *:not(.print\\:block) { display: none !important; }
+            }
+          `}
+        </style>
+        
+        <div style={{ textAlign: "center", borderBottom: "3px solid black", paddingBottom: "10px", marginBottom: "15px" }}>
+          <h1 style={{ margin: "0", fontSize: "24px", fontWeight: "900" }}>Ζ - HELLAS AALBORG</h1>
+          <p style={{ margin: "5px 0 0 0", fontSize: "14px", fontWeight: "bold" }}>
+            {dateRange === "today" ? "ΣΗΜΕΡΙΝΗ ΑΝΑΦΟΡΑ" : "ΑΝΑΦΟΡΑ ΙΣΤΟΡΙΚΟΥ"}
+          </p>
+          <p style={{ margin: "2px 0 0 0", fontSize: "12px", fontWeight: "bold" }}>
+            Εκτύπωση: {new Date().toLocaleString("el-GR")}
+          </p>
+        </div>
+
+        <table style={{ width: "100%", fontSize: "18px", fontWeight: "900", marginBottom: "15px" }}>
+          <tbody>
+            <tr><td style={{ padding: "6px 0" }}>ΠΑΡΑΓΓΕΛΙΕΣ:</td><td style={{ textAlign: "right" }}>{totalOrdersCount}</td></tr>
+            <tr><td style={{ padding: "6px 0" }}>ΜΕΣΗ ΑΞΙΑ:</td><td style={{ textAlign: "right" }}>{avgOrderValue.toFixed(2)} kr.</td></tr>
+          </tbody>
+        </table>
+
+        <div style={{ borderTop: "2px dashed black", borderBottom: "3px solid black", padding: "15px 0", margin: "15px 0" }}>
+          <table style={{ width: "100%", fontSize: "18px", fontWeight: "900" }}>
+            <tbody>
+              <tr><td style={{ padding: "6px 0" }}>ΜΕΤΡΗΤΑ:</td><td style={{ textAlign: "right" }}>{cashTotal.toFixed(2)} kr.</td></tr>
+              <tr><td style={{ padding: "6px 0" }}>ΚΑΡΤΑ:</td><td style={{ textAlign: "right" }}>{cardTotal.toFixed(2)} kr.</td></tr>
+              <tr>
+                <td style={{ padding: "12px 0 0 0", fontSize: "24px", fontWeight: "900" }}>ΤΖΙΡΟΣ:</td>
+                <td style={{ textAlign: "right", padding: "12px 0 0 0", fontSize: "24px", fontWeight: "900" }}>{totalRevenue.toFixed(2)} kr.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div style={{ textAlign: "center", marginTop: "30px", fontSize: "12px", fontWeight: "bold" }}>
+          ** ΤΕΛΟΣ ΑΝΑΦΟΡΑΣ Ζ **
+        </div>
+        <div style={{ height: "15mm" }}></div>
+      </div>
     </div>
   );
 }
