@@ -14,7 +14,8 @@ export default function HistoryPanel() {
   useEffect(() => {
     const fetchHistory = async () => {
       setIsLoading(true);
-      let query = supabase.from('orders').select('*').eq('status', 'completed');
+      // Τραβάμε πλέον ΚΑΙ τις 'completed' (Έτοιμες) ΚΑΙ τις 'delivered' (Παραδόθηκαν/Παρελήφθησαν)
+      let query = supabase.from('orders').select('*').in('status', ['completed', 'delivered']);
 
       const now = new Date();
       if (dateRange === "today") {
@@ -230,6 +231,7 @@ export default function HistoryPanel() {
                       <p className="text-[10px] font-bold text-gray-300 mt-0.5">{o.customer_name}</p>
                       <p className="text-[9px] font-bold text-gray-500 uppercase mt-1">
                         {new Date(o.created_at).toLocaleTimeString("da-DK", { hour: '2-digit', minute: '2-digit' })} • {o.payment_method}
+                        {o.status === 'delivered' && <span className="ml-2 text-emerald-400 font-black">(ΠΑΡΑΔΟΘΗΚΕ)</span>}
                       </p>
                     </div>
                     <span className="font-black text-lg tracking-tighter text-white">{Number(o.total_price).toFixed(2)} kr.</span>
@@ -253,16 +255,27 @@ export default function HistoryPanel() {
       )}
 
       {/* --------------------------------------------------- */}
-      {/* ΚΡΥΦΟ TEMPLATE ΓΙΑ ΤΗΝ ΕΚΤΥΠΩΣΗ ΤΟΥ Ζ (ΘΕΡΜΙΚΟΣ ΕΚΤΥΠΩΤΗΣ) */}
+      {/* ΣΩΣΤΟ CSS ΓΙΑ ΝΑ ΜΗΝ ΒΓΑΙΝΕΙ ΛΕΥΚΗ Η ΣΕΛΙΔΑ ΣΤΟ Ζ */}
       {/* --------------------------------------------------- */}
       <div className="hidden print:block thermal-container" style={{ width: "100%", padding: "0", margin: "0", backgroundColor: "white", color: "black", fontFamily: "monospace", lineHeight: "1.2" }}>
         <style>
           {`
             @media print {
+              body * {
+                visibility: hidden;
+              }
+              .thermal-container, .thermal-container * {
+                visibility: visible;
+              }
+              .thermal-container {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                padding: 0;
+              }
               @page { margin: 0 !important; size: auto; }
-              body { margin: 0 !important; padding: 0 !important; background-color: white; }
-              /* Κρύβουμε όλο το υπόλοιπο UI κατά την εκτύπωση */
-              body > *:not(.print\\:block) { display: none !important; }
             }
           `}
         </style>
