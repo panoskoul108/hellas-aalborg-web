@@ -6,7 +6,7 @@ import OrderTimer from '@/components/admin/OrderTimer';
 import { OrderCard } from '../../components/admin/OrderCard'; 
 import HistoryPanel from '../../components/admin/HistoryPanel'; 
 
-const NOTIFICATION_SOUND = "/notification.mp3"; // Βεβαιώσου ότι το αρχείο υπάρχει στο φάκελο public
+const NOTIFICATION_SOUND = "/notification.mp3"; 
 
 export default function AdminDashboard() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -43,7 +43,6 @@ export default function AdminDashboard() {
     setIsLoading(false);
   };
 
-  // --- ΣΩΣΤΟΣ ΣΥΓΧΡΟΝΙΣΜΟΣ SUPABASE ---
   useEffect(() => {
     if (!user) return;
     const channel = supabase.channel('admin-orders-channel')
@@ -60,7 +59,6 @@ export default function AdminDashboard() {
     return () => { supabase.removeChannel(channel); };
   }, [user]);
 
-  // --- ΣΙΓΟΥΡΟΣ ΗΧΟΣ ---
   useEffect(() => {
     const pendingCount = orders.filter(o => o.status === 'pending').length;
     if (pendingCount > prevCount && audioUnlocked) {
@@ -94,7 +92,6 @@ export default function AdminDashboard() {
 
     const updatedOrder = { ...order, status: 'preparing', requested_time: confirmedTime };
     
-    // Τοπική ακαριαία ενημέρωση
     setOrders(prev => prev.map(o => o.id === order.id ? updatedOrder : o));
     
     const { error } = await supabase.from('orders').update({ status: 'preparing', requested_time: confirmedTime }).eq('id', order.id);
@@ -112,6 +109,12 @@ export default function AdminDashboard() {
     setOrders(prev => prev.map(o => o.id === order.id ? updatedOrder : o));
     await supabase.from('orders').update({ status: 'completed', completed_at: completedAt }).eq('id', order.id);
     setSelectedOrder(null);
+  };
+
+  // ΝΕΑ ΣΥΝΑΡΤΗΣΗ: Για να εξαφανίζεις εσύ την παραγγελία αν ξεχάσει ο πελάτης
+  const handleDismissOrder = async (orderId: number) => {
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'delivered' } : o));
+    await supabase.from('orders').update({ status: 'delivered' }).eq('id', orderId);
   };
 
   if (isLoading) return <div className="min-h-screen bg-[#0B1120] flex items-center justify-center text-[#38BDF8] font-bold text-xl animate-pulse">Φόρτωση Ταμείου...</div>;
@@ -233,17 +236,21 @@ export default function AdminDashboard() {
               </div>
               <div className="flex flex-col gap-3">
                 {completedOrders.slice(0, 20).map(order => (
-                  <div key={order.id} className="bg-slate-800/40 p-4 rounded-2xl border border-white/5 flex flex-col gap-2">
+                  <div key={order.id} className="bg-slate-800/40 p-4 rounded-2xl border border-white/5 flex flex-col gap-2 relative">
                     <div className="flex justify-between">
                       <h3 className="font-black text-gray-300">#{order.order_number || order.id.toString().slice(-4)} - {order.customer_name}</h3>
                       <span className="text-emerald-400 font-bold">{order.requested_time?.slice(0, 5)}</span>
                     </div>
                     <div className="flex justify-between items-center mt-1">
                       <p className="text-xs text-gray-500 font-bold">{order.total_price} kr. ({order.payment_method})</p>
-                      <div className="flex items-center gap-3">
+                      
+                      {/* ΝΕΑ ΚΟΥΜΠΙΑ: Προβολή ΚΑΙ Παραδόθηκε (✓) */}
+                      <div className="flex items-center gap-2">
                         <OrderTimer createdAt={order.created_at} requestedTime={order.requested_time} status={order.status} />
-                        <button onClick={() => setSelectedOrder(order)} className="text-xs bg-gray-700 hover:bg-gray-600 transition-colors px-3 py-1.5 rounded text-white font-bold">Προβολή</button>
+                        <button onClick={() => setSelectedOrder(order)} className="text-[10px] bg-gray-700 hover:bg-gray-600 transition-colors px-2 py-1.5 rounded text-white font-bold">👁️</button>
+                        <button onClick={() => handleDismissOrder(order.id)} title="Ολοκλήρωση/Παραδόθηκε" className="text-[10px] bg-emerald-600 hover:bg-emerald-500 transition-colors px-2 py-1.5 rounded text-white font-black shadow-sm">✓</button>
                       </div>
+
                     </div>
                   </div>
                 ))}
