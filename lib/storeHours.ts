@@ -1,4 +1,7 @@
 export function isStoreOpen(): boolean {
+  // ΠΡΟΣΩΡΙΝΟ ΓΙΑ ΔΟΚΙΜΕΣ: Κάνει το μαγαζί να φαίνεται μόνιμα ανοιχτό. 
+  // Μόλις πας για Go-Live, απλά ΔΙΕΓΡΑΨΕ αυτή τη γραμμή!
+  return true;
   // Παίρνουμε την τρέχουσα ώρα στη Δανία
   const nowStr = new Date().toLocaleString("en-US", { timeZone: "Europe/Copenhagen" });
   const denmarkTime = new Date(nowStr);
