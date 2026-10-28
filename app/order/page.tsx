@@ -57,7 +57,7 @@ export default function OrderPage() {
       trackReadyTitle: "Klar til afhentning!", trackReadyDesc: "Din ordre venter på dig ved kassen.",
       summaryTitle: "Din Ordre", summaryTotal: "Total",
       guestCheckout: "Fortsæt som gæst", or: "ELLER",
-      pickedUpBtn: "JEG HAR MODTAGET ORDREN" // ΝΕΟ
+      pickedUpBtn: "JEG HAR MODTAGET ORDREN" 
     },
     en: { 
       menuTitle: "Choose your dishes", add: "Add", wolt: "Want delivery? Order via Wolt 🛵",
@@ -74,7 +74,7 @@ export default function OrderPage() {
       trackReadyTitle: "Ready for Pickup!", trackReadyDesc: "Your order is waiting for you at the counter.",
       summaryTitle: "Your Order", summaryTotal: "Total",
       guestCheckout: "Continue as Guest", or: "OR",
-      pickedUpBtn: "I PICKED UP MY ORDER" // ΝΕΟ
+      pickedUpBtn: "I PICKED UP MY ORDER" 
     },
     el: { 
       menuTitle: "Επιλέξτε τα πιάτα σας", add: "Προσθήκη", wolt: "Θέλετε Delivery; Παραγγείλτε μέσω Wolt 🛵",
@@ -91,7 +91,7 @@ export default function OrderPage() {
       trackReadyTitle: "Ετοιμο για Παραλαβη!", trackReadyDesc: "Η παραγγελία σας περιμένει στο ταμείο.",
       summaryTitle: "Η Παραγγελια Σας", summaryTotal: "Συνολο",
       guestCheckout: "Συνεχεια ως Επισκεπτης", or: "Η",
-      pickedUpBtn: "ΠΑΡΕΛΑΒΑ ΤΗΝ ΠΑΡΑΓΓΕΛΙΑ" // ΝΕΟ
+      pickedUpBtn: "ΠΑΡΕΛΑΒΑ ΤΗΝ ΠΑΡΑΓΓΕΛΙΑ" 
     }
   };
   const ui = dict[lang];
@@ -127,16 +127,14 @@ export default function OrderPage() {
     if (Date.now() - lastTime > LOCKOUT_MS) localStorage.setItem("servato_orders", "0");
     else { setOrdersPlaced(storedOrders); if (storedOrders >= MAX_ORDERS) setIsLocked(true); }
 
-    // --- ΣΥΣΤΗΜΑ ΜΝΗΜΗΣ (PERSISTENCE) ΓΙΑ ΝΑ ΜΗΝ ΧΑΝΕΤΑΙ Η ΟΘΟΝΗ ---
     const checkSavedOrder = async () => {
       const savedOrderId = localStorage.getItem('hellas_active_order');
       if (savedOrderId) {
         const { data } = await supabase.from('orders').select('*').eq('id', savedOrderId).single();
-        // Αν η παραγγελία υπάρχει και ΔΕΝ έχει παραδοθεί ακόμα, την εμφανίζουμε!
         if (data && data.status !== 'delivered') {
           setPlacedOrder(data);
           setCheckoutStep('success');
-          setIsCartOpen(true); // Ανοίγει κατευθείαν το πλάγιο μενού
+          setIsCartOpen(true); 
         } else {
           localStorage.removeItem('hellas_active_order');
         }
@@ -251,8 +249,6 @@ export default function OrderPage() {
       if (orderError) throw orderError;
       
       setPlacedOrder(orderData);
-      
-      // ΑΠΟΘΗΚΕΥΣΗ ΣΤΟ LOCALSTORAGE ΓΙΑ ΝΑ ΜΗΝ ΧΑΘΕΙ Η ΟΘΟΝΗ ΑΝ ΚΑΝΕΙ REFRESH Ο ΠΕΛΑΤΗΣ
       localStorage.setItem('hellas_active_order', orderData.id);
 
       await supabase.from('action_logs').insert([{
@@ -285,14 +281,16 @@ export default function OrderPage() {
     } catch (error: any) { alert('Σφάλμα: ' + error.message); } finally { setIsSubmitting(false); }
   };
 
-  // --- ΣΥΝΑΡΤΗΣΗ ΓΙΑ ΤΟ ΚΟΥΜΠΙ ΠΑΡΕΛΑΒΑ (ΠΕΛΑΤΗΣ) ---
   const handleCustomerPickup = async () => {
     if (!placedOrder) return;
     
-    // Αλλάζει το status στη βάση (έτσι θα φύγει αυτόματα από το Live Ταμείο σου!)
-    await supabase.from('orders').update({ status: 'delivered' }).eq('id', placedOrder.id);
+    // Προσπάθεια ενημέρωσης. Αν η βάση το κόψει λόγω RLS (Ασφάλεια Guest), θα βγάλει Alert
+    const { error } = await supabase.from('orders').update({ status: 'delivered' }).eq('id', placedOrder.id);
     
-    // Καθαρίζει τη μνήμη και κλείνει το καλάθι
+    if (error) {
+      alert("⚠️ Σφάλμα Δικαιωμάτων Βάσης (RLS): Ο πελάτης δεν έχει άδεια να ενημερώσει την παραγγελία του. Παρακαλώ χρησιμοποιήστε το '✓' από το Ταμείο Admin. (" + error.message + ")");
+    }
+    
     localStorage.removeItem('hellas_active_order');
     setPlacedOrder(null);
     setCheckoutStep('cart');
@@ -368,7 +366,6 @@ export default function OrderPage() {
           <div className="w-full md:max-w-md bg-[#0F172A] h-full flex flex-col shadow-2xl md:border-l border-white/10 animate-fade-in-up md:animate-slide-in-right">
             <div className="p-6 border-b border-white/10 flex justify-between items-center bg-slate-900">
               <h2 className="text-xl font-bold text-white">{ui.cartTitle}</h2>
-              {/* Αν είναι στο success step (έχει ενεργή παραγγελία), κρύβουμε το X για να μην το κλείσει καταλάθος */}
               {checkoutStep !== 'success' && (
                 <button onClick={() => setIsCartOpen(false)} className="text-gray-400 hover:text-white text-3xl md:text-2xl font-light">&times;</button>
               )}
@@ -406,13 +403,11 @@ export default function OrderPage() {
                       <div className="animate-fade-in"><span className="text-6xl mb-4 block">🔥</span><h3 className="text-xl font-black text-white mb-4 uppercase">{ui.trackPrepTitle}</h3>
                          <div className="bg-[#38BDF8]/20 border border-[#38BDF8]/50 rounded-2xl p-4 inline-block">
                            <p className="text-[10px] font-black text-[#38BDF8] uppercase tracking-widest mb-1">{ui.trackPrepTime}</p>
-                           {/* ΑΠΟΚΡΥΨΗ ΔΕΥΤΕΡΟΛΕΠΤΩΝ: .slice(0, 5) για να δείχνει "12:34" αντί για "12:34:00" */}
                            <p className="text-4xl font-black text-white">{placedOrder?.requested_time && placedOrder.requested_time !== 'ASAP' ? placedOrder.requested_time.slice(0, 5) : '...'}</p>
                          </div>
                       </div>
                     )}
                     
-                    {/* ΝΕΟ ΚΟΥΜΠΙ ΠΑΡΕΛΑΒΑ (ΕΜΦΑΝΙΖΕΤΑΙ ΟΤΑΝ Η ΠΑΡΑΓΓΕΛΙΑ ΕΙΝΑΙ ΕΤΟΙΜΗ) */}
                     {placedOrder?.status === 'completed' && (
                       <div className="animate-fade-in">
                         <span className="text-6xl mb-4 block">✅</span>
