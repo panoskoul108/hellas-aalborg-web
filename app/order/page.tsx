@@ -127,11 +127,13 @@ export default function OrderPage() {
     if (Date.now() - lastTime > LOCKOUT_MS) localStorage.setItem("servato_orders", "0");
     else { setOrdersPlaced(storedOrders); if (storedOrders >= MAX_ORDERS) setIsLocked(true); }
 
+    // ΕΠΑΝΑΦΟΡΑ ΣΕΛΙΔΑΣ (Αν κάνει refresh ο πελάτης)
     const checkSavedOrder = async () => {
       const savedOrderId = localStorage.getItem('hellas_active_order');
       if (savedOrderId) {
         const { data } = await supabase.from('orders').select('*').eq('id', savedOrderId).single();
-        if (data && data.status !== 'delivered') {
+        // Ελέγχει τη νέα στήλη
+        if (data && data.is_delivered !== true) {
           setPlacedOrder(data);
           setCheckoutStep('success');
           setIsCartOpen(true); 
@@ -143,14 +145,8 @@ export default function OrderPage() {
     checkSavedOrder();
 
     setStoreOpen(isStoreOpen());
-    const interval = setInterval(() => {
-      setStoreOpen(isStoreOpen());
-    }, 60000);
-    
-    return () => {
-      subscription.unsubscribe();
-      clearInterval(interval);
-    };
+    const interval = setInterval(() => { setStoreOpen(isStoreOpen()); }, 60000);
+    return () => { subscription.unsubscribe(); clearInterval(interval); };
   }, []);
 
   useEffect(() => {
@@ -251,25 +247,15 @@ export default function OrderPage() {
       setPlacedOrder(orderData);
       localStorage.setItem('hellas_active_order', orderData.id);
 
-      await supabase.from('action_logs').insert([{
-        action_type: "TAKEAWAY_ORDER_CREATED",
-        order_id: orderData.id,
-        details: { company: "Nordic-mythos 1 ApS", user: user?.email || "Guest", total_dkk: finalTotal }
-      }]);
+      await supabase.from('action_logs').insert([{ action_type: "TAKEAWAY_ORDER_CREATED", order_id: orderData.id, details: { company: "Nordic-mythos 1 ApS", user: user?.email || "Guest", total_dkk: finalTotal } }]);
 
       const earnedPoints = Math.floor(finalTotal / 10);
       if (loyaltyInfo && loyaltyInfo.id) {
         const currentPoints = loyaltyInfo.points || 0;
         const pntAfter = redeemReward ? Math.max(0, currentPoints - REWARD_THRESHOLD) : currentPoints;
-        await supabase.from('customers_loyalty').update({
-          points: pntAfter + earnedPoints,
-          total_orders: (loyaltyInfo.total_orders || 0) + 1,
-          total_spent_dkk: Number(loyaltyInfo.total_spent_dkk || 0) + finalTotal
-        }).eq('phone', cleanPhone);
+        await supabase.from('customers_loyalty').update({ points: pntAfter + earnedPoints, total_orders: (loyaltyInfo.total_orders || 0) + 1, total_spent_dkk: Number(loyaltyInfo.total_spent_dkk || 0) + finalTotal }).eq('phone', cleanPhone);
       } else {
-        await supabase.from('customers_loyalty').insert([{
-          phone: cleanPhone, customer_name: customerName, points: earnedPoints, total_spent_dkk: finalTotal
-        }]);
+        await supabase.from('customers_loyalty').insert([{ phone: cleanPhone, customer_name: customerName, points: earnedPoints, total_spent_dkk: finalTotal }]);
       }
 
       const newTotal = ordersPlaced + 1;
@@ -281,14 +267,15 @@ export default function OrderPage() {
     } catch (error: any) { alert('Σφάλμα: ' + error.message); } finally { setIsSubmitting(false); }
   };
 
+  // ΚΟΥΜΠΙ ΠΕΛΑΤΗ
   const handleCustomerPickup = async () => {
     if (!placedOrder) return;
     
-    // Προσπάθεια ενημέρωσης. Αν η βάση το κόψει λόγω RLS (Ασφάλεια Guest), θα βγάλει Alert
-    const { error } = await supabase.from('orders').update({ status: 'delivered' }).eq('id', placedOrder.id);
+    // Ασφαλής ενημέρωση στο is_delivered
+    const { error } = await supabase.from('orders').update({ is_delivered: true }).eq('id', placedOrder.id);
     
     if (error) {
-      alert("⚠️ Σφάλμα Δικαιωμάτων Βάσης (RLS): Ο πελάτης δεν έχει άδεια να ενημερώσει την παραγγελία του. Παρακαλώ χρησιμοποιήστε το '✓' από το Ταμείο Admin. (" + error.message + ")");
+      alert("⚠️ Η βάση δεδομένων απέρριψε την ενημέρωση! Ζητήστε από το ταμείο να πατήσει το '✓'.");
     }
     
     localStorage.removeItem('hellas_active_order');
@@ -414,10 +401,7 @@ export default function OrderPage() {
                         <h3 className="text-xl font-black text-emerald-400 mb-2 uppercase">{ui.trackReadyTitle}</h3>
                         <p className="text-sm text-gray-300 font-bold mb-6">{ui.trackReadyDesc}</p>
                         
-                        <button 
-                          onClick={handleCustomerPickup}
-                          className="w-full bg-emerald-500 hover:bg-emerald-400 text-[#0B1120] font-black text-sm uppercase py-4 rounded-xl shadow-lg active:scale-95 transition-transform"
-                        >
+                        <button onClick={handleCustomerPickup} className="w-full bg-emerald-500 hover:bg-emerald-400 text-[#0B1120] font-black text-sm uppercase py-4 rounded-xl shadow-lg active:scale-95 transition-transform">
                           🖐️ {ui.pickedUpBtn}
                         </button>
                       </div>
