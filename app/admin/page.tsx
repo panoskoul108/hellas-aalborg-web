@@ -111,10 +111,10 @@ export default function AdminDashboard() {
     setSelectedOrder(null);
   };
 
-  // ΝΕΑ ΣΥΝΑΡΤΗΣΗ: Για να εξαφανίζεις εσύ την παραγγελία αν ξεχάσει ο πελάτης
+  // ΝΕΑ ΛΟΓΙΚΗ: Ενημερώνει τη νέα στήλη "is_delivered"
   const handleDismissOrder = async (orderId: number) => {
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'delivered' } : o));
-    await supabase.from('orders').update({ status: 'delivered' }).eq('id', orderId);
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, is_delivered: true } : o));
+    await supabase.from('orders').update({ is_delivered: true }).eq('id', orderId);
   };
 
   if (isLoading) return <div className="min-h-screen bg-[#0B1120] flex items-center justify-center text-[#38BDF8] font-bold text-xl animate-pulse">Φόρτωση Ταμείου...</div>;
@@ -134,7 +134,9 @@ export default function AdminDashboard() {
 
   const pendingOrders = orders.filter(o => o.status === 'pending');
   const preparingOrders = orders.filter(o => o.status === 'preparing');
-  const completedOrders = orders.filter(o => o.status === 'completed' && (new Date().getTime() - new Date(o.created_at).getTime() < 24 * 60 * 60 * 1000));
+  
+  // Φιλτράρει όσες ΕΧΟΥΝ παραληφθεί (is_delivered !== true)
+  const completedOrders = orders.filter(o => o.status === 'completed' && o.is_delivered !== true && (new Date().getTime() - new Date(o.created_at).getTime() < 24 * 60 * 60 * 1000));
 
   return (
     <>
@@ -144,28 +146,13 @@ export default function AdminDashboard() {
             <h1 className="text-xl md:text-2xl font-black text-white italic tracking-tight">HELLAS AALBORG <span className="text-[#38BDF8]">ADMIN</span></h1>
             
             <div className="hidden md:flex bg-slate-900 rounded-xl p-1 border border-slate-700">
-              <button 
-                onClick={() => setActiveTab('live')} 
-                className={`px-5 py-2 rounded-lg text-xs font-black uppercase transition-colors ${activeTab === 'live' ? 'bg-[#38BDF8] text-[#0B1120]' : 'text-gray-400 hover:text-white'}`}
-              >
-                LIVE ΤΑΜΕΙΟ
-              </button>
-              <button 
-                onClick={() => setActiveTab('history')} 
-                className={`px-5 py-2 rounded-lg text-xs font-black uppercase transition-colors ${activeTab === 'history' ? 'bg-[#38BDF8] text-[#0B1120]' : 'text-gray-400 hover:text-white'}`}
-              >
-                ΙΣΤΟΡΙΚΟ & Z
-              </button>
+              <button onClick={() => setActiveTab('live')} className={`px-5 py-2 rounded-lg text-xs font-black uppercase transition-colors ${activeTab === 'live' ? 'bg-[#38BDF8] text-[#0B1120]' : 'text-gray-400 hover:text-white'}`}>LIVE ΤΑΜΕΙΟ</button>
+              <button onClick={() => setActiveTab('history')} className={`px-5 py-2 rounded-lg text-xs font-black uppercase transition-colors ${activeTab === 'history' ? 'bg-[#38BDF8] text-[#0B1120]' : 'text-gray-400 hover:text-white'}`}>ΙΣΤΟΡΙΚΟ & Z</button>
             </div>
           </div>
-
           <div className="flex items-center gap-4">
-            <button onClick={playSound} className="hidden sm:block bg-gray-800 text-gray-300 border border-gray-600 px-3 py-2 rounded-xl text-xs font-bold hover:bg-gray-700">
-              🔊 Δοκιμή Ήχου
-            </button>
-            <a href="/admin/products" className="hidden sm:block bg-purple-600 hover:bg-purple-500 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase shadow-lg transition-colors">
-              📋 ΔΙΑΧΕΙΡΙΣΗ ΚΑΤΑΛΟΓΟΥ
-            </a>
+            <button onClick={playSound} className="hidden sm:block bg-gray-800 text-gray-300 border border-gray-600 px-3 py-2 rounded-xl text-xs font-bold hover:bg-gray-700">🔊 Δοκιμή Ήχου</button>
+            <a href="/admin/products" className="hidden sm:block bg-purple-600 hover:bg-purple-500 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase shadow-lg transition-colors">📋 ΔΙΑΧΕΙΡΙΣΗ ΚΑΤΑΛΟΓΟΥ</a>
             <button onClick={fetchOrders} className="w-10 h-10 rounded-xl bg-slate-800 text-[#38BDF8] flex items-center justify-center hover:bg-slate-700 text-xl shadow-md">🔄</button>
             <button onClick={() => supabase.auth.signOut().then(() => window.location.href="/")} className="text-xs text-red-400 hover:text-red-300 font-bold uppercase ml-2">ΕΞΟΔΟΣ</button>
           </div>
@@ -173,15 +160,13 @@ export default function AdminDashboard() {
 
         {activeTab === 'live' ? (
           <main className="p-4 md:p-6 max-w-[1800px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
-            
             <div className="bg-[#0F172A]/80 border border-[#38BDF8]/30 rounded-[2rem] p-5 shadow-2xl min-h-[80vh]">
               <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
                 <h2 className="font-black text-lg uppercase text-[#38BDF8] tracking-widest flex items-center gap-2">
                   <span className="relative flex h-3 w-3">
                     {pendingOrders.length > 0 && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>}
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-[#38BDF8]"></span>
-                  </span>
-                  Νέες
+                  </span> Νέες
                 </h2>
                 <span className="bg-[#38BDF8] text-[#0B1120] font-black px-3 py-1 rounded-lg text-sm">{pendingOrders.length}</span>
               </div>
@@ -189,16 +174,10 @@ export default function AdminDashboard() {
                 {pendingOrders.map(order => (
                   <div key={order.id} className="flex flex-col gap-2 bg-slate-800/30 p-2 rounded-3xl border border-white/5 shadow-sm">
                     <div className="flex justify-between items-center px-4 pt-2">
-                      <span className="text-xs text-gray-500 font-bold uppercase tracking-widest">
-                        Ληψη: {new Date(order.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
+                      <span className="text-xs text-gray-500 font-bold uppercase tracking-widest">Ληψη: {new Date(order.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}</span>
                       <OrderTimer createdAt={order.created_at} requestedTime={order.requested_time} status={order.status} />
                     </div>
-                    <OrderCard 
-                      order={order} 
-                      onAccept={(exactTime: string | null, mins: number) => handleAcceptOrder(order, exactTime, mins)} 
-                      onView={() => setSelectedOrder(order)}
-                    />
+                    <OrderCard order={order} onAccept={(exactTime: string | null, mins: number) => handleAcceptOrder(order, exactTime, mins)} onView={() => setSelectedOrder(order)} />
                   </div>
                 ))}
               </div>
@@ -213,17 +192,10 @@ export default function AdminDashboard() {
                 {preparingOrders.map(order => (
                   <div key={order.id} className="flex flex-col gap-2 bg-slate-800/30 p-2 rounded-3xl border border-orange-500/10 shadow-sm">
                     <div className="flex justify-between items-center px-4 pt-2">
-                      <span className="text-xs text-gray-500 font-bold uppercase tracking-widest">
-                        Ληψη: {new Date(order.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
+                      <span className="text-xs text-gray-500 font-bold uppercase tracking-widest">Ληψη: {new Date(order.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}</span>
                       <OrderTimer createdAt={order.created_at} requestedTime={order.requested_time} status={order.status} />
                     </div>
-                    <OrderCard 
-                      order={order} 
-                      onComplete={() => handleCompleteOrder(order)} 
-                      onPrint={() => { setActivePrintOrder(order); setIsPrinting(true); }}
-                      onView={() => setSelectedOrder(order)}
-                    />
+                    <OrderCard order={order} onComplete={() => handleCompleteOrder(order)} onPrint={() => { setActivePrintOrder(order); setIsPrinting(true); }} onView={() => setSelectedOrder(order)} />
                   </div>
                 ))}
               </div>
@@ -243,20 +215,16 @@ export default function AdminDashboard() {
                     </div>
                     <div className="flex justify-between items-center mt-1">
                       <p className="text-xs text-gray-500 font-bold">{order.total_price} kr. ({order.payment_method})</p>
-                      
-                      {/* ΝΕΑ ΚΟΥΜΠΙΑ: Προβολή ΚΑΙ Παραδόθηκε (✓) */}
                       <div className="flex items-center gap-2">
                         <OrderTimer createdAt={order.created_at} requestedTime={order.requested_time} status={order.status} />
                         <button onClick={() => setSelectedOrder(order)} className="text-[10px] bg-gray-700 hover:bg-gray-600 transition-colors px-2 py-1.5 rounded text-white font-bold">👁️</button>
-                        <button onClick={() => handleDismissOrder(order.id)} title="Ολοκλήρωση/Παραδόθηκε" className="text-[10px] bg-emerald-600 hover:bg-emerald-500 transition-colors px-2 py-1.5 rounded text-white font-black shadow-sm">✓</button>
+                        <button onClick={() => handleDismissOrder(order.id)} title="Παραδόθηκε (Απόκρυψη)" className="text-[10px] bg-emerald-600 hover:bg-emerald-500 transition-colors px-2 py-1.5 rounded text-white font-black shadow-sm">✓</button>
                       </div>
-
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-
           </main>
         ) : (
           <div className="p-4 md:p-6 max-w-[1800px] mx-auto animate-fade-in">
@@ -267,10 +235,7 @@ export default function AdminDashboard() {
 
       {isPrinting && (
         <div className="bg-white text-black w-full m-0 p-0">
-          <PrintTicket 
-            order={activePrintOrder} storeName="HELLAS AALBORG" isThermal={true} hasKitchenEnabled={false}
-            onPrintDone={() => { setIsPrinting(false); setActivePrintOrder(null); }} 
-          />
+          <PrintTicket order={activePrintOrder} storeName="HELLAS AALBORG" isThermal={true} hasKitchenEnabled={false} onPrintDone={() => { setIsPrinting(false); setActivePrintOrder(null); }} />
         </div>
       )}
 
@@ -317,7 +282,6 @@ export default function AdminDashboard() {
                   </li>
                 ))}
               </ul>
-
               {selectedOrder.notes && (
                 <div className="bg-indigo-900/30 border border-indigo-800/50 p-4 rounded-xl mt-6">
                   <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block mb-1">ΓΕΝΙΚΟ ΣΧΟΛΙΟ:</span>
@@ -325,16 +289,13 @@ export default function AdminDashboard() {
                 </div>
               )}
             </div>
-
             <div className="p-6 border-t border-slate-700 bg-slate-900 flex justify-between items-center">
               <div>
                 <p className="text-xs text-gray-400 font-bold uppercase">Πληρωμή: {selectedOrder.payment_method}</p>
                 <p className="text-2xl font-black text-white">{selectedOrder.total_price} kr.</p>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => { setActivePrintOrder(selectedOrder); setIsPrinting(true); }} className="bg-slate-700 text-white font-bold px-6 py-3 rounded-xl hover:bg-slate-600 transition-colors shadow-lg">
-                  🖨️ ΕΚΤΥΠΩΣΗ
-                </button>
+                <button onClick={() => { setActivePrintOrder(selectedOrder); setIsPrinting(true); }} className="bg-slate-700 text-white font-bold px-6 py-3 rounded-xl hover:bg-slate-600 transition-colors shadow-lg">🖨️ ΕΚΤΥΠΩΣΗ</button>
               </div>
             </div>
           </div>
