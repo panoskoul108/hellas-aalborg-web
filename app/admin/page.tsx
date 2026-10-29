@@ -31,33 +31,26 @@ export default function AdminDashboard() {
     try {
       if ('wakeLock' in navigator) {
         await (navigator as any).wakeLock.request('screen');
-        console.log('Wake Lock ενεργό: Η οθόνη δεν θα σβήσει.');
       }
     } catch (err) {
       console.log('Το Wake Lock απορρίφθηκε ή δεν υποστηρίζεται:', err);
     }
   };
 
- useEffect(() => {
+  useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
-      // 1. Αν δεν είσαι συνδεδεμένος, σε πάει στην αρχική για Login (δεν σε αφήνει στο PIN Pad)
-      if (!session) { 
-        alert("⚠️ Η συνεδρία έληξε ή δεν είστε συνδεδεμένος. Παρακαλώ συνδεθείτε ξανά!");
-        window.location.href = "/"; 
-        return; 
+      // Αφαιρέσαμε την ανακατεύθυνση (redirect). Αν υπάρχει user τον κρατάμε, 
+      // αλλιώς προχωράμε κανονικά προς το PIN Pad!
+      if (session) {
+        setUser(session.user);
       }
       
-      setUser(session.user);
-      
-      // 2. Τραβάμε το PIN και αν υπάρχει λάθος (π.χ. RLS), μας πετάει μήνυμα να το ξέρουμε!
+      // Τραβάμε το PIN. Τώρα η βάση θα το δώσει ακόμα και αν δεν υπάρχει email session.
       const { data: pinData, error } = await supabase.from('pos_settings').select('pin_code').eq('id', 1).single();
       
-      if (error) {
-        console.error("Σφάλμα ανάγνωσης PIN:", error.message);
-      } else if (pinData) {
-        // Βάζουμε trim() σε περίπτωση που πάτησες "1111 " (με κενό στο τέλος) κατά λάθος στη βάση
+      if (pinData) {
         setExpectedPin(pinData.pin_code.trim()); 
       }
 
@@ -65,6 +58,7 @@ export default function AdminDashboard() {
     };
     checkAuth();
   }, []);
+
   const fetchOrders = async () => {
     const { data, error } = await supabase
       .from('orders')
@@ -75,9 +69,7 @@ export default function AdminDashboard() {
     setIsLoading(false);
   };
 
-  // --- ΣΥΓΧΡΟΝΙΣΜΟΣ SUPABASE ---
   useEffect(() => {
-    if (!user) return;
     const channel = supabase.channel('admin-orders-channel')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
         if (payload.eventType === 'INSERT') {
@@ -90,22 +82,19 @@ export default function AdminDashboard() {
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [user]);
+  }, []);
 
-  // --- ΤΡΙΠΛΗ ΑΣΠΙΔΑ: ΑΘΟΡΥΒΟ POLLING ΚΑΙ VISIBILITY API ---
   useEffect(() => {
-    if (!user || !audioUnlocked) return;
+    if (!audioUnlocked) return;
 
-    // 1. Αόρατη ανανέωση κάθε 60 δευτερόλεπτα (Σώζει σε περίπτωση που πέσει το WebSocket)
     const interval = setInterval(() => {
       fetchOrders();
     }, 60000);
 
-    // 2. Αν ο browser "ξυπνήσει" την καρτέλα (π.χ. άναψε ξανά η οθόνη), κάνε άμεσο refresh
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         fetchOrders();
-        requestWakeLock(); // Ξαναζητάμε το Wake Lock γιατί χάνεται όταν σβήνει η οθόνη
+        requestWakeLock(); 
       }
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -114,9 +103,8 @@ export default function AdminDashboard() {
       clearInterval(interval);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [user, audioUnlocked]);
+  }, [audioUnlocked]);
 
-  // --- ΗΧΟΣ ΕΙΔΟΠΟΙΗΣΗΣ ---
   useEffect(() => {
     const pendingCount = orders.filter(o => o.status === 'pending').length;
     if (pendingCount > prevCount && audioUnlocked) {
@@ -133,7 +121,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // --- ΕΛΕΓΧΟΣ PIN & ΞΕΚΛΕΙΔΩΜΑ ΗΧΟΥ/ΟΘΟΝΗΣ ---
   const handlePinSubmit = () => {
     if (enteredPin === expectedPin) {
       const audio = document.getElementById('order-alert-sound') as HTMLAudioElement;
@@ -142,9 +129,8 @@ export default function AdminDashboard() {
         audio.play().then(() => {
           audio.muted = false;
           setAudioUnlocked(true);
-          requestWakeLock(); // Κλειδώνουμε την οθόνη να μένει ανοιχτή
+          requestWakeLock(); 
         }).catch(e => {
-          console.log("Unlock failed", e);
           setAudioUnlocked(true); 
           requestWakeLock();
         });
@@ -248,7 +234,9 @@ export default function AdminDashboard() {
             <a href="/admin/products" className="hidden sm:block bg-purple-600 hover:bg-purple-500 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase shadow-lg transition-colors">📋 ΔΙΑΧΕΙΡΙΣΗ ΚΑΤΑΛΟΓΟΥ</a>
             <button onClick={fetchOrders} className="w-10 h-10 rounded-xl bg-slate-800 text-[#38BDF8] flex items-center justify-center hover:bg-slate-700 text-xl shadow-md transition-colors">🔄</button>
             <button onClick={() => { setAudioUnlocked(false); setEnteredPin(''); }} className="text-xs text-orange-400 hover:text-orange-300 font-bold uppercase ml-2 border border-orange-400/30 px-3 py-2 rounded-lg transition-colors">ΚΛΕΙΔΩΜΑ</button>
-            <button onClick={() => supabase.auth.signOut().then(() => window.location.href="/")} className="text-xs text-red-500 hover:text-red-400 font-bold uppercase ml-1 transition-colors">ΕΞΟΔΟΣ</button>
+            {user && (
+               <button onClick={() => supabase.auth.signOut().then(() => window.location.href="/")} className="text-xs text-red-500 hover:text-red-400 font-bold uppercase ml-1 transition-colors">ΕΞΟΔΟΣ</button>
+            )}
           </div>
         </header>
 
