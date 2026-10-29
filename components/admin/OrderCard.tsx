@@ -1,18 +1,18 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 
 export const OrderCard = ({ order, onAccept, onPrint, onComplete, onView }: any) => {
   const items = order.items || [];
   const isPending = order.status === 'pending';
   const isPreparing = order.status === 'preparing';
   
-  // State για το Custom Input
-  const [customMins, setCustomMins] = useState('');
-
   const isASAP = order.requested_time === 'ASAP' || order.requested_time?.includes('Hurtigst') || !order.requested_time;
   
-  // Κρύβουμε τα δευτερόλεπτα από το UI
+  // Κρύβουμε τα δευτερόλεπτα από το UI (π.χ. 20:45)
   const displayTime = order.requested_time ? order.requested_time.slice(0, 5) : '';
+
+  // Δημιουργία πίνακα με τα λεπτά από 2 έως 30 (για το Slider)
+  const customMinutes = Array.from({ length: 29 }, (_, i) => i + 2);
 
   return (
     <div className={`bg-slate-800 border rounded-2xl p-5 shadow-lg relative overflow-hidden ${isPending ? "border-[#38BDF8]/50" : "border-orange-500/50"}`}>
@@ -24,7 +24,7 @@ export const OrderCard = ({ order, onAccept, onPrint, onComplete, onView }: any)
           <p className="text-xs font-bold text-gray-400 mt-1 uppercase">Πελάτης: <span className="text-white">{order.customer_name}</span> ({order.customer_phone})</p>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <button onClick={onView} className="bg-gray-700 hover:bg-gray-600 text-white text-[10px] font-black uppercase px-3 py-1 rounded-md transition-colors border border-gray-600 mt-1">
+          <button onClick={onView} className="bg-gray-700 hover:bg-gray-600 text-white text-[10px] font-black uppercase px-3 py-1 rounded-md transition-colors border border-gray-600 mt-1 shadow-sm">
             👁️ ΠΡΟΒΟΛΗ
           </button>
         </div>
@@ -46,27 +46,26 @@ export const OrderCard = ({ order, onAccept, onPrint, onComplete, onView }: any)
 
       {isPending && (
         <div className="border-t border-slate-700 pt-4 flex flex-col gap-3">
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center mb-1">
              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Ζητηθηκε: <span className="text-white text-sm">{displayTime || 'ASAP'}</span></span>
              <span className="text-[10px] font-bold text-[#38BDF8] uppercase tracking-widest block">Σύνολο: {order.total_price} kr.</span>
           </div>
           
           {isASAP ? (
-            <div className="flex flex-wrap gap-2 mt-1">
-              {[5, 10, 15, 20].map((mins) => (
-                <button key={mins} onClick={() => onAccept(null, mins)} className="flex-1 min-w-[2.5rem] bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-black text-sm rounded-xl py-2.5 shadow-md active:scale-95 transition-transform">
-                  {mins}'
-                </button>
-              ))}
-              <div className="flex flex-1 min-w-[5.5rem] gap-1">
-                <input 
-                  type="number" 
-                  placeholder="Λεπτά" 
-                  value={customMins} 
-                  onChange={e => setCustomMins(e.target.value)} 
-                  className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl text-center font-bold text-sm outline-none focus:border-[#38BDF8] px-1" 
-                />
-                <button onClick={() => customMins && onAccept(null, Number(customMins))} className="bg-emerald-500 text-[#0B1120] font-black px-2 rounded-xl shadow-md hover:bg-emerald-400">✓</button>
+            <div className="flex flex-col gap-2">
+              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">ΕΠΙΛΟΓΗ ΧΡΟΝΟΥ (ΣΕΡΝΕΤΕ 👈👉):</span>
+              
+              {/* --- SLIDER 2 ΕΩΣ 30 ΛΕΠΤΑ --- */}
+              <div className="flex overflow-x-auto gap-2 pb-3 pt-1 px-1 no-scrollbar snap-x touch-pan-x" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                {customMinutes.map((mins) => (
+                  <button 
+                    key={mins} 
+                    onClick={() => onAccept(null, mins)} 
+                    className="shrink-0 w-12 h-12 bg-slate-700 hover:bg-[#38BDF8] hover:text-[#0B1120] text-white hover:border-[#38BDF8] font-black text-sm rounded-2xl shadow-md active:scale-95 transition-all snap-center border border-slate-600 flex items-center justify-center"
+                  >
+                    {mins}'
+                  </button>
+                ))}
               </div>
             </div>
           ) : (
@@ -74,11 +73,17 @@ export const OrderCard = ({ order, onAccept, onPrint, onComplete, onView }: any)
               <button onClick={() => onAccept(order.requested_time, 0)} className="w-full bg-emerald-500 hover:bg-emerald-400 text-[#0B1120] font-black text-sm uppercase rounded-xl py-3 shadow-md active:scale-95 transition-transform">
                 ✅ ΑΠΟΔΟΧΗ ΓΙΑ {displayTime}
               </button>
-              <div className="flex justify-between items-center mt-2 border-t border-slate-700 pt-2">
-                <span className="text-[9px] text-gray-500 font-bold uppercase">Ή αλλαγη (λεπτα):</span>
-                <div className="flex gap-1">
-                  {[10, 15, 20].map(mins => (
-                    <button key={mins} onClick={() => onAccept(null, mins)} className="bg-slate-700 text-gray-300 text-[10px] font-bold px-2 py-1 rounded hover:bg-slate-600">
+              
+              <div className="flex flex-col mt-3 border-t border-slate-700 pt-3">
+                <span className="text-[9px] text-gray-500 font-bold uppercase mb-2">Η ΑΛΛΑΓΗ (ΣΕΡΝΕΤΕ 👈👉):</span>
+                {/* --- SLIDER 2 ΕΩΣ 30 ΛΕΠΤΑ ΓΙΑ ΑΛΛΑΓΗ ΩΡΑΣ --- */}
+                <div className="flex overflow-x-auto gap-2 pb-2 no-scrollbar snap-x touch-pan-x" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                  {customMinutes.map((mins) => (
+                    <button 
+                      key={mins} 
+                      onClick={() => onAccept(null, mins)} 
+                      className="shrink-0 w-10 h-10 bg-slate-800 hover:bg-orange-500 text-gray-400 hover:text-black hover:border-orange-500 font-black text-xs rounded-xl shadow-sm active:scale-95 transition-all snap-center border border-slate-700 flex items-center justify-center"
+                    >
                       {mins}'
                     </button>
                   ))}
