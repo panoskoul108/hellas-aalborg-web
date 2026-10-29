@@ -6,7 +6,7 @@ import OrderTimer from '@/components/admin/OrderTimer';
 import { OrderCard } from '../../components/admin/OrderCard'; 
 import HistoryPanel from '../../components/admin/HistoryPanel'; 
 
-const NOTIFICATION_SOUND = "/notification.mp3.wav"; // Το διορθωμένο αρχείο ήχου!
+const NOTIFICATION_SOUND = "/notification.mp3.wav"; 
 
 export default function AdminDashboard() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -22,9 +22,21 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'live' | 'history'>('live');
 
   // --- STATES ΓΙΑ ΤΟ PIN PAD ---
-  const [expectedPin, setExpectedPin] = useState('1234'); // Fallback αν δεν βρει τη βάση
+  const [expectedPin, setExpectedPin] = useState('1234'); 
   const [enteredPin, setEnteredPin] = useState('');
   const [pinError, setPinError] = useState(false);
+
+  // --- WAKE LOCK API ---
+  const requestWakeLock = async () => {
+    try {
+      if ('wakeLock' in navigator) {
+        await (navigator as any).wakeLock.request('screen');
+        console.log('Wake Lock ενεργό: Η οθόνη δεν θα σβήσει.');
+      }
+    } catch (err) {
+      console.log('Το Wake Lock απορρίφθηκε ή δεν υποστηρίζεται:', err);
+    }
+  };
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -32,7 +44,6 @@ export default function AdminDashboard() {
       if (!session) { setIsLoading(false); return; }
       setUser(session.user);
       
-      // Τραβάμε τον κωδικό από τη βάση
       const { data: pinData } = await supabase.from('pos_settings').select('pin_code').eq('id', 1).single();
       if (pinData) setExpectedPin(pinData.pin_code);
 
@@ -51,6 +62,7 @@ export default function AdminDashboard() {
     setIsLoading(false);
   };
 
+  // --- ΣΥΓΧΡΟΝΙΣΜΟΣ SUPABASE ---
   useEffect(() => {
     if (!user) return;
     const channel = supabase.channel('admin-orders-channel')
@@ -67,14 +79,31 @@ export default function AdminDashboard() {
     return () => { supabase.removeChannel(channel); };
   }, [user]);
 
-  const playSound = () => {
-    const audio = document.getElementById('order-alert-sound') as HTMLAudioElement;
-    if (audio) {
-      audio.currentTime = 0;
-      audio.play().catch(e => console.log("Audio Blocked:", e));
-    }
-  };
+  // --- ΤΡΙΠΛΗ ΑΣΠΙΔΑ: ΑΘΟΡΥΒΟ POLLING ΚΑΙ VISIBILITY API ---
+  useEffect(() => {
+    if (!user || !audioUnlocked) return;
 
+    // 1. Αόρατη ανανέωση κάθε 60 δευτερόλεπτα (Σώζει σε περίπτωση που πέσει το WebSocket)
+    const interval = setInterval(() => {
+      fetchOrders();
+    }, 60000);
+
+    // 2. Αν ο browser "ξυπνήσει" την καρτέλα (π.χ. άναψε ξανά η οθόνη), κάνε άμεσο refresh
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchOrders();
+        requestWakeLock(); // Ξαναζητάμε το Wake Lock γιατί χάνεται όταν σβήνει η οθόνη
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [user, audioUnlocked]);
+
+  // --- ΗΧΟΣ ΕΙΔΟΠΟΙΗΣΗΣ ---
   useEffect(() => {
     const pendingCount = orders.filter(o => o.status === 'pending').length;
     if (pendingCount > prevCount && audioUnlocked) {
@@ -83,7 +112,15 @@ export default function AdminDashboard() {
     setPrevCount(pendingCount);
   }, [orders, prevCount, audioUnlocked]);
 
-  // --- Η ΛΟΓΙΚΗ ΤΟΥ PIN ΠΟΥ ΑΠΑΣΦΑΛΙΖΕΙ ΚΑΙ ΤΟΝ ΗΧΟ ---
+  const playSound = () => {
+    const audio = document.getElementById('order-alert-sound') as HTMLAudioElement;
+    if (audio) {
+      audio.currentTime = 0;
+      audio.play().catch(e => console.log("Audio Blocked:", e));
+    }
+  };
+
+  // --- ΕΛΕΓΧΟΣ PIN & ΞΕΚΛΕΙΔΩΜΑ ΗΧΟΥ/ΟΘΟΝΗΣ ---
   const handlePinSubmit = () => {
     if (enteredPin === expectedPin) {
       const audio = document.getElementById('order-alert-sound') as HTMLAudioElement;
@@ -92,12 +129,15 @@ export default function AdminDashboard() {
         audio.play().then(() => {
           audio.muted = false;
           setAudioUnlocked(true);
+          requestWakeLock(); // Κλειδώνουμε την οθόνη να μένει ανοιχτή
         }).catch(e => {
           console.log("Unlock failed", e);
           setAudioUnlocked(true); 
+          requestWakeLock();
         });
       } else {
         setAudioUnlocked(true);
+        requestWakeLock();
       }
     } else {
       setPinError(true);
@@ -140,9 +180,6 @@ export default function AdminDashboard() {
 
   if (isLoading) return <div className="min-h-screen bg-[#0B1120] flex items-center justify-center text-[#38BDF8] font-bold text-xl animate-pulse">Φόρτωση Ταμείου...</div>;
 
-  // =========================================================================
-  // ΝΕΑ ΟΘΟΝΗ PIN (LOGIN PAD)
-  // =========================================================================
   if (!audioUnlocked) {
     return (
       <div className="min-h-screen bg-[#0B1120] flex flex-col items-center justify-center p-6 text-center bg-[url('/bg.jpg')] bg-cover bg-fixed bg-center relative">
@@ -154,46 +191,24 @@ export default function AdminDashboard() {
         
         <div className={`bg-slate-800/80 p-8 rounded-[2.5rem] shadow-2xl border ${pinError ? 'border-red-500 animate-shake' : 'border-slate-600/50'} w-full max-w-xs backdrop-blur-md transition-colors duration-300`}>
           
-          {/* Οθόνη εισαγωγής */}
           <div className={`mb-8 h-14 bg-slate-900 rounded-2xl flex items-center justify-center tracking-[0.5em] text-3xl font-black border shadow-inner transition-colors ${pinError ? 'text-red-500 border-red-500/50' : 'text-[#38BDF8] border-slate-700'}`}>
              {enteredPin.length > 0 ? enteredPin.replace(/./g, '•') : <span className="text-slate-700 tracking-normal text-sm">PIN CODE</span>}
           </div>
           
-          {/* Grid Πληκτρολογίου */}
           <div className="grid grid-cols-3 gap-3">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
-              <button 
-                key={num} 
-                onClick={() => { if(enteredPin.length < 8) setEnteredPin(prev => prev + num); }} 
-                className="bg-slate-700 hover:bg-slate-600 text-white text-2xl font-black rounded-2xl aspect-square active:scale-90 transition-all shadow-md border border-slate-600"
-              >
+              <button key={num} onClick={() => { if(enteredPin.length < 8) setEnteredPin(prev => prev + num); }} className="bg-slate-700 hover:bg-slate-600 text-white text-2xl font-black rounded-2xl aspect-square active:scale-90 transition-all shadow-md border border-slate-600">
                 {num}
               </button>
             ))}
-            <button 
-              onClick={() => setEnteredPin('')} 
-              className="bg-red-900/40 hover:bg-red-500 text-red-400 hover:text-white text-lg font-black rounded-2xl aspect-square active:scale-90 transition-all shadow-md border border-red-900/50"
-            >
-              C
-            </button>
-            <button 
-              onClick={() => { if(enteredPin.length < 8) setEnteredPin(prev => prev + '0'); }} 
-              className="bg-slate-700 hover:bg-slate-600 text-white text-2xl font-black rounded-2xl aspect-square active:scale-90 transition-all shadow-md border border-slate-600"
-            >
-              0
-            </button>
-            <button 
-              onClick={handlePinSubmit} 
-              className="bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] text-2xl font-black rounded-2xl aspect-square active:scale-90 transition-all shadow-md border border-sky-400"
-            >
-              ✓
-            </button>
+            <button onClick={() => setEnteredPin('')} className="bg-red-900/40 hover:bg-red-500 text-red-400 hover:text-white text-lg font-black rounded-2xl aspect-square active:scale-90 transition-all shadow-md border border-red-900/50">C</button>
+            <button onClick={() => { if(enteredPin.length < 8) setEnteredPin(prev => prev + '0'); }} className="bg-slate-700 hover:bg-slate-600 text-white text-2xl font-black rounded-2xl aspect-square active:scale-90 transition-all shadow-md border border-slate-600">0</button>
+            <button onClick={handlePinSubmit} className="bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] text-2xl font-black rounded-2xl aspect-square active:scale-90 transition-all shadow-md border border-sky-400">✓</button>
           </div>
         </div>
       </div>
     );
   }
-  // =========================================================================
 
   const pendingOrders = orders.filter(o => o.status === 'pending');
   const preparingOrders = orders.filter(o => o.status === 'preparing');
@@ -368,7 +383,6 @@ export default function AdminDashboard() {
         </div>
       )}
       
-      {/* Animation για λάθος κωδικό */}
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes shake {
           0%, 100% { transform: translateX(0); }
