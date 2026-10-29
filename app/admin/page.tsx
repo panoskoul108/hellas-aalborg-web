@@ -6,7 +6,7 @@ import OrderTimer from '@/components/admin/OrderTimer';
 import { OrderCard } from '../../components/admin/OrderCard'; 
 import HistoryPanel from '../../components/admin/HistoryPanel'; 
 
-const NOTIFICATION_SOUND = "/notification.mp3"; 
+const NOTIFICATION_SOUND = "/notification.mp3.wav";
 
 export default function AdminDashboard() {
   const [orders, setOrders] = useState<any[]>([]);
