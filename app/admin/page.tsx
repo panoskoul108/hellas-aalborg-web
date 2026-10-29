@@ -38,20 +38,33 @@ export default function AdminDashboard() {
     }
   };
 
-  useEffect(() => {
+ useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { setIsLoading(false); return; }
+      
+      // 1. Αν δεν είσαι συνδεδεμένος, σε πάει στην αρχική για Login (δεν σε αφήνει στο PIN Pad)
+      if (!session) { 
+        alert("⚠️ Η συνεδρία έληξε ή δεν είστε συνδεδεμένος. Παρακαλώ συνδεθείτε ξανά!");
+        window.location.href = "/"; 
+        return; 
+      }
+      
       setUser(session.user);
       
-      const { data: pinData } = await supabase.from('pos_settings').select('pin_code').eq('id', 1).single();
-      if (pinData) setExpectedPin(pinData.pin_code);
+      // 2. Τραβάμε το PIN και αν υπάρχει λάθος (π.χ. RLS), μας πετάει μήνυμα να το ξέρουμε!
+      const { data: pinData, error } = await supabase.from('pos_settings').select('pin_code').eq('id', 1).single();
+      
+      if (error) {
+        console.error("Σφάλμα ανάγνωσης PIN:", error.message);
+      } else if (pinData) {
+        // Βάζουμε trim() σε περίπτωση που πάτησες "1111 " (με κενό στο τέλος) κατά λάθος στη βάση
+        setExpectedPin(pinData.pin_code.trim()); 
+      }
 
       fetchOrders();
     };
     checkAuth();
   }, []);
-
   const fetchOrders = async () => {
     const { data, error } = await supabase
       .from('orders')
