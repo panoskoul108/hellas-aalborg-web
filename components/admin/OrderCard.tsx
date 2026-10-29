@@ -11,67 +11,90 @@ export const OrderCard = ({ order, onAccept, onPrint, onComplete, onView }: any)
 
   // STATE ΓΙΑ ΤΟ "CUSTOM" ΚΟΥΜΠΙ
   const [showCustom, setShowCustom] = useState(false);
-  const customMinutes = Array.from({ length: 30 }, (_, i) => i + 1); // Λεπτά 1 έως 30
+  const customMinutes = Array.from({ length: 30 }, (_, i) => i + 1); 
 
   return (
-    <div className={`bg-slate-800 border rounded-2xl p-5 shadow-lg relative overflow-hidden ${isPending ? "border-[#38BDF8]/50" : "border-orange-500/50"}`}>
-      {order.discount_dkk > 0 && <div className="absolute top-0 right-0 bg-emerald-600 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-xl shadow-md">🎁 Loyalty</div>}
+    // Μειώσαμε τα paddings (p-3 αντί για p-5) και κάναμε την κάρτα flex-col
+    <div className={`bg-slate-800 border rounded-xl p-3 shadow-md flex flex-col h-full relative overflow-hidden ${isPending ? "border-[#38BDF8]/50" : "border-orange-500/50"}`}>
+      {order.discount_dkk > 0 && <div className="absolute top-0 right-0 bg-emerald-600 text-white text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-bl-lg shadow-sm z-10">🎁 Loyalty</div>}
 
-      <div className="flex justify-between items-start mb-4 border-b border-slate-700 pb-3">
-        <div>
-          <h3 className="text-2xl font-black text-white italic">#{order.order_number || order.id.toString().slice(-4)}</h3>
-          <p className="text-xs font-bold text-gray-400 mt-1 uppercase">Πελάτης: <span className="text-white">{order.customer_name}</span> ({order.customer_phone})</p>
+      {/* HEADER: Αριθμός, Πελάτης, Προβολή */}
+      <div className="flex justify-between items-start mb-2 border-b border-slate-700 pb-2 shrink-0">
+        <div className="flex-1 min-w-0 pr-2">
+          <h3 className="text-xl font-black text-white italic truncate">#{order.order_number || order.id.toString().slice(-4)}</h3>
+          <p className="text-[10px] font-bold text-gray-400 uppercase truncate">
+            <span className="text-gray-200">{order.customer_name}</span> <span className="opacity-70">({order.customer_phone})</span>
+          </p>
         </div>
-        <div className="flex flex-col items-end gap-2">
-          <button onClick={onView} className="bg-gray-700 hover:bg-gray-600 text-white text-[10px] font-black uppercase px-3 py-1 rounded-md transition-colors border border-gray-600 mt-1 shadow-sm">
-            👁️ ΠΡΟΒΟΛΗ
-          </button>
-        </div>
+        <button onClick={onView} className="bg-gray-700 hover:bg-gray-600 text-white text-[9px] font-black uppercase px-2 py-1 rounded-md transition-colors border border-gray-600 shrink-0">
+          👁️ ΠΡΟΒΟΛΗ
+        </button>
       </div>
 
-      <ul className="space-y-2 mb-5">
-        {items.slice(0, 2).map((it: any, i: number) => (
-          <li key={i} className="flex flex-col text-sm">
-            <div className="flex justify-between font-bold text-gray-200">
-              <span className="truncate pr-2"><span className="text-[#38BDF8] mr-2">{it.quantity || 1}x</span>{it.title_da || it.title_el || it.name}</span>
+      {/* ΛΙΣΤΑ ΠΡΟΪΟΝΤΩΝ: Εμφανίζει ΟΛΑ τα είδη. Αν είναι πολλά, μπαίνει scrollbar */}
+      <ul className="space-y-1.5 mb-3 flex-1 overflow-y-auto pr-1 custom-scrollbar min-h-[60px] max-h-[180px]">
+        {/* ΑΦΑΙΡΕΘΗΚΕ ΤΟ .slice(0, 2) ΓΙΑ ΝΑ ΦΑΙΝΟΝΤΑΙ ΟΛΑ */}
+        {items.map((it: any, i: number) => (
+          <li key={i} className="flex flex-col text-sm border-b border-white/5 pb-1.5 last:border-0 last:pb-0">
+            <div className="flex justify-between items-start font-bold text-gray-200 leading-tight">
+              <span className="flex-1 pr-2 break-words">
+                <span className="text-[#38BDF8] mr-1.5">{it.quantity || 1}x</span>{it.title_da || it.title_el || it.name}
+              </span>
             </div>
-            {it.selectedOptions?.length > 0 && <span className="text-[10px] text-gray-400 ml-6 truncate block">+ {it.selectedOptions.map((o:any) => o.name || o).join(', ')}</span>}
+            {/* Options */}
+            {it.selectedOptions?.length > 0 && (
+              <span className="text-[10px] text-gray-400 ml-5 block leading-tight mt-0.5">
+                + {it.selectedOptions.map((o:any) => o.name || o).join(', ')}
+              </span>
+            )}
+            {/* Σχόλιο Είδους */}
+            {it.note && (
+              <span className="text-[10px] text-yellow-500 font-bold italic ml-5 mt-0.5 bg-yellow-500/10 px-1.5 py-0.5 rounded-md inline-block w-fit">
+                📝 {it.note}
+              </span>
+            )}
           </li>
         ))}
-        {items.length > 2 && (
-          <li className="text-xs text-gray-500 font-bold italic ml-6 mt-1">+ {items.length - 2} ακόμη είδη (Δείτε Προβολή)</li>
-        )}
       </ul>
 
+      {/* Γενικό Σχόλιο Παραγγελίας (Αν υπάρχει) */}
+      {order.notes && (
+         <div className="text-[10px] font-bold italic text-indigo-300 bg-indigo-900/30 p-1.5 rounded-lg mb-3 shrink-0 border border-indigo-500/30">
+           <span className="uppercase text-indigo-400 block mb-0.5 text-[9px]">ΣΧΟΛΙΟ ΠΕΛΑΤΗ:</span>
+           {order.notes}
+         </div>
+      )}
+
+      {/* FOOTER: Ενέργειες ανάλογα με το Status */}
       {isPending && (
-        <div className="border-t border-slate-700 pt-4 flex flex-col gap-3">
-          <div className="flex justify-between items-center mb-1">
-             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Ζητηθηκε: <span className="text-white text-sm">{displayTime || 'ASAP'}</span></span>
-             <span className="text-[10px] font-bold text-[#38BDF8] uppercase tracking-widest block">Σύνολο: {order.total_price} kr.</span>
+        <div className="border-t border-slate-700 pt-2 shrink-0">
+          <div className="flex justify-between items-center mb-1.5">
+             <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Ζητηθηκε: <span className="text-white">{displayTime || 'ASAP'}</span></span>
+             <span className="text-[10px] font-black text-[#38BDF8]">{order.total_price} kr.</span>
           </div>
           
           {isASAP ? (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               {!showCustom ? (
-                <div className="flex gap-2">
+                <div className="flex gap-1.5">
                   {[5, 10, 15, 20].map((mins) => (
-                    <button key={mins} onClick={() => onAccept(null, mins)} className="flex-1 bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-black text-sm rounded-xl py-3 shadow-md active:scale-95 transition-transform">
+                    <button key={mins} onClick={() => onAccept(null, mins)} className="flex-1 bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-black text-xs rounded-lg py-2 shadow-sm active:scale-95 transition-transform">
                       {mins}'
                     </button>
                   ))}
-                  <button onClick={() => setShowCustom(true)} className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-black text-sm rounded-xl py-3 shadow-md active:scale-95 transition-transform border border-slate-500">
+                  <button onClick={() => setShowCustom(true)} className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-black text-[10px] rounded-lg py-2 shadow-sm active:scale-95 transition-transform border border-slate-500">
                     CUSTOM
                   </button>
                 </div>
               ) : (
-                <div className="flex flex-col gap-2 animate-fade-in">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">ΕΠΙΛΕΞΤΕ ΛΕΠΤΑ (ΣΕΡΝΕΤΕ 👈👉):</span>
-                    <button onClick={() => setShowCustom(false)} className="text-red-400 hover:text-red-300 text-xs font-black px-2 bg-red-900/30 rounded-md py-1">✕ ΠΙΣΩ</button>
+                <div className="flex flex-col gap-1.5 animate-fade-in bg-slate-900/50 p-1.5 rounded-lg border border-slate-700">
+                  <div className="flex justify-between items-center px-1">
+                    <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">ΕΠΙΛΕΞΤΕ ΛΕΠΤΑ (👈👉):</span>
+                    <button onClick={() => setShowCustom(false)} className="text-red-400 hover:text-red-300 text-[9px] font-black px-1.5 py-0.5 rounded border border-red-500/30">✕ ΠΙΣΩ</button>
                   </div>
-                  <div className="flex overflow-x-auto gap-2 pb-2 pt-1 px-1 no-scrollbar snap-x touch-pan-x" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                  <div className="flex overflow-x-auto gap-1.5 pb-1 no-scrollbar snap-x touch-pan-x" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                     {customMinutes.map((mins) => (
-                      <button key={mins} onClick={() => onAccept(null, mins)} className="shrink-0 w-12 h-12 bg-slate-700 hover:bg-[#38BDF8] hover:text-[#0B1120] text-white hover:border-[#38BDF8] font-black text-sm rounded-2xl shadow-md active:scale-95 transition-all snap-center border border-slate-600 flex items-center justify-center">
+                      <button key={mins} onClick={() => onAccept(null, mins)} className="shrink-0 w-10 h-10 bg-slate-700 hover:bg-[#38BDF8] hover:text-[#0B1120] text-white hover:border-[#38BDF8] font-black text-xs rounded-xl shadow-sm active:scale-95 transition-all snap-center border border-slate-600 flex items-center justify-center">
                         {mins}'
                       </button>
                     ))}
@@ -80,35 +103,35 @@ export const OrderCard = ({ order, onAccept, onPrint, onComplete, onView }: any)
               )}
             </div>
           ) : (
-            <div className="flex flex-col gap-2 mt-1">
-              <button onClick={() => onAccept(order.requested_time, 0)} className="w-full bg-emerald-500 hover:bg-emerald-400 text-[#0B1120] font-black text-sm uppercase rounded-xl py-3 shadow-md active:scale-95 transition-transform">
+            <div className="flex flex-col gap-1.5">
+              <button onClick={() => onAccept(order.requested_time, 0)} className="w-full bg-emerald-500 hover:bg-emerald-400 text-[#0B1120] font-black text-xs uppercase rounded-lg py-2 shadow-sm active:scale-95 transition-transform">
                 ✅ ΑΠΟΔΟΧΗ ΓΙΑ {displayTime}
               </button>
               
-              <div className="flex flex-col mt-3 border-t border-slate-700 pt-3">
+              <div className="flex flex-col mt-1 border-t border-slate-700 pt-1.5">
                 {!showCustom ? (
                   <div className="flex justify-between items-center">
-                    <span className="text-[9px] text-gray-500 font-bold uppercase">Η ΑΛΛΑΓΗ (ΛΕΠΤΑ):</span>
+                    <span className="text-[9px] text-gray-500 font-bold uppercase">ΑΛΛΑΓΗ:</span>
                     <div className="flex gap-1">
                       {[10, 15, 20].map(mins => (
-                        <button key={mins} onClick={() => onAccept(null, mins)} className="bg-slate-700 hover:bg-slate-600 text-gray-200 text-[10px] font-bold px-3 py-2 rounded-lg">
+                        <button key={mins} onClick={() => onAccept(null, mins)} className="bg-slate-700 hover:bg-slate-600 text-gray-200 text-[10px] font-bold px-2.5 py-1.5 rounded-md">
                           {mins}'
                         </button>
                       ))}
-                      <button onClick={() => setShowCustom(true)} className="bg-slate-800 text-[#38BDF8] border border-[#38BDF8]/30 hover:bg-slate-700 text-[10px] font-bold px-3 py-2 rounded-lg">
+                      <button onClick={() => setShowCustom(true)} className="bg-slate-800 text-[#38BDF8] border border-[#38BDF8]/30 hover:bg-slate-700 text-[9px] font-bold px-2 py-1.5 rounded-md">
                         CUSTOM
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-2 animate-fade-in">
-                    <div className="flex justify-between items-center">
+                  <div className="flex flex-col gap-1.5 animate-fade-in bg-slate-900/50 p-1.5 rounded-lg border border-slate-700">
+                    <div className="flex justify-between items-center px-1">
                       <span className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">ΑΛΛΑΓΗ ΩΡΑΣ (👈👉):</span>
-                      <button onClick={() => setShowCustom(false)} className="text-red-400 hover:text-red-300 text-[10px] font-black px-2 bg-red-900/30 rounded-md py-1">✕ ΠΙΣΩ</button>
+                      <button onClick={() => setShowCustom(false)} className="text-red-400 hover:text-red-300 text-[9px] font-black px-1.5 py-0.5 rounded border border-red-500/30">✕ ΠΙΣΩ</button>
                     </div>
-                    <div className="flex overflow-x-auto gap-2 pb-2 no-scrollbar snap-x touch-pan-x" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                    <div className="flex overflow-x-auto gap-1.5 pb-1 no-scrollbar snap-x touch-pan-x" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                       {customMinutes.map((mins) => (
-                        <button key={mins} onClick={() => onAccept(null, mins)} className="shrink-0 w-10 h-10 bg-slate-800 hover:bg-orange-500 text-gray-400 hover:text-black hover:border-orange-500 font-black text-xs rounded-xl shadow-sm active:scale-95 transition-all snap-center border border-slate-700 flex items-center justify-center">
+                        <button key={mins} onClick={() => onAccept(null, mins)} className="shrink-0 w-9 h-9 bg-slate-800 hover:bg-orange-500 text-gray-400 hover:text-black hover:border-orange-500 font-black text-xs rounded-lg shadow-sm active:scale-95 transition-all snap-center border border-slate-700 flex items-center justify-center">
                           {mins}'
                         </button>
                       ))}
@@ -122,17 +145,38 @@ export const OrderCard = ({ order, onAccept, onPrint, onComplete, onView }: any)
       )}
 
       {isPreparing && (
-        <div className="flex items-center justify-between border-t border-slate-700 pt-4 mt-auto">
+        <div className="flex items-center justify-between border-t border-slate-700 pt-2 shrink-0 mt-2">
           <div>
-            <span className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-0.5">Πληρωμή ({order.payment_method})</span>
-            <span className="text-xl font-black text-white">{order.total_price?.toFixed(2)} kr.</span>
+            <span className="block text-[9px] font-bold text-gray-500 uppercase tracking-widest leading-none">Πληρωμή ({order.payment_method})</span>
+            <span className="text-lg font-black text-white">{order.total_price?.toFixed(2)} kr.</span>
           </div>
-          <div className="flex gap-2">
-            <button onClick={onPrint} className="w-12 h-12 bg-slate-700 hover:bg-slate-600 rounded-xl flex items-center justify-center text-xl transition-colors shadow-md active:scale-95">🖨️</button>
-            <button onClick={onComplete} className="px-6 h-12 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-xs uppercase transition-colors shadow-md active:scale-95 tracking-wider">✅ ΕΤΟΙΜΗ</button>
+          <div className="flex gap-1.5">
+            <button onClick={onPrint} className="w-10 h-10 bg-slate-700 hover:bg-slate-600 rounded-lg flex items-center justify-center text-lg transition-colors shadow-sm active:scale-95 border border-slate-600">🖨️</button>
+            <button onClick={onComplete} className="px-4 h-10 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-black text-[11px] uppercase transition-colors shadow-sm active:scale-95 tracking-wider border border-emerald-500">✅ ΕΤΟΙΜΗ</button>
           </div>
         </div>
       )}
+      
+      {/* 
+        Ενσωματωμένο CSS αποκλειστικά για να φτιάξουμε ένα διακριτικό 
+        λεπτό scrollbar στα προϊόντα, ώστε να μην πιάνει χώρο και να φαίνεται ωραίο.
+      */}
+      <style dangerouslySetInnerHTML={{__html: `
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.02);
+          border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(56, 189, 248, 0.5);
+        }
+      `}} />
     </div>
   );
 };
