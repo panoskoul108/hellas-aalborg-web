@@ -6,7 +6,7 @@ import OrderTimer from '@/components/admin/OrderTimer';
 import { OrderCard } from '../../components/admin/OrderCard'; 
 import HistoryPanel from '../../components/admin/HistoryPanel'; 
 
-const NOTIFICATION_SOUND = "/notification.mp3.wav";
+const NOTIFICATION_SOUND = "/notification.mp3.wav"; // Το διορθωμένο αρχείο ήχου!
 
 export default function AdminDashboard() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -19,14 +19,23 @@ export default function AdminDashboard() {
   const [isPrinting, setIsPrinting] = useState(false);
   const [activePrintOrder, setActivePrintOrder] = useState<any>(null);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
-
   const [activeTab, setActiveTab] = useState<'live' | 'history'>('live');
+
+  // --- STATES ΓΙΑ ΤΟ PIN PAD ---
+  const [expectedPin, setExpectedPin] = useState('1234'); // Fallback αν δεν βρει τη βάση
+  const [enteredPin, setEnteredPin] = useState('');
+  const [pinError, setPinError] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { setIsLoading(false); return; }
       setUser(session.user);
+      
+      // Τραβάμε τον κωδικό από τη βάση
+      const { data: pinData } = await supabase.from('pos_settings').select('pin_code').eq('id', 1).single();
+      if (pinData) setExpectedPin(pinData.pin_code);
+
       fetchOrders();
     };
     checkAuth();
@@ -38,7 +47,6 @@ export default function AdminDashboard() {
       .select('*')
       .order('created_at', { ascending: false })
       .limit(50);
-    
     if (data) setOrders(data);
     setIsLoading(false);
   };
@@ -59,44 +67,59 @@ export default function AdminDashboard() {
     return () => { supabase.removeChannel(channel); };
   }, [user]);
 
+  const playSound = () => {
+    const audio = document.getElementById('order-alert-sound') as HTMLAudioElement;
+    if (audio) {
+      audio.currentTime = 0;
+      audio.play().catch(e => console.log("Audio Blocked:", e));
+    }
+  };
+
   useEffect(() => {
     const pendingCount = orders.filter(o => o.status === 'pending').length;
     if (pendingCount > prevCount && audioUnlocked) {
-      new Audio(NOTIFICATION_SOUND).play().catch(e => console.log("Audio block:", e));
+      playSound();
     }
     setPrevCount(pendingCount);
   }, [orders, prevCount, audioUnlocked]);
 
-  const unlockSystem = () => {
-    new Audio(NOTIFICATION_SOUND).play().catch(() => {}); 
-    setAudioUnlocked(true);
-  };
-
-  const playSound = () => {
-    new Audio(NOTIFICATION_SOUND).play().catch(e => console.log("Αναμονή αλληλεπίδρασης", e));
+  // --- Η ΛΟΓΙΚΗ ΤΟΥ PIN ΠΟΥ ΑΠΑΣΦΑΛΙΖΕΙ ΚΑΙ ΤΟΝ ΗΧΟ ---
+  const handlePinSubmit = () => {
+    if (enteredPin === expectedPin) {
+      const audio = document.getElementById('order-alert-sound') as HTMLAudioElement;
+      if (audio) {
+        audio.muted = true;
+        audio.play().then(() => {
+          audio.muted = false;
+          setAudioUnlocked(true);
+        }).catch(e => {
+          console.log("Unlock failed", e);
+          setAudioUnlocked(true); 
+        });
+      } else {
+        setAudioUnlocked(true);
+      }
+    } else {
+      setPinError(true);
+      setEnteredPin('');
+      setTimeout(() => setPinError(false), 800);
+    }
   };
 
   const handleAcceptOrder = async (order: any, exactTime: string | null, addedMins: number = 0) => {
     let confirmedTime = exactTime;
-    
     if (!confirmedTime) {
       const targetDate = new Date();
       targetDate.setMinutes(targetDate.getMinutes() + addedMins);
-      
       const hh = targetDate.getHours().toString().padStart(2, '0');
       const mm = targetDate.getMinutes().toString().padStart(2, '0');
       const ss = targetDate.getSeconds().toString().padStart(2, '0'); 
-      
       confirmedTime = `${hh}:${mm}:${ss}`; 
     }
-
     const updatedOrder = { ...order, status: 'preparing', requested_time: confirmedTime };
-    
     setOrders(prev => prev.map(o => o.id === order.id ? updatedOrder : o));
-    
     const { error } = await supabase.from('orders').update({ status: 'preparing', requested_time: confirmedTime }).eq('id', order.id);
     if (error) { alert("Σφάλμα: " + error.message); fetchOrders(); return; }
-
     setActivePrintOrder(updatedOrder);
     setIsPrinting(true);
     setSelectedOrder(null); 
@@ -105,13 +128,11 @@ export default function AdminDashboard() {
   const handleCompleteOrder = async (order: any) => {
     const completedAt = new Date().toISOString();
     const updatedOrder = { ...order, status: 'completed', completed_at: completedAt };
-    
     setOrders(prev => prev.map(o => o.id === order.id ? updatedOrder : o));
     await supabase.from('orders').update({ status: 'completed', completed_at: completedAt }).eq('id', order.id);
     setSelectedOrder(null);
   };
 
-  // ΝΕΑ ΛΟΓΙΚΗ: Ενημερώνει τη νέα στήλη "is_delivered"
   const handleDismissOrder = async (orderId: number) => {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, is_delivered: true } : o));
     await supabase.from('orders').update({ is_delivered: true }).eq('id', orderId);
@@ -119,29 +140,73 @@ export default function AdminDashboard() {
 
   if (isLoading) return <div className="min-h-screen bg-[#0B1120] flex items-center justify-center text-[#38BDF8] font-bold text-xl animate-pulse">Φόρτωση Ταμείου...</div>;
 
+  // =========================================================================
+  // ΝΕΑ ΟΘΟΝΗ PIN (LOGIN PAD)
+  // =========================================================================
   if (!audioUnlocked) {
     return (
-      <div className="min-h-screen bg-[#0B1120] flex flex-col items-center justify-center p-6 text-center">
-        <span className="text-7xl mb-6">🔊</span>
-        <h1 className="text-3xl font-black text-white uppercase tracking-widest mb-2">Ενεργοποιηση Ταμειου</h1>
-        <p className="text-gray-400 font-bold mb-8">Για να λαμβάνετε ειδοποιήσεις, πρέπει να ξεκινήσετε τη βάρδια.</p>
-        <button onClick={unlockSystem} className="bg-emerald-500 hover:bg-emerald-400 text-[#0B1120] px-10 py-6 rounded-2xl font-black text-2xl uppercase shadow-[0_0_30px_rgba(16,185,129,0.4)]">
-          ▶ ΕΝΑΡΞΗ ΒΑΡΔΙΑΣ
-        </button>
+      <div className="min-h-screen bg-[#0B1120] flex flex-col items-center justify-center p-6 text-center bg-[url('/bg.jpg')] bg-cover bg-fixed bg-center relative">
+        <div className="absolute inset-0 bg-[#0B1120]/90 -z-10 backdrop-blur-sm"></div>
+        <audio id="order-alert-sound" src={NOTIFICATION_SOUND} preload="auto" />
+        
+        <h1 className="text-3xl font-black text-white uppercase tracking-widest mb-2 shadow-black drop-shadow-md">HELLAS AALBORG</h1>
+        <p className="text-[#38BDF8] font-black uppercase tracking-widest text-xs mb-8">ΣΥΣΤΗΜΑ ΤΑΜΕΙΟΥ</p>
+        
+        <div className={`bg-slate-800/80 p-8 rounded-[2.5rem] shadow-2xl border ${pinError ? 'border-red-500 animate-shake' : 'border-slate-600/50'} w-full max-w-xs backdrop-blur-md transition-colors duration-300`}>
+          
+          {/* Οθόνη εισαγωγής */}
+          <div className={`mb-8 h-14 bg-slate-900 rounded-2xl flex items-center justify-center tracking-[0.5em] text-3xl font-black border shadow-inner transition-colors ${pinError ? 'text-red-500 border-red-500/50' : 'text-[#38BDF8] border-slate-700'}`}>
+             {enteredPin.length > 0 ? enteredPin.replace(/./g, '•') : <span className="text-slate-700 tracking-normal text-sm">PIN CODE</span>}
+          </div>
+          
+          {/* Grid Πληκτρολογίου */}
+          <div className="grid grid-cols-3 gap-3">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+              <button 
+                key={num} 
+                onClick={() => { if(enteredPin.length < 8) setEnteredPin(prev => prev + num); }} 
+                className="bg-slate-700 hover:bg-slate-600 text-white text-2xl font-black rounded-2xl aspect-square active:scale-90 transition-all shadow-md border border-slate-600"
+              >
+                {num}
+              </button>
+            ))}
+            <button 
+              onClick={() => setEnteredPin('')} 
+              className="bg-red-900/40 hover:bg-red-500 text-red-400 hover:text-white text-lg font-black rounded-2xl aspect-square active:scale-90 transition-all shadow-md border border-red-900/50"
+            >
+              C
+            </button>
+            <button 
+              onClick={() => { if(enteredPin.length < 8) setEnteredPin(prev => prev + '0'); }} 
+              className="bg-slate-700 hover:bg-slate-600 text-white text-2xl font-black rounded-2xl aspect-square active:scale-90 transition-all shadow-md border border-slate-600"
+            >
+              0
+            </button>
+            <button 
+              onClick={handlePinSubmit} 
+              className="bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] text-2xl font-black rounded-2xl aspect-square active:scale-90 transition-all shadow-md border border-sky-400"
+            >
+              ✓
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
+  // =========================================================================
 
   const pendingOrders = orders.filter(o => o.status === 'pending');
   const preparingOrders = orders.filter(o => o.status === 'preparing');
-  
-  // Φιλτράρει όσες ΕΧΟΥΝ παραληφθεί (is_delivered !== true)
   const completedOrders = orders.filter(o => o.status === 'completed' && o.is_delivered !== true && (new Date().getTime() - new Date(o.created_at).getTime() < 24 * 60 * 60 * 1000));
 
   return (
     <>
-      <div className={`min-h-screen font-sans bg-[#0B1120] text-gray-200 ${isPrinting ? "hidden" : "block"}`}>
-        <header className="bg-[#0F172A] border-b border-white/10 p-4 md:p-6 sticky top-0 z-40 flex justify-between items-center shadow-lg">
+      <audio id="order-alert-sound" src={NOTIFICATION_SOUND} preload="auto" />
+
+      <div className={`min-h-screen font-sans bg-[#0B1120] text-gray-200 bg-[url('/bg.jpg')] bg-cover bg-fixed bg-center relative ${isPrinting ? "hidden" : "block"}`}>
+        <div className="absolute inset-0 bg-[#0B1120]/85 -z-10"></div>
+
+        <header className="bg-[#0F172A]/90 border-b border-white/10 p-4 md:p-6 sticky top-0 z-40 flex justify-between items-center shadow-lg backdrop-blur-md">
           <div className="flex items-center gap-6">
             <h1 className="text-xl md:text-2xl font-black text-white italic tracking-tight">HELLAS AALBORG <span className="text-[#38BDF8]">ADMIN</span></h1>
             
@@ -151,16 +216,17 @@ export default function AdminDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <button onClick={playSound} className="hidden sm:block bg-gray-800 text-gray-300 border border-gray-600 px-3 py-2 rounded-xl text-xs font-bold hover:bg-gray-700">🔊 Δοκιμή Ήχου</button>
+            <button onClick={playSound} className="hidden sm:block bg-gray-800 text-gray-300 border border-gray-600 px-3 py-2 rounded-xl text-xs font-bold hover:bg-gray-700 transition-colors">🔊 Δοκιμή Ήχου</button>
             <a href="/admin/products" className="hidden sm:block bg-purple-600 hover:bg-purple-500 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase shadow-lg transition-colors">📋 ΔΙΑΧΕΙΡΙΣΗ ΚΑΤΑΛΟΓΟΥ</a>
-            <button onClick={fetchOrders} className="w-10 h-10 rounded-xl bg-slate-800 text-[#38BDF8] flex items-center justify-center hover:bg-slate-700 text-xl shadow-md">🔄</button>
-            <button onClick={() => supabase.auth.signOut().then(() => window.location.href="/")} className="text-xs text-red-400 hover:text-red-300 font-bold uppercase ml-2">ΕΞΟΔΟΣ</button>
+            <button onClick={fetchOrders} className="w-10 h-10 rounded-xl bg-slate-800 text-[#38BDF8] flex items-center justify-center hover:bg-slate-700 text-xl shadow-md transition-colors">🔄</button>
+            <button onClick={() => { setAudioUnlocked(false); setEnteredPin(''); }} className="text-xs text-orange-400 hover:text-orange-300 font-bold uppercase ml-2 border border-orange-400/30 px-3 py-2 rounded-lg transition-colors">ΚΛΕΙΔΩΜΑ</button>
+            <button onClick={() => supabase.auth.signOut().then(() => window.location.href="/")} className="text-xs text-red-500 hover:text-red-400 font-bold uppercase ml-1 transition-colors">ΕΞΟΔΟΣ</button>
           </div>
         </header>
 
         {activeTab === 'live' ? (
           <main className="p-4 md:p-6 max-w-[1800px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
-            <div className="bg-[#0F172A]/80 border border-[#38BDF8]/30 rounded-[2rem] p-5 shadow-2xl min-h-[80vh]">
+            <div className="bg-[#0F172A]/80 border border-[#38BDF8]/30 rounded-[2rem] p-5 shadow-2xl min-h-[80vh] backdrop-blur-sm">
               <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
                 <h2 className="font-black text-lg uppercase text-[#38BDF8] tracking-widest flex items-center gap-2">
                   <span className="relative flex h-3 w-3">
@@ -168,13 +234,13 @@ export default function AdminDashboard() {
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-[#38BDF8]"></span>
                   </span> Νέες
                 </h2>
-                <span className="bg-[#38BDF8] text-[#0B1120] font-black px-3 py-1 rounded-lg text-sm">{pendingOrders.length}</span>
+                <span className="bg-[#38BDF8] text-[#0B1120] font-black px-3 py-1 rounded-lg text-sm shadow-md">{pendingOrders.length}</span>
               </div>
               <div className="flex flex-col gap-4">
                 {pendingOrders.map(order => (
-                  <div key={order.id} className="flex flex-col gap-2 bg-slate-800/30 p-2 rounded-3xl border border-white/5 shadow-sm">
+                  <div key={order.id} className="flex flex-col gap-2 bg-slate-800/40 p-2 rounded-2xl border border-white/10 shadow-sm backdrop-blur-md">
                     <div className="flex justify-between items-center px-4 pt-2">
-                      <span className="text-xs text-gray-500 font-bold uppercase tracking-widest">Ληψη: {new Date(order.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Ληψη: {new Date(order.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}</span>
                       <OrderTimer createdAt={order.created_at} requestedTime={order.requested_time} status={order.status} />
                     </div>
                     <OrderCard order={order} onAccept={(exactTime: string | null, mins: number) => handleAcceptOrder(order, exactTime, mins)} onView={() => setSelectedOrder(order)} />
@@ -183,16 +249,16 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="bg-[#0F172A]/50 border border-orange-500/30 rounded-[2rem] p-5 shadow-xl min-h-[80vh]">
+            <div className="bg-[#0F172A]/70 border border-orange-500/30 rounded-[2rem] p-5 shadow-xl min-h-[80vh] backdrop-blur-sm">
               <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
                 <h2 className="font-black text-lg uppercase text-orange-400 tracking-widest">Σε Προετοιμασία</h2>
-                <span className="bg-orange-500 text-black font-black px-3 py-1 rounded-lg text-sm">{preparingOrders.length}</span>
+                <span className="bg-orange-500 text-[#0B1120] font-black px-3 py-1 rounded-lg text-sm shadow-md">{preparingOrders.length}</span>
               </div>
               <div className="flex flex-col gap-4">
                 {preparingOrders.map(order => (
-                  <div key={order.id} className="flex flex-col gap-2 bg-slate-800/30 p-2 rounded-3xl border border-orange-500/10 shadow-sm">
+                  <div key={order.id} className="flex flex-col gap-2 bg-slate-800/40 p-2 rounded-2xl border border-orange-500/20 shadow-sm backdrop-blur-md">
                     <div className="flex justify-between items-center px-4 pt-2">
-                      <span className="text-xs text-gray-500 font-bold uppercase tracking-widest">Ληψη: {new Date(order.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Ληψη: {new Date(order.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}</span>
                       <OrderTimer createdAt={order.created_at} requestedTime={order.requested_time} status={order.status} />
                     </div>
                     <OrderCard order={order} onComplete={() => handleCompleteOrder(order)} onPrint={() => { setActivePrintOrder(order); setIsPrinting(true); }} onView={() => setSelectedOrder(order)} />
@@ -201,24 +267,24 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="bg-slate-900/30 border border-white/5 rounded-[2rem] p-5 opacity-90 hover:opacity-100 transition-opacity min-h-[80vh]">
-              <div className="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
-                <h2 className="font-black text-lg uppercase text-gray-500 tracking-widest">Ολοκληρωμένες</h2>
-                <span className="bg-gray-800 text-gray-400 border border-gray-700 font-black px-3 py-1 rounded-lg text-sm">{completedOrders.length}</span>
+            <div className="bg-slate-900/50 border border-white/5 rounded-[2rem] p-5 opacity-90 hover:opacity-100 transition-opacity min-h-[80vh] backdrop-blur-sm">
+              <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
+                <h2 className="font-black text-lg uppercase text-gray-400 tracking-widest">Ολοκληρωμένες</h2>
+                <span className="bg-gray-800 text-gray-300 border border-gray-700 font-black px-3 py-1 rounded-lg text-sm shadow-sm">{completedOrders.length}</span>
               </div>
               <div className="flex flex-col gap-3">
                 {completedOrders.slice(0, 20).map(order => (
-                  <div key={order.id} className="bg-slate-800/40 p-4 rounded-2xl border border-white/5 flex flex-col gap-2 relative">
+                  <div key={order.id} className="bg-slate-800/60 p-4 rounded-xl border border-white/5 flex flex-col gap-2 relative shadow-sm backdrop-blur-md">
                     <div className="flex justify-between">
-                      <h3 className="font-black text-gray-300">#{order.order_number || order.id.toString().slice(-4)} - {order.customer_name}</h3>
+                      <h3 className="font-black text-gray-200">#{order.order_number || order.id.toString().slice(-4)} - {order.customer_name}</h3>
                       <span className="text-emerald-400 font-bold">{order.requested_time?.slice(0, 5)}</span>
                     </div>
                     <div className="flex justify-between items-center mt-1">
-                      <p className="text-xs text-gray-500 font-bold">{order.total_price} kr. ({order.payment_method})</p>
+                      <p className="text-xs text-gray-400 font-bold">{order.total_price} kr. ({order.payment_method})</p>
                       <div className="flex items-center gap-2">
                         <OrderTimer createdAt={order.created_at} requestedTime={order.requested_time} status={order.status} />
-                        <button onClick={() => setSelectedOrder(order)} className="text-[10px] bg-gray-700 hover:bg-gray-600 transition-colors px-2 py-1.5 rounded text-white font-bold">👁️</button>
-                        <button onClick={() => handleDismissOrder(order.id)} title="Παραδόθηκε (Απόκρυψη)" className="text-[10px] bg-emerald-600 hover:bg-emerald-500 transition-colors px-2 py-1.5 rounded text-white font-black shadow-sm">✓</button>
+                        <button onClick={() => setSelectedOrder(order)} className="text-[10px] bg-gray-700 hover:bg-gray-600 transition-colors px-2 py-1.5 rounded text-white font-bold border border-gray-600 shadow-sm">👁️</button>
+                        <button onClick={() => handleDismissOrder(order.id)} title="Παραδόθηκε (Απόκρυψη)" className="text-[10px] bg-emerald-600 hover:bg-emerald-500 transition-colors px-2 py-1.5 rounded text-white font-black shadow-sm border border-emerald-500">✓</button>
                       </div>
                     </div>
                   </div>
@@ -240,7 +306,7 @@ export default function AdminDashboard() {
       )}
 
       {selectedOrder && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setSelectedOrder(null)}>
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm" onClick={() => setSelectedOrder(null)}>
           <div className="bg-slate-800 border border-slate-600 w-full max-w-xl rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
             <div className="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-900">
               <div>
@@ -249,7 +315,7 @@ export default function AdminDashboard() {
                   {selectedOrder.status}
                 </span>
               </div>
-              <button onClick={() => setSelectedOrder(null)} className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white transition-colors">✕</button>
+              <button onClick={() => setSelectedOrder(null)} className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white transition-colors border border-slate-700 shadow-sm">✕</button>
             </div>
             
             <div className="p-6 overflow-y-auto flex-1">
@@ -272,7 +338,7 @@ export default function AdminDashboard() {
               <h4 className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-3">Προϊοντα</h4>
               <ul className="space-y-4">
                 {(selectedOrder.items || []).map((it: any, i: number) => (
-                  <li key={i} className="flex flex-col bg-slate-900/50 p-4 rounded-xl border border-white/5">
+                  <li key={i} className="flex flex-col bg-slate-900/50 p-4 rounded-xl border border-white/5 shadow-sm">
                     <div className="flex justify-between font-bold text-lg text-white">
                       <span><span className="text-[#38BDF8] mr-2">{it.quantity || 1}x</span>{it.title_da || it.title_el || it.name}</span>
                       <span>{(it.unit_price_dkk * (it.quantity || 1)).toFixed(0)} kr.</span>
@@ -283,7 +349,7 @@ export default function AdminDashboard() {
                 ))}
               </ul>
               {selectedOrder.notes && (
-                <div className="bg-indigo-900/30 border border-indigo-800/50 p-4 rounded-xl mt-6">
+                <div className="bg-indigo-900/30 border border-indigo-800/50 p-4 rounded-xl mt-6 shadow-sm">
                   <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block mb-1">ΓΕΝΙΚΟ ΣΧΟΛΙΟ:</span>
                   <p className="text-base text-indigo-100 font-bold italic">{selectedOrder.notes}</p>
                 </div>
@@ -295,12 +361,22 @@ export default function AdminDashboard() {
                 <p className="text-2xl font-black text-white">{selectedOrder.total_price} kr.</p>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => { setActivePrintOrder(selectedOrder); setIsPrinting(true); }} className="bg-slate-700 text-white font-bold px-6 py-3 rounded-xl hover:bg-slate-600 transition-colors shadow-lg">🖨️ ΕΚΤΥΠΩΣΗ</button>
+                <button onClick={() => { setActivePrintOrder(selectedOrder); setIsPrinting(true); }} className="bg-slate-700 text-white font-bold px-6 py-3 rounded-xl hover:bg-slate-600 transition-colors shadow-lg border border-slate-600">🖨️ ΕΚΤΥΠΩΣΗ</button>
               </div>
             </div>
           </div>
         </div>
       )}
+      
+      {/* Animation για λάθος κωδικό */}
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-5px); }
+          75% { transform: translateX(5px); }
+        }
+        .animate-shake { animation: shake 0.2s ease-in-out 0s 2; }
+      `}} />
     </>
   );
 }
