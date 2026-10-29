@@ -25,7 +25,8 @@ export default function OrderPage() {
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState('');
 
-  const [checkoutStep, setCheckoutStep] = useState<'cart' | 'auth' | 'checkout' | 'success'>('cart');
+  // Προστέθηκε το 'review' στα πιθανά steps
+  const [checkoutStep, setCheckoutStep] = useState<'cart' | 'auth' | 'checkout' | 'success' | 'review'>('cart');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('card');
@@ -57,7 +58,11 @@ export default function OrderPage() {
       trackReadyTitle: "Klar til afhentning!", trackReadyDesc: "Din ordre venter på dig ved kassen.",
       summaryTitle: "Din Ordre", summaryTotal: "Total",
       guestCheckout: "Fortsæt som gæst", or: "ELLER",
-      pickedUpBtn: "JEG HAR MODTAGET ORDREN" 
+      pickedUpBtn: "JEG HAR MODTAGET ORDREN",
+      // Νέα μηνύματα για το review
+      thankYou: "MANGE TAK!",
+      reviewPrompt: "Vi håber, du nyder din mad! Vi vil sætte stor pris på, hvis du vil give os en anmeldelse på Google.",
+      leaveReview: "BEDØM OS PÅ GOOGLE ⭐"
     },
     en: { 
       menuTitle: "Choose your dishes", add: "Add", wolt: "Want delivery? Order via Wolt 🛵",
@@ -74,7 +79,11 @@ export default function OrderPage() {
       trackReadyTitle: "Ready for Pickup!", trackReadyDesc: "Your order is waiting for you at the counter.",
       summaryTitle: "Your Order", summaryTotal: "Total",
       guestCheckout: "Continue as Guest", or: "OR",
-      pickedUpBtn: "I PICKED UP MY ORDER" 
+      pickedUpBtn: "I PICKED UP MY ORDER",
+      // Νέα μηνύματα για το review
+      thankYou: "THANK YOU!",
+      reviewPrompt: "We hope you enjoy your meal! We would really appreciate it if you could leave us a quick review on Google.",
+      leaveReview: "RATE US ON GOOGLE ⭐"
     },
     el: { 
       menuTitle: "Επιλέξτε τα πιάτα σας", add: "Προσθήκη", wolt: "Θέλετε Delivery; Παραγγείλτε μέσω Wolt 🛵",
@@ -91,7 +100,11 @@ export default function OrderPage() {
       trackReadyTitle: "Ετοιμο για Παραλαβη!", trackReadyDesc: "Η παραγγελία σας περιμένει στο ταμείο.",
       summaryTitle: "Η Παραγγελια Σας", summaryTotal: "Συνολο",
       guestCheckout: "Συνεχεια ως Επισκεπτης", or: "Η",
-      pickedUpBtn: "ΠΑΡΕΛΑΒΑ ΤΗΝ ΠΑΡΑΓΓΕΛΙΑ" 
+      pickedUpBtn: "ΠΑΡΕΛΑΒΑ ΤΗΝ ΠΑΡΑΓΓΕΛΙΑ",
+      // Νέα μηνύματα για το review
+      thankYou: "ΕΥΧΑΡΙΣΤΟΥΜΕ ΠΟΛΥ!",
+      reviewPrompt: "Ελπίζουμε να απολαύσετε το γεύμα σας! Θα εκτιμούσαμε πολύ αν αφιερώνατε 1 λεπτό για μια αξιολόγηση στο Google.",
+      leaveReview: "ΑΞΙΟΛΟΓΗΣΤΕ ΜΑΣ ⭐"
     }
   };
   const ui = dict[lang];
@@ -127,12 +140,10 @@ export default function OrderPage() {
     if (Date.now() - lastTime > LOCKOUT_MS) localStorage.setItem("servato_orders", "0");
     else { setOrdersPlaced(storedOrders); if (storedOrders >= MAX_ORDERS) setIsLocked(true); }
 
-    // ΕΠΑΝΑΦΟΡΑ ΣΕΛΙΔΑΣ (Αν κάνει refresh ο πελάτης)
     const checkSavedOrder = async () => {
       const savedOrderId = localStorage.getItem('hellas_active_order');
       if (savedOrderId) {
         const { data } = await supabase.from('orders').select('*').eq('id', savedOrderId).single();
-        // Ελέγχει τη νέα στήλη
         if (data && data.is_delivered !== true) {
           setPlacedOrder(data);
           setCheckoutStep('success');
@@ -267,11 +278,9 @@ export default function OrderPage() {
     } catch (error: any) { alert('Σφάλμα: ' + error.message); } finally { setIsSubmitting(false); }
   };
 
-  // ΚΟΥΜΠΙ ΠΕΛΑΤΗ
   const handleCustomerPickup = async () => {
     if (!placedOrder) return;
     
-    // Ασφαλής ενημέρωση στο is_delivered
     const { error } = await supabase.from('orders').update({ is_delivered: true }).eq('id', placedOrder.id);
     
     if (error) {
@@ -280,9 +289,9 @@ export default function OrderPage() {
     
     localStorage.removeItem('hellas_active_order');
     setPlacedOrder(null);
-    setCheckoutStep('cart');
     setCart([]);
-    setIsCartOpen(false);
+    // Πηγαίνουμε στην οθόνη του review αντί να κλείσουμε κατευθείαν το καλάθι
+    setCheckoutStep('review');
   };
 
   return (
@@ -351,15 +360,47 @@ export default function OrderPage() {
       {isCartOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-end">
           <div className="w-full md:max-w-md bg-[#0F172A] h-full flex flex-col shadow-2xl md:border-l border-white/10 animate-fade-in-up md:animate-slide-in-right">
-            <div className="p-6 border-b border-white/10 flex justify-between items-center bg-slate-900">
+            <div className="p-6 border-b border-white/10 flex justify-between items-center bg-slate-900 shrink-0">
               <h2 className="text-xl font-bold text-white">{ui.cartTitle}</h2>
+              {/* Αν είναι στο success step δεν κλείνει (περιμένει παραλαβή). Αν είναι στο review, αν κλείσει πάει πίσω στο άδειο cart */}
               {checkoutStep !== 'success' && (
-                <button onClick={() => setIsCartOpen(false)} className="text-gray-400 hover:text-white text-3xl md:text-2xl font-light">&times;</button>
+                <button 
+                  onClick={() => { 
+                    setIsCartOpen(false); 
+                    if(checkoutStep === 'review') setCheckoutStep('cart'); 
+                  }} 
+                  className="text-gray-400 hover:text-white text-3xl md:text-2xl font-light"
+                >
+                  &times;
+                </button>
               )}
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 md:p-6">
-              {checkoutStep === 'success' ? (
+              
+              {checkoutStep === 'review' ? (
+                <div className="flex flex-col items-center justify-center py-10 h-full text-center animate-fade-in">
+                  <span className="text-7xl mb-6">🙏</span>
+                  <h2 className="text-2xl md:text-3xl font-black text-white mb-4 uppercase italic tracking-wider">{ui.thankYou}</h2>
+                  <p className="text-gray-400 font-bold mb-10 px-2 leading-relaxed">{ui.reviewPrompt}</p>
+                  
+                  <a 
+                    href="https://reviewshellas.dk" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="w-full max-w-xs bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-black uppercase tracking-widest py-4 rounded-2xl shadow-xl shadow-[#38BDF8]/20 transition-transform active:scale-95 mb-4 block"
+                  >
+                    {ui.leaveReview}
+                  </a>
+                  
+                  <button 
+                    onClick={() => { setCheckoutStep('cart'); setIsCartOpen(false); }} 
+                    className="w-full max-w-xs bg-slate-800 text-gray-300 font-bold uppercase py-4 rounded-2xl border border-slate-700 hover:bg-slate-700 transition-colors"
+                  >
+                    {ui.close}
+                  </button>
+                </div>
+              ) : checkoutStep === 'success' ? (
                 <div className="flex flex-col items-center py-6 w-full">
                   <h2 className="text-xl md:text-2xl font-black text-white mb-8 uppercase tracking-widest italic text-center"># {placedOrder?.order_number || placedOrder?.id?.toString().slice(-4)}</h2>
                   <div className="w-full max-w-xs mb-10 relative">
@@ -506,15 +547,15 @@ export default function OrderPage() {
               )}
             </div>
 
-            {cart.length > 0 && checkoutStep !== 'success' && (
-              <div className="p-6 bg-slate-900 border-t border-white/10">
+            {cart.length > 0 && checkoutStep !== 'success' && checkoutStep !== 'review' && (
+              <div className="p-6 bg-slate-900 border-t border-white/10 shrink-0">
                 <div className="flex justify-between items-center mb-1"><span className="text-gray-400">{ui.subtotal}</span><span className="text-white font-bold">{subtotal} kr.</span></div>
                 {discount > 0 && <div className="flex justify-between items-center mb-1 text-emerald-400"><span className="text-xs">{ui.loyaltyDiscount}</span><span className="font-bold">-{discount} kr.</span></div>}
                 <div className="flex justify-between items-center mt-4 mb-6 border-t border-white/10 pt-4"><span className="text-gray-200 font-bold">{ui.totalPay}</span><span className="text-2xl font-black text-[#38BDF8]">{finalTotal} kr.</span></div>
                 
                 {checkoutStep === 'cart' ? (
                   storeOpen ? (
-                    <button onClick={proceedToCheckout} className="w-full bg-[#38BDF8] text-slate-900 font-black uppercase tracking-wider py-4 rounded-xl shadow-lg">{ui.toCheckout}</button>
+                    <button onClick={proceedToCheckout} className="w-full bg-[#38BDF8] text-slate-900 font-black uppercase tracking-wider py-4 rounded-xl shadow-lg hover:bg-sky-400 transition-colors">{ui.toCheckout}</button>
                   ) : (
                     <div className="w-full bg-red-900/50 border border-red-500 text-red-400 font-black uppercase tracking-wider py-4 rounded-xl text-center shadow-lg">
                       {lang === 'da' ? 'RESTAURANTEN ER LUKKET' : lang === 'en' ? 'RESTAURANT IS CLOSED' : 'ΤΟ ΚΑΤΑΣΤΗΜΑ ΕΙΝΑΙ ΚΛΕΙΣΤΟ'}
@@ -525,7 +566,7 @@ export default function OrderPage() {
                 ) : (
                   <div className="flex gap-3">
                     <button type="button" onClick={() => setCheckoutStep('cart')} className="px-6 py-4 rounded-xl bg-slate-800 text-white font-bold border border-white/5 uppercase">{ui.back}</button>
-                    <button type="submit" form="checkoutForm" disabled={isSubmitting || !storeOpen} className="flex-1 bg-emerald-500 text-white font-black py-4 rounded-xl disabled:opacity-50 uppercase tracking-wider">{isSubmitting ? ui.sending : ui.confirm}</button>
+                    <button type="submit" form="checkoutForm" disabled={isSubmitting || !storeOpen} className="flex-1 bg-emerald-500 hover:bg-emerald-400 transition-colors text-[#0B1120] font-black py-4 rounded-xl disabled:opacity-50 uppercase tracking-wider">{isSubmitting ? ui.sending : ui.confirm}</button>
                   </div>
                 )}
               </div>
