@@ -14,8 +14,8 @@ export const OrderCard = ({ order, onAccept, onPrint, onComplete, onView }: any)
   const customMinutes = Array.from({ length: 30 }, (_, i) => i + 1); 
 
   return (
-    // Μειώσαμε τα paddings (p-3 αντί για p-5) και κάναμε την κάρτα flex-col
-    <div className={`bg-slate-800 border rounded-xl p-3 shadow-md flex flex-col h-full relative overflow-hidden ${isPending ? "border-[#38BDF8]/50" : "border-orange-500/50"}`}>
+    // Αφαιρέσαμε το h-full και βάλαμε h-auto για να μεγαλώνει ελεύθερα
+    <div className={`bg-slate-800 border rounded-xl p-3 shadow-md flex flex-col h-auto relative overflow-hidden ${isPending ? "border-[#38BDF8]/50" : "border-orange-500/50"}`}>
       {order.discount_dkk > 0 && <div className="absolute top-0 right-0 bg-emerald-600 text-white text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-bl-lg shadow-sm z-10">🎁 Loyalty</div>}
 
       {/* HEADER: Αριθμός, Πελάτης, Προβολή */}
@@ -31,9 +31,8 @@ export const OrderCard = ({ order, onAccept, onPrint, onComplete, onView }: any)
         </button>
       </div>
 
-      {/* ΛΙΣΤΑ ΠΡΟΪΟΝΤΩΝ: Εμφανίζει ΟΛΑ τα είδη. Αν είναι πολλά, μπαίνει scrollbar */}
-      <ul className="space-y-1.5 mb-3 flex-1 overflow-y-auto pr-1 custom-scrollbar min-h-[60px] max-h-[180px]">
-        {/* ΑΦΑΙΡΕΘΗΚΕ ΤΟ .slice(0, 2) ΓΙΑ ΝΑ ΦΑΙΝΟΝΤΑΙ ΟΛΑ */}
+      {/* ΛΙΣΤΑ ΠΡΟΪΟΝΤΩΝ: Χωρίς scroll, ψηλώνει φυσικά */}
+      <ul className="space-y-1.5 mb-3 flex-1">
         {items.map((it: any, i: number) => (
           <li key={i} className="flex flex-col text-sm border-b border-white/5 pb-1.5 last:border-0 last:pb-0">
             <div className="flex justify-between items-start font-bold text-gray-200 leading-tight">
@@ -94,7 +93,7 @@ export const OrderCard = ({ order, onAccept, onPrint, onComplete, onView }: any)
                   </div>
                   <div className="flex overflow-x-auto gap-1.5 pb-1 no-scrollbar snap-x touch-pan-x" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                     {customMinutes.map((mins) => (
-                      <button key={mins} onClick={() => onAccept(null, mins)} className="shrink-0 w-10 h-10 bg-slate-700 hover:bg-[#38BDF8] hover:text-[#0B1120] text-white hover:border-[#38BDF8] font-black text-xs rounded-xl shadow-sm active:scale-95 transition-all snap-center border border-slate-600 flex items-center justify-center">
+                      <button key={mins} onClick={() => onAccept(null, mins)} className="shrink-0 w-12 h-12 bg-slate-700 hover:bg-[#38BDF8] hover:text-[#0B1120] text-white hover:border-[#38BDF8] font-black text-sm rounded-2xl shadow-md active:scale-95 transition-all snap-center border border-slate-600 flex items-center justify-center">
                         {mins}'
                       </button>
                     ))}
@@ -156,27 +155,6 @@ export const OrderCard = ({ order, onAccept, onPrint, onComplete, onView }: any)
           </div>
         </div>
       )}
-      
-      {/* 
-        Ενσωματωμένο CSS αποκλειστικά για να φτιάξουμε ένα διακριτικό 
-        λεπτό scrollbar στα προϊόντα, ώστε να μην πιάνει χώρο και να φαίνεται ωραίο.
-      */}
-      <style dangerouslySetInnerHTML={{__html: `
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: rgba(255, 255, 255, 0.02);
-          border-radius: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(56, 189, 248, 0.5);
-        }
-      `}} />
     </div>
   );
 };
