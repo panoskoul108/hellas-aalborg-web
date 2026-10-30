@@ -3,12 +3,11 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { supabase } from '../supabase';
 import ProductModal from './ProductModal'; 
+import LoyaltyWallet from '../../components/order/LoyaltyWallet'; // <--- ΕΙΣΑΓΩΓΗ ΤΟΥ ΝΕΟΥ COMPONENT
 import { isStoreOpen } from '../../lib/storeHours';
 
 const MAX_ORDERS = 50; 
 const LOCKOUT_MS = 5 * 60 * 1000;
-const REWARD_THRESHOLD = 40;
-const REWARD_DISCOUNT_DKK = 35;
 
 export default function OrderPage() {
   const [menuItems, setMenuItems] = useState<any[]>([]);
@@ -25,7 +24,6 @@ export default function OrderPage() {
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState('');
 
-  // Προστέθηκε το 'review' στα πιθανά steps
   const [checkoutStep, setCheckoutStep] = useState<'cart' | 'auth' | 'checkout' | 'success' | 'review'>('cart');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -33,8 +31,9 @@ export default function OrderPage() {
   const [requestedTime, setRequestedTime] = useState('ASAP');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const [loyaltyInfo, setLoyaltyInfo] = useState<any>(null);
-  const [redeemReward, setRedeemReward] = useState(false);
+  // Το μόνο state που χρειαζόμαστε πλέον για το Cashback!
+  const [loyaltyDiscount, setLoyaltyDiscount] = useState(0); 
+
   const [ordersPlaced, setOrdersPlaced] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
   const [storeOpen, setStoreOpen] = useState(true);
@@ -49,7 +48,7 @@ export default function OrderPage() {
       detailsTitle: "Dine oplysninger (Afhentning)", nameLabel: "Fulde Navn", phoneLabel: "Telefonnummer",
       timeLabel: "Afhentningstidspunkt", asap: "Hurtigst muligt",
       payLabel: "Betalingsmetode", card: "Kort", cash: "Kontant",
-      subtotal: "Subtotal", loyaltyDiscount: "Loyalty Rabat", vat: "Heraf 25% moms",
+      subtotal: "Subtotal", loyaltyDiscount: "Brugt fra Pung", vat: "Heraf 25% moms",
       totalPay: "Total at betale", back: "Tilbage", confirm: "Bekræft Bestilling", sending: "Sender...",
       close: "Luk", loginTitle: "Log ind eller Opret", toCheckout: "Gå til Kassen", backToCart: "Tilbage til kurv",
       trackPending: "Afventer", trackPrep: "Tilberedes", trackReady: "Klar",
@@ -59,7 +58,6 @@ export default function OrderPage() {
       summaryTitle: "Din Ordre", summaryTotal: "Total",
       guestCheckout: "Fortsæt som gæst", or: "ELLER",
       pickedUpBtn: "JEG HAR MODTAGET ORDREN",
-      // Νέα μηνύματα για το review
       thankYou: "MANGE TAK!",
       reviewPrompt: "Vi håber, du nyder din mad! Vi vil sætte stor pris på, hvis du vil give os en anmeldelse på Google.",
       leaveReview: "BEDØM OS PÅ GOOGLE ⭐"
@@ -70,7 +68,7 @@ export default function OrderPage() {
       detailsTitle: "Your Details (Pickup)", nameLabel: "Full Name", phoneLabel: "Phone Number",
       timeLabel: "Pickup Time", asap: "As soon as possible",
       payLabel: "Payment Method", card: "Card", cash: "Cash",
-      subtotal: "Subtotal", loyaltyDiscount: "Loyalty Discount", vat: "Includes 25% VAT",
+      subtotal: "Subtotal", loyaltyDiscount: "Wallet Used", vat: "Includes 25% VAT",
       totalPay: "Total to pay", back: "Back", confirm: "Confirm Order", sending: "Sending...",
       close: "Close", loginTitle: "Login or Register", toCheckout: "Proceed to Checkout", backToCart: "Back to Cart",
       trackPending: "Pending", trackPrep: "Preparing", trackReady: "Ready",
@@ -80,7 +78,6 @@ export default function OrderPage() {
       summaryTitle: "Your Order", summaryTotal: "Total",
       guestCheckout: "Continue as Guest", or: "OR",
       pickedUpBtn: "I PICKED UP MY ORDER",
-      // Νέα μηνύματα για το review
       thankYou: "THANK YOU!",
       reviewPrompt: "We hope you enjoy your meal! We would really appreciate it if you could leave us a quick review on Google.",
       leaveReview: "RATE US ON GOOGLE ⭐"
@@ -91,7 +88,7 @@ export default function OrderPage() {
       detailsTitle: "Τα στοιχεία σας (Takeaway)", nameLabel: "Ονοματεπώνυμο", phoneLabel: "Τηλέφωνο",
       timeLabel: "Ώρα Παραλαβής", asap: "Το συντομότερο δυνατό",
       payLabel: "Τρόπος Πληρωμής", card: "Κάρτα (POS)", cash: "Μετρητά",
-      subtotal: "Μερικό Σύνολο", loyaltyDiscount: "Έκπτωση Loyalty", vat: "Περιλαμβάνει 25% ΦΠΑ",
+      subtotal: "Μερικό Σύνολο", loyaltyDiscount: "Από Πορτοφόλι", vat: "Περιλαμβάνει 25% ΦΠΑ",
       totalPay: "Σύνολο Πληρωμής", back: "Πίσω", confirm: "Επιβεβαίωση", sending: "Αποστολή...",
       close: "Κλείσιμο", loginTitle: "Σύνδεση ή Εγγραφή", toCheckout: "Ολοκλήρωση Παραγγελίας", backToCart: "Πίσω στο καλάθι",
       trackPending: "Αναμονη", trackPrep: "Προετοιμασια", trackReady: "Ετοιμο",
@@ -101,7 +98,6 @@ export default function OrderPage() {
       summaryTitle: "Η Παραγγελια Σας", summaryTotal: "Συνολο",
       guestCheckout: "Συνεχεια ως Επισκεπτης", or: "Η",
       pickedUpBtn: "ΠΑΡΕΛΑΒΑ ΤΗΝ ΠΑΡΑΓΓΕΛΙΑ",
-      // Νέα μηνύματα για το review
       thankYou: "ΕΥΧΑΡΙΣΤΟΥΜΕ ΠΟΛΥ!",
       reviewPrompt: "Ελπίζουμε να απολαύσετε το γεύμα σας! Θα εκτιμούσαμε πολύ αν αφιερώνατε 1 λεπτό για μια αξιολόγηση στο Google.",
       leaveReview: "ΑΞΙΟΛΟΓΗΣΤΕ ΜΑΣ ⭐"
@@ -161,18 +157,6 @@ export default function OrderPage() {
   }, []);
 
   useEffect(() => {
-    const checkLoyalty = async () => {
-      if (customerPhone.trim().length >= 8) {
-        const cleanPhone = customerPhone.replace(/\s+/g, "");
-        const { data } = await supabase.from('customers_loyalty').select('*').eq('phone', cleanPhone).maybeSingle();
-        setLoyaltyInfo(data || { phone: cleanPhone, points: 0 });
-      } else { setLoyaltyInfo(null); setRedeemReward(false); }
-    };
-    const timer = setTimeout(checkLoyalty, 500);
-    return () => clearTimeout(timer);
-  }, [customerPhone]);
-
-  useEffect(() => {
     if (!placedOrder?.id) return;
     const channel = supabase
       .channel(`public:orders:id=eq.${placedOrder.id}`)
@@ -199,10 +183,9 @@ export default function OrderPage() {
   const removeFromCart = (cartId: string) => setCart(prev => prev.filter(cartItem => cartItem.cartId !== cartId));
   const updateQuantity = (cartId: string, delta: number) => setCart(prev => prev.map(cartItem => cartItem.cartId === cartId ? (cartItem.quantity + delta > 0 ? { ...cartItem, quantity: cartItem.quantity + delta } : cartItem) : cartItem));
 
+  // --- ΜΑΘΗΜΑΤΙΚΑ ΚΑΛΑΘΙΟΥ ---
   const subtotal = cart.reduce((total, cartItem) => total + (getItemPrice(cartItem.item) * cartItem.quantity), 0);
-  const canRedeem = loyaltyInfo && loyaltyInfo.points >= REWARD_THRESHOLD;
-  const discount = canRedeem && redeemReward ? REWARD_DISCOUNT_DKK : 0;
-  const finalTotal = Math.max(0, subtotal - discount);
+  const finalTotal = Math.max(0, subtotal - loyaltyDiscount);
   const vatMoms = Number((finalTotal * 0.2).toFixed(2)); 
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -245,7 +228,7 @@ export default function OrderPage() {
           note: c.item.note || "" 
         })),
         subtotal_dkk: subtotal,
-        discount_dkk: discount,
+        discount_dkk: loyaltyDiscount,
         vat_moms_dkk: vatMoms,
         total_price: finalTotal,
         payment_method: paymentMethod === 'card' ? 'ΚΑΡΤΑ' : 'ΜΕΤΡΗΤΑ',
@@ -260,13 +243,22 @@ export default function OrderPage() {
 
       await supabase.from('action_logs').insert([{ action_type: "TAKEAWAY_ORDER_CREATED", order_id: orderData.id, details: { company: "Nordic-mythos 1 ApS", user: user?.email || "Guest", total_dkk: finalTotal } }]);
 
-      const earnedPoints = Math.floor(finalTotal / 10);
-      if (loyaltyInfo && loyaltyInfo.id) {
-        const currentPoints = loyaltyInfo.points || 0;
-        const pntAfter = redeemReward ? Math.max(0, currentPoints - REWARD_THRESHOLD) : currentPoints;
-        await supabase.from('customers_loyalty').update({ points: pntAfter + earnedPoints, total_orders: (loyaltyInfo.total_orders || 0) + 1, total_spent_dkk: Number(loyaltyInfo.total_spent_dkk || 0) + finalTotal }).eq('phone', cleanPhone);
-      } else {
-        await supabase.from('customers_loyalty').insert([{ phone: cleanPhone, customer_name: customerName, points: earnedPoints, total_spent_dkk: finalTotal }]);
+      // --- ΕΝΗΜΕΡΩΣΗ ΨΗΦΙΑΚΟΥ ΠΟΡΤΟΦΟΛΙΟΥ ---
+      if (user?.id) {
+        const earnedCashback = Number((finalTotal * 0.05).toFixed(2));
+        
+        // Φέρνουμε τα τρέχοντα δεδομένα
+        const { data: loyaltyData } = await supabase.from('customers_loyalty').select('*').eq('user_id', user.id).single();
+        
+        const currentBalance = loyaltyData?.wallet_balance ? Number(loyaltyData.wallet_balance) : 0;
+        const newBalance = currentBalance - loyaltyDiscount + earnedCashback;
+        
+        await supabase.from('customers_loyalty').upsert({
+          user_id: user.id,
+          wallet_balance: newBalance,
+          total_orders: (loyaltyData?.total_orders || 0) + 1,
+          total_spent_dkk: Number(loyaltyData?.total_spent_dkk || 0) + finalTotal
+        });
       }
 
       const newTotal = ordersPlaced + 1;
@@ -280,22 +272,19 @@ export default function OrderPage() {
 
   const handleCustomerPickup = async () => {
     if (!placedOrder) return;
-    
     const { error } = await supabase.from('orders').update({ is_delivered: true }).eq('id', placedOrder.id);
-    
-    if (error) {
-      alert("⚠️ Η βάση δεδομένων απέρριψε την ενημέρωση! Ζητήστε από το ταμείο να πατήσει το '✓'.");
-    }
+    if (error) alert("⚠️ Η βάση δεδομένων απέρριψε την ενημέρωση! Ζητήστε από το ταμείο να πατήσει το '✓'.");
     
     localStorage.removeItem('hellas_active_order');
     setPlacedOrder(null);
     setCart([]);
-    // Πηγαίνουμε στην οθόνη του review αντί να κλείσουμε κατευθείαν το καλάθι
     setCheckoutStep('review');
   };
 
   return (
-    <div className="min-h-screen font-sans bg-[#0B1120] text-gray-200 selection:bg-[#38BDF8] selection:text-[#0B1120] pb-24">
+    <div className="min-h-screen font-sans bg-[#0B1120] text-gray-200 selection:bg-[#38BDF8] selection:text-[#0B1120] pb-24 bg-[url('/bg.jpg')] bg-cover bg-fixed bg-center relative">
+      <div className="absolute inset-0 bg-[#0B1120]/85 -z-10"></div>
+      
       <header className="bg-[#0F172A] border-b border-white/10 p-4 md:p-6 sticky top-0 z-40 flex justify-between items-center shadow-lg">
         <div className="flex items-center gap-3">
           <a href="/" className="hover:opacity-80 transition-opacity">
@@ -362,17 +351,8 @@ export default function OrderPage() {
           <div className="w-full md:max-w-md bg-[#0F172A] h-full flex flex-col shadow-2xl md:border-l border-white/10 animate-fade-in-up md:animate-slide-in-right">
             <div className="p-6 border-b border-white/10 flex justify-between items-center bg-slate-900 shrink-0">
               <h2 className="text-xl font-bold text-white">{ui.cartTitle}</h2>
-              {/* Αν είναι στο success step δεν κλείνει (περιμένει παραλαβή). Αν είναι στο review, αν κλείσει πάει πίσω στο άδειο cart */}
               {checkoutStep !== 'success' && (
-                <button 
-                  onClick={() => { 
-                    setIsCartOpen(false); 
-                    if(checkoutStep === 'review') setCheckoutStep('cart'); 
-                  }} 
-                  className="text-gray-400 hover:text-white text-3xl md:text-2xl font-light"
-                >
-                  &times;
-                </button>
+                <button onClick={() => { setIsCartOpen(false); if(checkoutStep === 'review') setCheckoutStep('cart'); }} className="text-gray-400 hover:text-white text-3xl md:text-2xl font-light">&times;</button>
               )}
             </div>
 
@@ -384,19 +364,11 @@ export default function OrderPage() {
                   <h2 className="text-2xl md:text-3xl font-black text-white mb-4 uppercase italic tracking-wider">{ui.thankYou}</h2>
                   <p className="text-gray-400 font-bold mb-10 px-2 leading-relaxed">{ui.reviewPrompt}</p>
                   
-                  <a 
-                    href="https://reviewshellas.dk" 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="w-full max-w-xs bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-black uppercase tracking-widest py-4 rounded-2xl shadow-xl shadow-[#38BDF8]/20 transition-transform active:scale-95 mb-4 block"
-                  >
+                  <a href="https://reviewshellas.dk" target="_blank" rel="noopener noreferrer" className="w-full max-w-xs bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-black uppercase tracking-widest py-4 rounded-2xl shadow-xl shadow-[#38BDF8]/20 transition-transform active:scale-95 mb-4 block">
                     {ui.leaveReview}
                   </a>
                   
-                  <button 
-                    onClick={() => { setCheckoutStep('cart'); setIsCartOpen(false); }} 
-                    className="w-full max-w-xs bg-slate-800 text-gray-300 font-bold uppercase py-4 rounded-2xl border border-slate-700 hover:bg-slate-700 transition-colors"
-                  >
+                  <button onClick={() => { setCheckoutStep('cart'); setIsCartOpen(false); }} className="w-full max-w-xs bg-slate-800 text-gray-300 font-bold uppercase py-4 rounded-2xl border border-slate-700 hover:bg-slate-700 transition-colors">
                     {ui.close}
                   </button>
                 </div>
@@ -448,23 +420,6 @@ export default function OrderPage() {
                       </div>
                     )}
                   </div>
-
-                  <div className="w-full bg-slate-900 border border-slate-700 rounded-3xl p-6 text-left shadow-lg mb-8">
-                    <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4 border-b border-slate-700 pb-2">{ui.summaryTitle}</h4>
-                    <ul className="space-y-3 mb-4">
-                      {placedOrder?.items?.map((it: any, i: number) => (
-                        <li key={i} className="flex justify-between items-start text-sm">
-                          <div className="flex-1 pr-2"><span className="font-bold text-white"><span className="text-[#38BDF8] mr-2">{it.quantity || 1}x</span>{it.title_da || it.title_el || it.name}</span>{it.selectedOptions?.length > 0 && <span className="text-xs text-gray-400 block mt-0.5">+ {it.selectedOptions.join(', ')}</span>}</div>
-                          <span className="font-bold text-gray-300">{(it.unit_price_dkk * (it.quantity || 1)).toFixed(0)} kr.</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <div className="flex justify-between items-center border-t border-slate-700 pt-3">
-                      <span className="text-xs font-bold text-gray-400 uppercase">{ui.summaryTotal} ({placedOrder?.payment_method === 'ΚΑΡΤΑ' ? ui.card : ui.cash}):</span>
-                      <span className="text-lg font-black text-[#38BDF8]">{placedOrder?.total_price} kr.</span>
-                    </div>
-                  </div>
-
                 </div>
               ) : checkoutStep === 'auth' ? (
                 <div className="flex flex-col gap-5">
@@ -513,21 +468,18 @@ export default function OrderPage() {
               ) : (
                 <form id="checkoutForm" onSubmit={submitOrder} className="flex flex-col gap-5">
                   <h3 className="font-bold text-lg text-white border-b border-white/10 pb-2">{ui.detailsTitle}</h3>
+                  
+                  {/* --- ΕΔΩ ΜΠΑΙΝΕΙ ΤΟ ΑΝΕΞΑΡΤΗΤΟ ΠΟΡΤΟΦΟΛΙ --- */}
+                  <LoyaltyWallet userId={user?.id} subtotal={subtotal} lang={lang} onApplyDiscount={setLoyaltyDiscount} />
+
                   <div>
                     <label className="text-xs text-gray-400 block mb-1">{ui.nameLabel}</label>
                     <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" />
                   </div>
                   <div>
-                    <label className="text-xs text-gray-400 block mb-1">{ui.phoneLabel} (Loyalty)</label>
+                    <label className="text-xs text-gray-400 block mb-1">{ui.phoneLabel}</label>
                     <input type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" />
                   </div>
-
-                  {loyaltyInfo && (
-                    <div className="bg-emerald-900/30 border border-emerald-500/50 p-4 rounded-xl flex justify-between items-center">
-                      <div><p className="text-[10px] uppercase text-emerald-400 font-bold">Loyalty Points</p><p className="text-sm font-bold text-white">⭐ {loyaltyInfo.points} / {REWARD_THRESHOLD}</p></div>
-                      {canRedeem && <button type="button" onClick={() => setRedeemReward(!redeemReward)} className={`text-xs px-4 py-2 rounded-lg font-bold transition-colors ${redeemReward ? 'bg-emerald-500 text-slate-900' : 'bg-slate-800 text-emerald-400 border border-emerald-500/50'}`}>{redeemReward ? "✓" : "Brug (-35 kr)"}</button>}
-                    </div>
-                  )}
 
                   <div>
                     <label className="text-xs text-gray-400 block mb-1">{ui.timeLabel}</label>
@@ -550,8 +502,8 @@ export default function OrderPage() {
             {cart.length > 0 && checkoutStep !== 'success' && checkoutStep !== 'review' && (
               <div className="p-6 bg-slate-900 border-t border-white/10 shrink-0">
                 <div className="flex justify-between items-center mb-1"><span className="text-gray-400">{ui.subtotal}</span><span className="text-white font-bold">{subtotal} kr.</span></div>
-                {discount > 0 && <div className="flex justify-between items-center mb-1 text-emerald-400"><span className="text-xs">{ui.loyaltyDiscount}</span><span className="font-bold">-{discount} kr.</span></div>}
-                <div className="flex justify-between items-center mt-4 mb-6 border-t border-white/10 pt-4"><span className="text-gray-200 font-bold">{ui.totalPay}</span><span className="text-2xl font-black text-[#38BDF8]">{finalTotal} kr.</span></div>
+                {loyaltyDiscount > 0 && <div className="flex justify-between items-center mb-1 text-[#38BDF8]"><span className="text-xs">{ui.loyaltyDiscount}</span><span className="font-bold">-{loyaltyDiscount.toFixed(2)} kr.</span></div>}
+                <div className="flex justify-between items-center mt-4 mb-6 border-t border-white/10 pt-4"><span className="text-gray-200 font-bold">{ui.totalPay}</span><span className="text-2xl font-black text-[#38BDF8]">{finalTotal.toFixed(2)} kr.</span></div>
                 
                 {checkoutStep === 'cart' ? (
                   storeOpen ? (
