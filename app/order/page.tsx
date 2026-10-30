@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { supabase } from '../supabase';
-import ProductModal from './ProductModal'; 
-import LoyaltyWallet from '../../components/order/LoyaltyWallet'; // <--- ΕΙΣΑΓΩΓΗ ΤΟΥ ΝΕΟΥ COMPONENT
+import ProductModal from './ProductModal';
+import LoyaltyWallet from '../../components/order/LoyaltyWallet'; 
 import { isStoreOpen } from '../../lib/storeHours';
 
 const MAX_ORDERS = 50; 
@@ -24,6 +24,11 @@ export default function OrderPage() {
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState('');
 
+  // --- ΝΕΑ STATES ΓΙΑ ΤΗ ΦΟΡΜΑ ΕΓΓΡΑΦΗΣ ---
+  const [regName, setRegName] = useState('');
+  const [regPhone, setRegPhone] = useState('');
+  const [regDob, setRegDob] = useState('');
+
   const [checkoutStep, setCheckoutStep] = useState<'cart' | 'auth' | 'checkout' | 'success' | 'review'>('cart');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -31,7 +36,6 @@ export default function OrderPage() {
   const [requestedTime, setRequestedTime] = useState('ASAP');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Το μόνο state που χρειαζόμαστε πλέον για το Cashback!
   const [loyaltyDiscount, setLoyaltyDiscount] = useState(0); 
 
   const [ordersPlaced, setOrdersPlaced] = useState(0);
@@ -188,17 +192,47 @@ export default function OrderPage() {
   const finalTotal = Math.max(0, subtotal - loyaltyDiscount);
   const vatMoms = Number((finalTotal * 0.2).toFixed(2)); 
 
+  // --- ΝΕΟ HANDLE AUTH ΓΙΑ ΕΓΓΡΑΦΗ & PROFILE ---
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
     if (authMode === 'signup') {
-      const { data, error } = await supabase.auth.signUp({ email, password });
-      if (error) setAuthError('Σφάλμα: ' + error.message);
-      else { setUser(data.user); setCheckoutStep('checkout'); }
+      if (!regName || !regPhone) { setAuthError('Παρακαλώ συμπληρώστε Όνομα και Τηλέφωνο.'); return; }
+      
+      const { data, error } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: { data: { full_name: regName, phone: regPhone } } 
+      });
+      
+      if (error) {
+        setAuthError('Σφάλμα: ' + error.message);
+      } else if (data.user) {
+        setUser(data.user);
+        await supabase.from('customers_loyalty').insert({
+          user_id: data.user.id,
+          full_name: regName,
+          phone: regPhone,
+          date_of_birth: regDob || null,
+          wallet_balance: 0
+        });
+        
+        setCustomerName(regName);
+        setCustomerPhone(regPhone);
+        setCheckoutStep('checkout'); 
+      }
     } else {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setAuthError('Λάθος email ή κωδικός.');
-      else { setUser(data.user); setCheckoutStep('checkout'); }
+      else { 
+        setUser(data.user); 
+        const { data: profile } = await supabase.from('customers_loyalty').select('*').eq('user_id', data.user.id).single();
+        if (profile) {
+          setCustomerName(profile.full_name || '');
+          setCustomerPhone(profile.phone || '');
+        }
+        setCheckoutStep('checkout'); 
+      }
     }
   };
 
@@ -247,7 +281,6 @@ export default function OrderPage() {
       if (user?.id) {
         const earnedCashback = Number((finalTotal * 0.05).toFixed(2));
         
-        // Φέρνουμε τα τρέχοντα δεδομένα
         const { data: loyaltyData } = await supabase.from('customers_loyalty').select('*').eq('user_id', user.id).single();
         
         const currentBalance = loyaltyData?.wallet_balance ? Number(loyaltyData.wallet_balance) : 0;
@@ -423,14 +456,30 @@ export default function OrderPage() {
                 </div>
               ) : checkoutStep === 'auth' ? (
                 <div className="flex flex-col gap-5">
-                  <h3 className="text-2xl font-bold text-white text-center mb-2">{ui.loginTitle}</h3>
+                  <h3 className="text-2xl font-bold text-white text-center mb-2">{authMode === 'signup' ? 'Opret Konto (Register)' : ui.loginTitle}</h3>
                   <form onSubmit={handleAuth} className="flex flex-col gap-4">
                     {authError && <div className="bg-red-500/10 border border-red-500 text-red-400 p-3 rounded-lg text-sm">{authError}</div>}
+                    
+                    {/* --- ΝΕΑ ΠΕΔΙΑ ΕΓΓΡΑΦΗΣ --- */}
+                    {authMode === 'signup' && (
+                      <div className="flex flex-col gap-4 animate-fade-in">
+                        <input type="text" placeholder="Fulde Navn (Όνομα)" value={regName} onChange={e => setRegName(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" />
+                        <input type="tel" placeholder="Telefonnummer (Τηλέφωνο)" value={regPhone} onChange={e => setRegPhone(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" />
+                        <div>
+                          <label className="text-xs text-gray-400 block mb-1 ml-1">Fødselsdato (Γενέθλια - Προαιρετικό για δώρα!)</label>
+                          <input type="date" value={regDob} onChange={e => setRegDob(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" />
+                        </div>
+                      </div>
+                    )}
+
                     <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" />
                     <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" />
-                    <button type="submit" className="w-full bg-[#38BDF8] hover:bg-sky-400 text-slate-900 font-bold py-4 rounded-xl shadow-lg mt-2 uppercase">{authMode === 'signup' ? 'REGISTER' : 'LOGIN'}</button>
+                    
+                    <button type="submit" className="w-full bg-[#38BDF8] hover:bg-sky-400 text-slate-900 font-bold py-4 rounded-xl shadow-lg mt-2 uppercase">{authMode === 'signup' ? 'OPRET KONTO (REGISTER)' : 'LOG IND (LOGIN)'}</button>
                   </form>
-                  <button type="button" onClick={() => setAuthMode(authMode === 'signup' ? 'login' : 'signup')} className="text-sm text-gray-400 hover:text-white underline text-center pb-2">Toggle Login / Register</button>
+                  <button type="button" onClick={() => { setAuthMode(authMode === 'signup' ? 'login' : 'signup'); setAuthError(''); }} className="text-sm text-gray-400 hover:text-white underline text-center pb-2">
+                    {authMode === 'signup' ? 'Har du allerede en konto? Log ind' : 'Opret en ny konto'}
+                  </button>
                   
                   <div className="flex items-center gap-4 my-2">
                     <hr className="flex-1 border-slate-700" />
@@ -469,7 +518,6 @@ export default function OrderPage() {
                 <form id="checkoutForm" onSubmit={submitOrder} className="flex flex-col gap-5">
                   <h3 className="font-bold text-lg text-white border-b border-white/10 pb-2">{ui.detailsTitle}</h3>
                   
-                  {/* --- ΕΔΩ ΜΠΑΙΝΕΙ ΤΟ ΑΝΕΞΑΡΤΗΤΟ ΠΟΡΤΟΦΟΛΙ --- */}
                   <LoyaltyWallet userId={user?.id} subtotal={subtotal} lang={lang} onApplyDiscount={setLoyaltyDiscount} />
 
                   <div>
