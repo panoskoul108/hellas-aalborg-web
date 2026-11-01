@@ -24,18 +24,21 @@ export default function OrderPage() {
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState('');
 
-  // --- ΝΕΑ STATES ΓΙΑ ΤΗ ΦΟΡΜΑ ΕΓΓΡΑΦΗΣ ---
   const [regName, setRegName] = useState('');
   const [regPhone, setRegPhone] = useState('');
   const [regDob, setRegDob] = useState('');
 
-  const [checkoutStep, setCheckoutStep] = useState<'cart' | 'auth' | 'checkout' | 'success' | 'review'>('cart');
+  // Νέο step "profile"
+  const [checkoutStep, setCheckoutStep] = useState<'cart' | 'auth' | 'checkout' | 'success' | 'review' | 'profile'>('cart');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [requestedTime, setRequestedTime] = useState('ASAP');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // ΝΕΟ STATE ΓΙΑ ΤΟ ΓΕΝΙΚΟ ΣΧΟΛΙΟ ΠΑΡΑΓΓΕΛΙΑΣ
+  const [orderNote, setOrderNote] = useState(''); 
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [loyaltyDiscount, setLoyaltyDiscount] = useState(0); 
 
   const [ordersPlaced, setOrdersPlaced] = useState(0);
@@ -43,6 +46,7 @@ export default function OrderPage() {
   const [storeOpen, setStoreOpen] = useState(true);
 
   const [placedOrder, setPlacedOrder] = useState<any>(null);
+  const [userOrderHistory, setUserOrderHistory] = useState<any[]>([]); // Για το Προφίλ
   const supabaseImageUrl = "https://keolpijcsvwsrzkjqtkc.supabase.co/storage/v1/object/public/menu-images/";
 
   const dict = {
@@ -54,7 +58,7 @@ export default function OrderPage() {
       payLabel: "Betalingsmetode", card: "Kort", cash: "Kontant",
       subtotal: "Subtotal", loyaltyDiscount: "Brugt fra Pung", vat: "Heraf 25% moms",
       totalPay: "Total at betale", back: "Tilbage", confirm: "Bekræft Bestilling", sending: "Sender...",
-      close: "Luk", loginTitle: "Log ind eller Opret", toCheckout: "Gå til Kassen", backToCart: "Tilbage til kurv",
+      close: "Luk", loginTitle: "Log ind", regTitle: "Opret Konto", toCheckout: "Gå til Kassen", backToCart: "Tilbage til kurv",
       trackPending: "Afventer", trackPrep: "Tilberedes", trackReady: "Klar",
       trackPendingTitle: "Afventer Godkendelse", trackPendingDesc: "Restauranten gennemgår din ordre...",
       trackPrepTitle: "Tilberedes!", trackPrepTime: "Klar klokken:",
@@ -64,7 +68,12 @@ export default function OrderPage() {
       pickedUpBtn: "JEG HAR MODTAGET ORDREN",
       thankYou: "MANGE TAK!",
       reviewPrompt: "Vi håber, du nyder din mad! Vi vil sætte stor pris på, hvis du vil give os en anmeldelse på Google.",
-      leaveReview: "BEDØM OS PÅ GOOGLE ⭐"
+      leaveReview: "BEDØM OS PÅ GOOGLE ⭐",
+      // Νέες μεταφράσεις
+      orderNoteTitle: "Ordrebemærkning", orderNotePlh: "F.eks. 'Ekstra servietter tak'",
+      emailPlh: "Email", passPlh: "Adgangskode", dobPlh: "Fødselsdato (Frivillig)",
+      hasAcc: "Har du allerede en konto? Log ind", noAcc: "Opret en ny konto",
+      profileTitle: "Min Profil", myOrders: "Mine seneste ordrer", logout: "Log ud"
     },
     en: { 
       menuTitle: "Choose your dishes", add: "Add", wolt: "Want delivery? Order via Wolt 🛵",
@@ -74,7 +83,7 @@ export default function OrderPage() {
       payLabel: "Payment Method", card: "Card", cash: "Cash",
       subtotal: "Subtotal", loyaltyDiscount: "Wallet Used", vat: "Includes 25% VAT",
       totalPay: "Total to pay", back: "Back", confirm: "Confirm Order", sending: "Sending...",
-      close: "Close", loginTitle: "Login or Register", toCheckout: "Proceed to Checkout", backToCart: "Back to Cart",
+      close: "Close", loginTitle: "Login", regTitle: "Register", toCheckout: "Proceed to Checkout", backToCart: "Back to Cart",
       trackPending: "Pending", trackPrep: "Preparing", trackReady: "Ready",
       trackPendingTitle: "Awaiting Approval", trackPendingDesc: "The restaurant is reviewing your order...",
       trackPrepTitle: "Preparing!", trackPrepTime: "Will be ready at:",
@@ -84,7 +93,12 @@ export default function OrderPage() {
       pickedUpBtn: "I PICKED UP MY ORDER",
       thankYou: "THANK YOU!",
       reviewPrompt: "We hope you enjoy your meal! We would really appreciate it if you could leave us a quick review on Google.",
-      leaveReview: "RATE US ON GOOGLE ⭐"
+      leaveReview: "RATE US ON GOOGLE ⭐",
+      // Νέες μεταφράσεις
+      orderNoteTitle: "Order Note", orderNotePlh: "e.g., 'Extra napkins please'",
+      emailPlh: "Email", passPlh: "Password", dobPlh: "Date of Birth (Optional)",
+      hasAcc: "Already have an account? Login", noAcc: "Create a new account",
+      profileTitle: "My Profile", myOrders: "My Recent Orders", logout: "Logout"
     },
     el: { 
       menuTitle: "Επιλέξτε τα πιάτα σας", add: "Προσθήκη", wolt: "Θέλετε Delivery; Παραγγείλτε μέσω Wolt 🛵",
@@ -94,7 +108,7 @@ export default function OrderPage() {
       payLabel: "Τρόπος Πληρωμής", card: "Κάρτα (POS)", cash: "Μετρητά",
       subtotal: "Μερικό Σύνολο", loyaltyDiscount: "Από Πορτοφόλι", vat: "Περιλαμβάνει 25% ΦΠΑ",
       totalPay: "Σύνολο Πληρωμής", back: "Πίσω", confirm: "Επιβεβαίωση", sending: "Αποστολή...",
-      close: "Κλείσιμο", loginTitle: "Σύνδεση ή Εγγραφή", toCheckout: "Ολοκλήρωση Παραγγελίας", backToCart: "Πίσω στο καλάθι",
+      close: "Κλείσιμο", loginTitle: "Σύνδεση", regTitle: "Εγγραφή", toCheckout: "Ολοκλήρωση", backToCart: "Πίσω στο καλάθι",
       trackPending: "Αναμονη", trackPrep: "Προετοιμασια", trackReady: "Ετοιμο",
       trackPendingTitle: "Αναμονη Αποδοχης", trackPendingDesc: "Το κατάστημα εξετάζει την παραγγελία σας...",
       trackPrepTitle: "Ετοιμαζεται!", trackPrepTime: "Θα ειναι ετοιμο στις:",
@@ -104,7 +118,12 @@ export default function OrderPage() {
       pickedUpBtn: "ΠΑΡΕΛΑΒΑ ΤΗΝ ΠΑΡΑΓΓΕΛΙΑ",
       thankYou: "ΕΥΧΑΡΙΣΤΟΥΜΕ ΠΟΛΥ!",
       reviewPrompt: "Ελπίζουμε να απολαύσετε το γεύμα σας! Θα εκτιμούσαμε πολύ αν αφιερώνατε 1 λεπτό για μια αξιολόγηση στο Google.",
-      leaveReview: "ΑΞΙΟΛΟΓΗΣΤΕ ΜΑΣ ⭐"
+      leaveReview: "ΑΞΙΟΛΟΓΗΣΤΕ ΜΑΣ ⭐",
+      // Νέες μεταφράσεις
+      orderNoteTitle: "Γενικό Σχόλιο Παραγγελίας", orderNotePlh: "π.χ. 'Χτυπήστε το κουδούνι'",
+      emailPlh: "Email", passPlh: "Κωδικός", dobPlh: "Ημερομηνία Γέννησης (Προαιρετικό)",
+      hasAcc: "Έχετε ήδη λογαριασμό; Σύνδεση", noAcc: "Δημιουργία νέου λογαριασμού",
+      profileTitle: "Το Προφίλ μου", myOrders: "Πρόσφατες Παραγγελίες", logout: "Αποσύνδεση"
     }
   };
   const ui = dict[lang];
@@ -187,17 +206,15 @@ export default function OrderPage() {
   const removeFromCart = (cartId: string) => setCart(prev => prev.filter(cartItem => cartItem.cartId !== cartId));
   const updateQuantity = (cartId: string, delta: number) => setCart(prev => prev.map(cartItem => cartItem.cartId === cartId ? (cartItem.quantity + delta > 0 ? { ...cartItem, quantity: cartItem.quantity + delta } : cartItem) : cartItem));
 
-  // --- ΜΑΘΗΜΑΤΙΚΑ ΚΑΛΑΘΙΟΥ ---
   const subtotal = cart.reduce((total, cartItem) => total + (getItemPrice(cartItem.item) * cartItem.quantity), 0);
   const finalTotal = Math.max(0, subtotal - loyaltyDiscount);
   const vatMoms = Number((finalTotal * 0.2).toFixed(2)); 
 
-  // --- ΝΕΟ HANDLE AUTH ΓΙΑ ΕΓΓΡΑΦΗ & PROFILE ---
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
     if (authMode === 'signup') {
-      if (!regName || !regPhone) { setAuthError('Παρακαλώ συμπληρώστε Όνομα και Τηλέφωνο.'); return; }
+      if (!regName || !regPhone) { setAuthError('Missing Name or Phone.'); return; }
       
       const { data, error } = await supabase.auth.signUp({ 
         email, 
@@ -206,7 +223,7 @@ export default function OrderPage() {
       });
       
       if (error) {
-        setAuthError('Σφάλμα: ' + error.message);
+        setAuthError(error.message);
       } else if (data.user) {
         setUser(data.user);
         await supabase.from('customers_loyalty').insert({
@@ -223,7 +240,7 @@ export default function OrderPage() {
       }
     } else {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) setAuthError('Λάθος email ή κωδικός.');
+      if (error) setAuthError('Wrong email or password.');
       else { 
         setUser(data.user); 
         const { data: profile } = await supabase.from('customers_loyalty').select('*').eq('user_id', data.user.id).single();
@@ -236,12 +253,20 @@ export default function OrderPage() {
     }
   };
 
+  const openProfile = async () => {
+    if (!user) return;
+    setCheckoutStep('profile');
+    setIsCartOpen(true);
+    const { data } = await supabase.from('orders').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10);
+    if (data) setUserOrderHistory(data);
+  };
+
   const proceedToCheckout = () => { user ? setCheckoutStep('checkout') : setCheckoutStep('auth'); };
 
   const submitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isLocked) return alert("Limit reached.");
-    if (!customerName || !customerPhone) return alert('Λείπουν στοιχεία.');
+    if (!customerName || !customerPhone) return alert('Missing details.');
     
     setIsSubmitting(true);
     try {
@@ -252,6 +277,7 @@ export default function OrderPage() {
         customer_name: customerName,
         customer_phone: cleanPhone,
         requested_time: requestedTime,
+        notes: orderNote, // ΠΡΟΣΤΕΘΗΚΕ ΤΟ ΓΕΝΙΚΟ ΣΧΟΛΙΟ
         items: cart.map(c => ({
           id: c.item.id,
           title_da: c.item.title_da,
@@ -277,21 +303,12 @@ export default function OrderPage() {
 
       await supabase.from('action_logs').insert([{ action_type: "TAKEAWAY_ORDER_CREATED", order_id: orderData.id, details: { company: "Nordic-mythos 1 ApS", user: user?.email || "Guest", total_dkk: finalTotal } }]);
 
-      // --- ΕΝΗΜΕΡΩΣΗ ΨΗΦΙΑΚΟΥ ΠΟΡΤΟΦΟΛΙΟΥ ---
       if (user?.id) {
         const earnedCashback = Number((finalTotal * 0.05).toFixed(2));
-        
         const { data: loyaltyData } = await supabase.from('customers_loyalty').select('*').eq('user_id', user.id).single();
-        
         const currentBalance = loyaltyData?.wallet_balance ? Number(loyaltyData.wallet_balance) : 0;
         const newBalance = currentBalance - loyaltyDiscount + earnedCashback;
-        
-        await supabase.from('customers_loyalty').upsert({
-          user_id: user.id,
-          wallet_balance: newBalance,
-          total_orders: (loyaltyData?.total_orders || 0) + 1,
-          total_spent_dkk: Number(loyaltyData?.total_spent_dkk || 0) + finalTotal
-        });
+        await supabase.from('customers_loyalty').upsert({ user_id: user.id, wallet_balance: newBalance, total_orders: (loyaltyData?.total_orders || 0) + 1, total_spent_dkk: Number(loyaltyData?.total_spent_dkk || 0) + finalTotal });
       }
 
       const newTotal = ordersPlaced + 1;
@@ -300,6 +317,7 @@ export default function OrderPage() {
       localStorage.setItem("servato_time", Date.now().toString());
 
       setCheckoutStep('success');
+      setOrderNote(''); // Καθαρισμός σχολίου
     } catch (error: any) { alert('Σφάλμα: ' + error.message); } finally { setIsSubmitting(false); }
   };
 
@@ -337,12 +355,12 @@ export default function OrderPage() {
           </div>
 
           {user ? (
-            <div className="hidden md:flex flex-col text-right">
-              <span className="text-xs text-gray-400">{user.email}</span>
-              <button onClick={() => {supabase.auth.signOut(); setUser(null);}} className="text-xs text-red-400 hover:text-red-300 underline">Log ud</button>
+            <div className="hidden md:flex flex-col text-right cursor-pointer hover:opacity-80" onClick={openProfile}>
+              <span className="text-xs text-gray-400 font-bold border-b border-slate-700 pb-0.5">{user.email}</span>
+              <span className="text-[10px] text-[#38BDF8] uppercase tracking-widest mt-0.5">{ui.profileTitle}</span>
             </div>
           ) : (
-            <button onClick={() => { setIsCartOpen(true); setCheckoutStep('auth'); }} className="hidden md:block text-sm font-bold text-[#38BDF8] hover:text-white transition-colors">Log ind</button>
+            <button onClick={() => { setIsCartOpen(true); setCheckoutStep('auth'); }} className="hidden md:block text-sm font-bold text-[#38BDF8] hover:text-white transition-colors">{ui.loginTitle}</button>
           )}
           <button onClick={() => setIsCartOpen(true)} className="relative bg-white/10 hover:bg-white/20 p-3 rounded-full transition-colors border border-white/5">
             🛒 {cart.length > 0 && <span className="absolute -top-1 -right-1 bg-[#38BDF8] text-[#0B1120] text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full shadow-lg border-2 border-[#0F172A]">{cart.reduce((sum, item) => sum + item.quantity, 0)}</span>}
@@ -383,15 +401,52 @@ export default function OrderPage() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-end">
           <div className="w-full md:max-w-md bg-[#0F172A] h-full flex flex-col shadow-2xl md:border-l border-white/10 animate-fade-in-up md:animate-slide-in-right">
             <div className="p-6 border-b border-white/10 flex justify-between items-center bg-slate-900 shrink-0">
-              <h2 className="text-xl font-bold text-white">{ui.cartTitle}</h2>
+              <h2 className="text-xl font-bold text-white">
+                {checkoutStep === 'profile' ? ui.profileTitle : ui.cartTitle}
+              </h2>
               {checkoutStep !== 'success' && (
-                <button onClick={() => { setIsCartOpen(false); if(checkoutStep === 'review') setCheckoutStep('cart'); }} className="text-gray-400 hover:text-white text-3xl md:text-2xl font-light">&times;</button>
+                <button onClick={() => { setIsCartOpen(false); if(checkoutStep === 'review' || checkoutStep === 'profile') setCheckoutStep('cart'); }} className="text-gray-400 hover:text-white text-3xl md:text-2xl font-light">&times;</button>
               )}
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 md:p-6">
               
-              {checkoutStep === 'review' ? (
+              {/* --- ΝΕΟ STEP: ΣΕΛΙΔΑ ΠΡΟΦΙΛ (PROFILE) --- */}
+              {checkoutStep === 'profile' ? (
+                <div className="flex flex-col gap-6 animate-fade-in">
+                  <div className="text-center mb-4">
+                     <div className="w-20 h-20 bg-slate-800 border-2 border-[#38BDF8] rounded-full mx-auto flex items-center justify-center text-3xl mb-3 shadow-lg">👤</div>
+                     <h3 className="text-xl font-black text-white">{customerName || user?.email}</h3>
+                     <p className="text-sm text-gray-400 font-bold">{customerPhone}</p>
+                  </div>
+                  
+                  <LoyaltyWallet userId={user?.id} subtotal={0} lang={lang} onApplyDiscount={() => {}} />
+
+                  <div className="bg-slate-900/50 rounded-2xl border border-white/5 p-5">
+                    <h4 className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-4 border-b border-slate-700 pb-2">{ui.myOrders}</h4>
+                    {userOrderHistory.length === 0 ? <p className="text-sm text-gray-400">No orders yet.</p> : (
+                      <ul className="space-y-4">
+                        {userOrderHistory.map(o => (
+                          <li key={o.id} className="flex justify-between items-center border-b border-white/5 pb-3 last:border-0 last:pb-0">
+                            <div>
+                              <p className="font-bold text-white text-sm">#{o.order_number || o.id.toString().slice(-4)}</p>
+                              <p className="text-[10px] text-gray-400">{new Date(o.created_at).toLocaleDateString()} - {o.total_price} kr.</p>
+                            </div>
+                            <span className={`text-[9px] px-2 py-1 rounded font-bold uppercase ${o.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-orange-500/20 text-orange-400'}`}>
+                              {o.status}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+
+                  <button onClick={() => { supabase.auth.signOut(); setUser(null); setIsCartOpen(false); setCheckoutStep('cart'); }} className="w-full bg-red-900/30 text-red-400 hover:bg-red-900/50 font-bold py-3 rounded-xl border border-red-900/50 uppercase transition-colors mt-4">
+                    {ui.logout}
+                  </button>
+                </div>
+
+              ) : checkoutStep === 'review' ? (
                 <div className="flex flex-col items-center justify-center py-10 h-full text-center animate-fade-in">
                   <span className="text-7xl mb-6">🙏</span>
                   <h2 className="text-2xl md:text-3xl font-black text-white mb-4 uppercase italic tracking-wider">{ui.thankYou}</h2>
@@ -440,7 +495,6 @@ export default function OrderPage() {
                          </div>
                       </div>
                     )}
-                    
                     {placedOrder?.status === 'completed' && (
                       <div className="animate-fade-in">
                         <span className="text-6xl mb-4 block">✅</span>
@@ -456,29 +510,31 @@ export default function OrderPage() {
                 </div>
               ) : checkoutStep === 'auth' ? (
                 <div className="flex flex-col gap-5">
-                  <h3 className="text-2xl font-bold text-white text-center mb-2">{authMode === 'signup' ? 'Opret Konto (Register)' : ui.loginTitle}</h3>
+                  {/* ΜΕΤΑΦΡΑΣΜΕΝΟΙ ΤΙΤΛΟΙ LOGIN/REGISTER */}
+                  <h3 className="text-2xl font-bold text-white text-center mb-2">{authMode === 'signup' ? ui.regTitle : ui.loginTitle}</h3>
                   <form onSubmit={handleAuth} className="flex flex-col gap-4">
                     {authError && <div className="bg-red-500/10 border border-red-500 text-red-400 p-3 rounded-lg text-sm">{authError}</div>}
                     
-                    {/* --- ΝΕΑ ΠΕΔΙΑ ΕΓΓΡΑΦΗΣ --- */}
                     {authMode === 'signup' && (
                       <div className="flex flex-col gap-4 animate-fade-in">
-                        <input type="text" placeholder="Fulde Navn (Όνομα)" value={regName} onChange={e => setRegName(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" />
-                        <input type="tel" placeholder="Telefonnummer (Τηλέφωνο)" value={regPhone} onChange={e => setRegPhone(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" />
+                        <input type="text" placeholder={ui.nameLabel} value={regName} onChange={e => setRegName(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" />
+                        <input type="tel" placeholder={ui.phoneLabel} value={regPhone} onChange={e => setRegPhone(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" />
                         <div>
-                          <label className="text-xs text-gray-400 block mb-1 ml-1">Fødselsdato (Γενέθλια - Προαιρετικό για δώρα!)</label>
+                          <label className="text-xs text-gray-400 block mb-1 ml-1">{ui.dobPlh}</label>
                           <input type="date" value={regDob} onChange={e => setRegDob(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" />
                         </div>
                       </div>
                     )}
 
-                    <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" />
-                    <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" />
+                    <input type="email" placeholder={ui.emailPlh} value={email} onChange={e => setEmail(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" />
+                    <input type="password" placeholder={ui.passPlh} value={password} onChange={e => setPassword(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" />
                     
-                    <button type="submit" className="w-full bg-[#38BDF8] hover:bg-sky-400 text-slate-900 font-bold py-4 rounded-xl shadow-lg mt-2 uppercase">{authMode === 'signup' ? 'OPRET KONTO (REGISTER)' : 'LOG IND (LOGIN)'}</button>
+                    <button type="submit" className="w-full bg-[#38BDF8] hover:bg-sky-400 text-slate-900 font-bold py-4 rounded-xl shadow-lg mt-2 uppercase">
+                      {authMode === 'signup' ? ui.regTitle : ui.loginTitle}
+                    </button>
                   </form>
                   <button type="button" onClick={() => { setAuthMode(authMode === 'signup' ? 'login' : 'signup'); setAuthError(''); }} className="text-sm text-gray-400 hover:text-white underline text-center pb-2">
-                    {authMode === 'signup' ? 'Har du allerede en konto? Log ind' : 'Opret en ny konto'}
+                    {authMode === 'signup' ? ui.hasAcc : ui.noAcc}
                   </button>
                   
                   <div className="flex items-center gap-4 my-2">
@@ -535,6 +591,18 @@ export default function OrderPage() {
                       {generateTimeSlots().map((slot, i) => <option key={i} value={slot.value}>{slot.label}</option>)}
                     </select>
                   </div>
+                  
+                  {/* ΝΕΟ ΠΕΔΙΟ ΓΙΑ ΓΕΝΙΚΟ ΣΧΟΛΙΟ ΠΑΡΑΓΓΕΛΙΑΣ */}
+                  <div>
+                    <label className="text-xs text-gray-400 block mb-1">{ui.orderNoteTitle}</label>
+                    <textarea 
+                      value={orderNote} 
+                      onChange={e => setOrderNote(e.target.value)} 
+                      placeholder={ui.orderNotePlh}
+                      rows={2}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8] resize-none"
+                    ></textarea>
+                  </div>
 
                   <div className="mt-2">
                     <label className="text-xs text-gray-400 block mb-2">{ui.payLabel}</label>
@@ -547,7 +615,7 @@ export default function OrderPage() {
               )}
             </div>
 
-            {cart.length > 0 && checkoutStep !== 'success' && checkoutStep !== 'review' && (
+            {cart.length > 0 && checkoutStep !== 'success' && checkoutStep !== 'review' && checkoutStep !== 'profile' && (
               <div className="p-6 bg-slate-900 border-t border-white/10 shrink-0">
                 <div className="flex justify-between items-center mb-1"><span className="text-gray-400">{ui.subtotal}</span><span className="text-white font-bold">{subtotal} kr.</span></div>
                 {loyaltyDiscount > 0 && <div className="flex justify-between items-center mb-1 text-[#38BDF8]"><span className="text-xs">{ui.loyaltyDiscount}</span><span className="font-bold">-{loyaltyDiscount.toFixed(2)} kr.</span></div>}
