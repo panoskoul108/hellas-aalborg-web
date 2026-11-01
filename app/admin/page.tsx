@@ -15,7 +15,8 @@ export default function AdminDashboard() {
   
   const [prevCount, setPrevCount] = useState(0);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
-
+  const [isOffline, setIsOffline] = useState(false);
+  
   const [isPrinting, setIsPrinting] = useState(false);
   const [activePrintOrder, setActivePrintOrder] = useState<any>(null);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
@@ -37,17 +38,28 @@ export default function AdminDashboard() {
     }
   };
 
+  // --- OFFLINE DETECTOR ---
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    setIsOffline(!navigator.onLine); 
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
-      // Αφαιρέσαμε την ανακατεύθυνση (redirect). Αν υπάρχει user τον κρατάμε, 
-      // αλλιώς προχωράμε κανονικά προς το PIN Pad!
       if (session) {
         setUser(session.user);
       }
       
-      // Τραβάμε το PIN. Τώρα η βάση θα το δώσει ακόμα και αν δεν υπάρχει email session.
       const { data: pinData, error } = await supabase.from('pos_settings').select('pin_code').eq('id', 1).single();
       
       if (pinData) {
@@ -219,6 +231,13 @@ export default function AdminDashboard() {
 
       <div className={`min-h-screen font-sans bg-[#0B1120] text-gray-200 bg-[url('/bg.jpg')] bg-cover bg-fixed bg-center relative ${isPrinting ? "hidden" : "block"}`}>
         <div className="absolute inset-0 bg-[#0B1120]/85 -z-10"></div>
+        
+        {/* --- ΕΝΔΕΙΞΗ OFFLINE --- */}
+        {isOffline && (
+          <div className="bg-red-600 text-white font-black text-center py-1.5 uppercase tracking-widest animate-pulse z-50 fixed top-0 w-full shadow-lg">
+            ⚠️ ΕΚΤΟΣ ΣΥΝΔΕΣΗΣ (OFFLINE) - ΕΛΕΓΞΤΕ ΤΟ INTERNET ⚠️
+          </div>
+        )}
 
         <header className="bg-[#0F172A]/90 border-b border-white/10 p-4 md:p-6 sticky top-0 z-40 flex justify-between items-center shadow-lg backdrop-blur-md">
           <div className="flex items-center gap-6">
