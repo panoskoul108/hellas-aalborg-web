@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase'; 
-import { PrintTicket } from './PrintTicket'; 
+import { PrintTicket } from './PrintTicket';
 import OrderTimer from '@/components/admin/OrderTimer'; 
 import { OrderCard } from '../../components/admin/OrderCard'; 
 import HistoryPanel from '../../components/admin/HistoryPanel'; 
