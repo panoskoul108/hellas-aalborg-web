@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { supabase } from '../supabase';
 import ProductModal from './ProductModal';
 import LoyaltyWallet from '../../components/order/LoyaltyWallet'; 
+import SmartUpsell from '../../components/order/SmartUpsell'; // <--- ΕΙΣΑΓΩΓΗ ΤΟΥ UPSELL
 import { isStoreOpen } from '../../lib/storeHours';
 
 const MAX_ORDERS = 50; 
@@ -28,14 +29,12 @@ export default function OrderPage() {
   const [regPhone, setRegPhone] = useState('');
   const [regDob, setRegDob] = useState('');
 
-  // Νέο step "profile"
   const [checkoutStep, setCheckoutStep] = useState<'cart' | 'auth' | 'checkout' | 'success' | 'review' | 'profile'>('cart');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [requestedTime, setRequestedTime] = useState('ASAP');
   
-  // ΝΕΟ STATE ΓΙΑ ΤΟ ΓΕΝΙΚΟ ΣΧΟΛΙΟ ΠΑΡΑΓΓΕΛΙΑΣ
   const [orderNote, setOrderNote] = useState(''); 
   
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,7 +45,7 @@ export default function OrderPage() {
   const [storeOpen, setStoreOpen] = useState(true);
 
   const [placedOrder, setPlacedOrder] = useState<any>(null);
-  const [userOrderHistory, setUserOrderHistory] = useState<any[]>([]); // Για το Προφίλ
+  const [userOrderHistory, setUserOrderHistory] = useState<any[]>([]); 
   const supabaseImageUrl = "https://keolpijcsvwsrzkjqtkc.supabase.co/storage/v1/object/public/menu-images/";
 
   const dict = {
@@ -69,7 +68,6 @@ export default function OrderPage() {
       thankYou: "MANGE TAK!",
       reviewPrompt: "Vi håber, du nyder din mad! Vi vil sætte stor pris på, hvis du vil give os en anmeldelse på Google.",
       leaveReview: "BEDØM OS PÅ GOOGLE ⭐",
-      // Νέες μεταφράσεις
       orderNoteTitle: "Ordrebemærkning", orderNotePlh: "F.eks. 'Ekstra servietter tak'",
       emailPlh: "Email", passPlh: "Adgangskode", dobPlh: "Fødselsdato (Frivillig)",
       hasAcc: "Har du allerede en konto? Log ind", noAcc: "Opret en ny konto",
@@ -94,7 +92,6 @@ export default function OrderPage() {
       thankYou: "THANK YOU!",
       reviewPrompt: "We hope you enjoy your meal! We would really appreciate it if you could leave us a quick review on Google.",
       leaveReview: "RATE US ON GOOGLE ⭐",
-      // Νέες μεταφράσεις
       orderNoteTitle: "Order Note", orderNotePlh: "e.g., 'Extra napkins please'",
       emailPlh: "Email", passPlh: "Password", dobPlh: "Date of Birth (Optional)",
       hasAcc: "Already have an account? Login", noAcc: "Create a new account",
@@ -119,7 +116,6 @@ export default function OrderPage() {
       thankYou: "ΕΥΧΑΡΙΣΤΟΥΜΕ ΠΟΛΥ!",
       reviewPrompt: "Ελπίζουμε να απολαύσετε το γεύμα σας! Θα εκτιμούσαμε πολύ αν αφιερώνατε 1 λεπτό για μια αξιολόγηση στο Google.",
       leaveReview: "ΑΞΙΟΛΟΓΗΣΤΕ ΜΑΣ ⭐",
-      // Νέες μεταφράσεις
       orderNoteTitle: "Γενικό Σχόλιο Παραγγελίας", orderNotePlh: "π.χ. 'Χτυπήστε το κουδούνι'",
       emailPlh: "Email", passPlh: "Κωδικός", dobPlh: "Ημερομηνία Γέννησης (Προαιρετικό)",
       hasAcc: "Έχετε ήδη λογαριασμό; Σύνδεση", noAcc: "Δημιουργία νέου λογαριασμού",
@@ -277,7 +273,7 @@ export default function OrderPage() {
         customer_name: customerName,
         customer_phone: cleanPhone,
         requested_time: requestedTime,
-        notes: orderNote, // ΠΡΟΣΤΕΘΗΚΕ ΤΟ ΓΕΝΙΚΟ ΣΧΟΛΙΟ
+        notes: orderNote, 
         items: cart.map(c => ({
           id: c.item.id,
           title_da: c.item.title_da,
@@ -317,7 +313,7 @@ export default function OrderPage() {
       localStorage.setItem("servato_time", Date.now().toString());
 
       setCheckoutStep('success');
-      setOrderNote(''); // Καθαρισμός σχολίου
+      setOrderNote(''); 
     } catch (error: any) { alert('Σφάλμα: ' + error.message); } finally { setIsSubmitting(false); }
   };
 
@@ -411,7 +407,6 @@ export default function OrderPage() {
 
             <div className="flex-1 overflow-y-auto p-4 md:p-6">
               
-              {/* --- ΝΕΟ STEP: ΣΕΛΙΔΑ ΠΡΟΦΙΛ (PROFILE) --- */}
               {checkoutStep === 'profile' ? (
                 <div className="flex flex-col gap-6 animate-fade-in">
                   <div className="text-center mb-4">
@@ -510,7 +505,6 @@ export default function OrderPage() {
                 </div>
               ) : checkoutStep === 'auth' ? (
                 <div className="flex flex-col gap-5">
-                  {/* ΜΕΤΑΦΡΑΣΜΕΝΟΙ ΤΙΤΛΟΙ LOGIN/REGISTER */}
                   <h3 className="text-2xl font-bold text-white text-center mb-2">{authMode === 'signup' ? ui.regTitle : ui.loginTitle}</h3>
                   <form onSubmit={handleAuth} className="flex flex-col gap-4">
                     {authError && <div className="bg-red-500/10 border border-red-500 text-red-400 p-3 rounded-lg text-sm">{authError}</div>}
@@ -569,6 +563,10 @@ export default function OrderPage() {
                       {cartItem.item.note && <p className="text-[10px] text-yellow-500 font-bold italic ml-1 mt-1">📝 {cartItem.item.note}</p>}
                     </div>
                   ))}
+                  
+                  {/* --- ΕΔΩ ΕΜΦΑΝΙΖΕΤΑΙ ΤΟ ΕΞΥΠΝΟ UPSELL --- */}
+                  <SmartUpsell cart={cart} menuItems={menuItems} lang={lang} onAdd={(item) => addToCart(item, 1)} />
+
                 </div>
               ) : (
                 <form id="checkoutForm" onSubmit={submitOrder} className="flex flex-col gap-5">
@@ -592,7 +590,6 @@ export default function OrderPage() {
                     </select>
                   </div>
                   
-                  {/* ΝΕΟ ΠΕΔΙΟ ΓΙΑ ΓΕΝΙΚΟ ΣΧΟΛΙΟ ΠΑΡΑΓΓΕΛΙΑΣ */}
                   <div>
                     <label className="text-xs text-gray-400 block mb-1">{ui.orderNoteTitle}</label>
                     <textarea 
