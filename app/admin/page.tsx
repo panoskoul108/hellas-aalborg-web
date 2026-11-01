@@ -229,7 +229,7 @@ export default function AdminDashboard() {
     <>
       <audio id="order-alert-sound" src={NOTIFICATION_SOUND} preload="auto" />
 
-      <div className={`min-h-screen font-sans bg-[#0B1120] text-gray-200 bg-[url('/bg.jpg')] bg-cover bg-fixed bg-center relative ${isPrinting ? "hidden" : "block"}`}>
+      <div className={`min-h-screen font-sans bg-[#0B1120] text-gray-200 bg-[url('/bg.jpg')] bg-cover bg-fixed bg-center relative print:hidden ${isPrinting ? "hidden" : "block"}`}>
         <div className="absolute inset-0 bg-[#0B1120]/85 -z-10"></div>
         
         {/* --- ΕΝΔΕΙΞΗ OFFLINE --- */}
