@@ -17,7 +17,8 @@ const translations = {
     hoursTitle: 'Åbningstider', monThu: 'Mandag - Torsdag', friSat: 'Fredag - Lørdag', sun: 'Søndag',
     footerDesc: 'Dit lille stykke Grækenland i Nordjylland. Vi glæder os til at se dig.',
     footerDelivery: 'Bestil Delivery', allergies: 'Allergier eller særlige behov? Spørg vores personale!',
-    veg: 'Vegetarisk', smiley: 'Se Fødevarestyrelsens smiley-rapport', followUs: 'Følg os på Instagram', callNow: 'Ring nu',
+    veg: 'Vegetarisk', smiley: 'Se Fødevarestyrelsens smiley-rapport', followUs: 'Følg os på Instagram', 
+    callNow: 'Ring nu', orderTakeaway: 'Bestil Takeaway',
     cateringTitle: 'Græsk Catering & Events',
     cateringDesc: 'Vi bringer den autentiske græske smag til dit arrangement. Vi håndterer store ordrer med særlige priser og gratis levering til din dør.',
     cateringBtn: 'Ring for Tilbud'
@@ -35,7 +36,8 @@ const translations = {
     hoursTitle: 'Opening Hours', monThu: 'Monday - Thursday', friSat: 'Friday - Saturday', sun: 'Sunday',
     footerDesc: 'Your little piece of Greece in North Jutland. We look forward to seeing you.',
     footerDelivery: 'Order Delivery', allergies: 'Allergies or dietary needs? Please ask our staff!',
-    veg: 'Vegetarian', smiley: 'Food safety inspection report', followUs: 'Follow us on Instagram', callNow: 'Call Now',
+    veg: 'Vegetarian', smiley: 'Food safety inspection report', followUs: 'Follow us on Instagram', 
+    callNow: 'Call Now', orderTakeaway: 'Order Takeaway',
     cateringTitle: 'Greek Catering & Events',
     cateringDesc: 'Bring authentic Greek flavors to your event. We accommodate large orders with special pricing and complimentary delivery to your venue.',
     cateringBtn: 'Call for a Quote'
@@ -53,7 +55,8 @@ const translations = {
     hoursTitle: 'Ωράριο Λειτουργίας', monThu: 'Δευτέρα - Πέμπτη', friSat: 'Παρασκευή - Σάββατο', sun: 'Κυριακή',
     footerDesc: 'Το δικό σας κομμάτι Ελλάδας στη Βόρεια Γιουτλάνδη. Σας περιμένουμε.',
     footerDelivery: 'Παραγγελία Delivery', allergies: 'Έχετε αλλεργίες; Ρωτήστε το προσωπικό μας!',
-    veg: 'Χορτοφαγικό', smiley: 'Αναφορά υγειονομικού ελέγχου', followUs: 'Ακολουθήστε μας στο Instagram', callNow: 'Κλήση',
+    veg: 'Χορτοφαγικό', smiley: 'Αναφορά υγειονομικού ελέγχου', followUs: 'Ακολουθήστε μας στο Instagram', 
+    callNow: 'Κλήση', orderTakeaway: 'Παραγγελία Takeaway',
     cateringTitle: 'Ελληνικό Catering & Εκδηλώσεις',
     cateringDesc: 'Φέρνουμε την αυθεντική ελληνική γεύση στην εκδήλωσή σας. Αναλαμβάνουμε μεγάλες παραγγελίες με ειδικές προνομιακές τιμές και δωρεάν διανομή.',
     cateringBtn: 'Καλέστε μας'
@@ -277,8 +280,8 @@ export default function Home() {
               {t.orderWolt}
             </a>
           ) : (
-            <a href="tel:+4542177754" className="inline-flex items-center gap-3 bg-white text-[#0B1120] font-bold py-4 px-14 rounded-full shadow-[0_0_25px_rgba(255,255,255,0.15)] transition-all transform hover:scale-105 hover:shadow-[0_0_35px_rgba(255,255,255,0.25)]">
-              📞 {t.callNow}
+            <a href="/order" className="inline-flex items-center gap-3 bg-white text-[#0B1120] font-bold py-4 px-14 rounded-full shadow-[0_0_25px_rgba(255,255,255,0.15)] transition-all transform hover:scale-105 hover:shadow-[0_0_35px_rgba(255,255,255,0.25)]">
+              🛍️ {t.orderTakeaway}
             </a>
           )}
         </div>
@@ -369,7 +372,7 @@ export default function Home() {
       </footer>
 
       <div className="md:hidden fixed bottom-0 left-0 w-full bg-[#0B1120]/90 backdrop-blur-xl border-t border-white/10 px-4 py-3 z-40 flex justify-between gap-3 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
-        <a href="tel:+4542177754" className="flex-1 bg-white text-[#0B1120] text-center font-bold py-3 rounded-2xl flex justify-center items-center gap-2 active:scale-95 transition-transform">📞 {t.callNow}</a>
+        <a href="/order" className="flex-1 bg-white text-[#0B1120] text-center font-bold py-3 rounded-2xl flex justify-center items-center gap-2 active:scale-95 transition-transform">🛍️ {t.orderTakeaway}</a>
         <a href="https://wolt.com/da/dnk/aalborg/restaurant/hellas-food1" target="_blank" rel="noopener noreferrer" className="flex-1 bg-gradient-to-r from-[#009de0] to-[#007fb5] text-white text-center font-bold py-3 rounded-2xl flex justify-center items-center gap-2 active:scale-95 transition-transform">🛵 {t.orderWolt}</a>
       </div>
 
@@ -429,8 +432,8 @@ export default function Home() {
                     {t.orderWolt}
                   </a>
                 ) : (
-                  <a href="tel:+4542177754" className="bg-white text-[#0B1120] px-6 py-3 rounded-full font-bold hover:scale-105 transition-transform shadow-lg">
-                    {t.callNow}
+                  <a href="/order" className="bg-white text-[#0B1120] px-6 py-3 rounded-full font-bold hover:scale-105 transition-transform shadow-lg">
+                    {t.orderTakeaway}
                   </a>
                 )}
               </div>
