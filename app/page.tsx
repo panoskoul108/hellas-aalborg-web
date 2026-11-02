@@ -250,7 +250,7 @@ export default function Home() {
                     <h3 className={`${item.featured ? 'text-3xl font-extrabold' : 'text-xl font-bold'} text-white mb-3 tracking-wide group-hover:text-[#38BDF8] transition-colors duration-300`}>
                       {item.title[lang as keyof typeof item.title] || item.title.da}
                     </h3>
-                    <p className="text-gray-400 text-sm md:text-base font-light leading-relaxed max-w-lg line-clamp-2">
+                    <p className="text-gray-400 text-sm md:text-base font-light leading-relaxed max-w-lg">
                       {item.desc[lang as keyof typeof item.desc] || item.desc.da}
                     </p>
                   </div>
