@@ -14,7 +14,7 @@ const translations = {
     tabTakeaway: 'Takeaway Menu', tabDelivery: 'Wolt Menu',
     aboutTitle: 'Græsk Hjerte, Dansk Hygge',
     aboutDesc: 'Hos Hellas Aalborg forener vi den varme græske gæstfrihed med nordisk kvalitet. Vores gyros laves efter originale familieopskrifter med kød af højeste kvalitet og håndlavet tzatziki.',
-    hoursTitle: 'Åbningstider', monThu: 'Mandag - Torsdag', friSat: 'Fredag - Lørdag', sun: 'Søndag',
+    hoursTitle: 'Åbningstider',
     footerDesc: 'Dit lille stykke Grækenland i Nordjylland. Vi glæder os til at se dig.',
     footerDelivery: 'Bestil Delivery', allergies: 'Allergier eller særlige behov? Spørg vores personale!',
     veg: 'Vegetarisk', smiley: 'Se Fødevarestyrelsens smiley-rapport', followUs: 'Følg os på Instagram', 
@@ -33,7 +33,7 @@ const translations = {
     tabTakeaway: 'Takeaway Menu', tabDelivery: 'Wolt Menu',
     aboutTitle: 'Greek Heart, Danish Hygge',
     aboutDesc: 'At Hellas Aalborg, we combine warm Greek hospitality with Nordic quality. Our gyros are made using original family recipes, premium meat, and handmade tzatziki.',
-    hoursTitle: 'Opening Hours', monThu: 'Monday - Thursday', friSat: 'Friday - Saturday', sun: 'Sunday',
+    hoursTitle: 'Opening Hours',
     footerDesc: 'Your little piece of Greece in North Jutland. We look forward to seeing you.',
     footerDelivery: 'Order Delivery', allergies: 'Allergies or dietary needs? Please ask our staff!',
     veg: 'Vegetarian', smiley: 'Food safety inspection report', followUs: 'Follow us on Instagram', 
@@ -52,7 +52,7 @@ const translations = {
     tabTakeaway: 'Μενού Takeaway', tabDelivery: 'Μενού Wolt',
     aboutTitle: 'Ελληνική Ψυχή, Δανέζικη Ποιότητα',
     aboutDesc: 'Στο Hellas Aalborg ενώνουμε τη ζεστή ελληνική φιλοξενία με την ποιότητα του Βορρά. Ο γύρος μας φτιάχνεται με αυθεντικές οικογενειακές συνταγές, εκλεκτά κρέατα και χειροποίητο τζατζίκι.',
-    hoursTitle: 'Ωράριο Λειτουργίας', monThu: 'Δευτέρα - Πέμπτη', friSat: 'Παρασκευή - Σάββατο', sun: 'Κυριακή',
+    hoursTitle: 'Ωράριο Λειτουργίας',
     footerDesc: 'Το δικό σας κομμάτι Ελλάδας στη Βόρεια Γιουτλάνδη. Σας περιμένουμε.',
     footerDelivery: 'Παραγγελία Delivery', allergies: 'Έχετε αλλεργίες; Ρωτήστε το προσωπικό μας!',
     veg: 'Χορτοφαγικό', smiley: 'Αναφορά υγειονομικού ελέγχου', followUs: 'Ακολουθήστε μας στο Instagram', 
@@ -77,6 +77,7 @@ export default function Home() {
   const [isScrolled, setIsScrolled] = useState(false);
   
   const [menuItems, setMenuItems] = useState<any[]>([]);
+  const [storeHours, setStoreHours] = useState<any[]>([]); // Δυναμικό Ωράριο
   const [isLoading, setIsLoading] = useState(true);
   
   const [selectedItem, setSelectedItem] = useState<any>(null);
@@ -84,46 +85,36 @@ export default function Home() {
   const supabaseImageUrl = "https://keolpijcsvwsrzkjqtkc.supabase.co/storage/v1/object/public/menu-images/";
 
   useEffect(() => {
-    const fetchMenu = async () => {
-      const { data, error } = await supabase
-        .from('menu_items')
-        .select('*')
-        .order('sort_order', { ascending: true });
-      
-      if (data) {
-        const formattedData = data.map(item => ({
-          id: item.id,
-          category: item.category,
+    const fetchData = async () => {
+      const { data: menuData } = await supabase.from('menu_items').select('*').order('sort_order', { ascending: true });
+      if (menuData) {
+        const formattedData = menuData.map(item => ({
+          id: item.id, category: item.category,
           title: { da: item.title_da, en: item.title_en, el: item.title_el },
           desc: { da: item.desc_da, en: item.desc_en, el: item.desc_el },
-          priceTakeaway: item.price_takeaway,
-          priceDelivery: item.price_delivery,
-          popular: item.popular,
-          vegetarian: item.vegetarian,
-          featured: item.featured,
-          imagePath: item.image_path
+          priceTakeaway: item.price_takeaway, priceDelivery: item.price_delivery,
+          popular: item.popular, vegetarian: item.vegetarian,
+          featured: item.featured, imagePath: item.image_path
         }));
         setMenuItems(formattedData);
       }
+      
+      const { data: hoursData } = await supabase.from('store_hours').select('*').order('day_of_week', { ascending: true });
+      if (hoursData) setStoreHours(hoursData);
+      
       setIsLoading(false);
     };
 
-    fetchMenu();
+    fetchData();
 
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % heroImages.length);
-    }, 6000);
-
+    const timer = setInterval(() => setCurrentSlide((prev) => (prev + 1) % heroImages.length), 6000);
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
     
     if (selectedItem) document.body.style.overflow = 'hidden';
     else document.body.style.overflow = 'unset';
     
-    return () => {
-      clearInterval(timer);
-      window.removeEventListener('scroll', handleScroll);
-    };
+    return () => { clearInterval(timer); window.removeEventListener('scroll', handleScroll); };
   }, [selectedItem]);
   
   const t = translations[lang as keyof typeof translations];
@@ -345,9 +336,16 @@ export default function Home() {
           <div>
             <h4 className="text-lg font-bold text-white mb-8 tracking-wide">{t.hoursTitle}</h4>
             <ul className="space-y-4 text-sm">
-              <li className="flex justify-between border-b border-white/5 pb-3"><span className="text-gray-400">{t.monThu}</span><span className="font-bold text-white">16:00 - 22:00</span></li>
-              <li className="flex justify-between border-b border-white/5 pb-3"><span className="text-[#38BDF8] font-medium">{t.friSat}</span><span className="font-bold text-[#38BDF8]">17:00 - 05:00</span></li>
-              <li className="flex justify-between border-b border-white/5 pb-3"><span className="text-gray-400">{t.sun}</span><span className="font-bold text-white">17:00 - 22:00</span></li>
+              {storeHours.length > 0 ? storeHours.map(day => (
+                <li key={day.day_of_week} className="flex justify-between border-b border-white/5 pb-3">
+                  <span className="text-gray-400">{day.day_name}</span>
+                  <span className={`font-bold ${day.is_closed ? 'text-red-400' : 'text-white'}`}>
+                    {day.is_closed ? (lang === 'da' ? 'LUKKET' : lang === 'en' ? 'CLOSED' : 'ΚΛΕΙΣΤΑ') : `${day.open_time.slice(0,5)} - ${day.close_time.slice(0,5)}`}
+                  </span>
+                </li>
+              )) : (
+                <li className="text-gray-500 animate-pulse">Loading...</li>
+              )}
             </ul>
           </div>
           <div className="h-72 w-full rounded-3xl overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.5)] opacity-80 hover:opacity-100 transition-opacity border border-white/10 relative">
@@ -441,7 +439,6 @@ export default function Home() {
           </div>
         </div>
       )}
-
     </div>
   );
 }
