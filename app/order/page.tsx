@@ -41,6 +41,8 @@ export default function OrderPage() {
 
   const [ordersPlaced, setOrdersPlaced] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
+  
+  // Το State του Καταστήματος
   const [storeOpen, setStoreOpen] = useState(true);
 
   const [placedOrder, setPlacedOrder] = useState<any>(null);
@@ -172,21 +174,19 @@ export default function OrderPage() {
     };
     checkSavedOrder();
 
-    // ΕΛΕΓΧΟΣ ΩΡΑΡΙΟΥ ΑΠΕΥΘΕΙΑΣ ΑΠΟ ΤΗ ΒΑΣΗ ΔΕΔΟΜΕΝΩΝ
+    // ΔΙΟΡΘΩΣΗ: ΠΡΑΓΜΑΤΙΚΟΣ ΕΛΕΓΧΟΣ ΑΠΟ ΤΗ ΒΑΣΗ ΔΕΔΟΜΕΝΩΝ
     const checkStoreStatus = async () => {
       const jsDay = new Date().getDay();
-      const dbDay = jsDay === 0 ? 7 : jsDay; // Μετατροπή Κυριακής (0) σε 7
+      const dbDay = jsDay === 0 ? 7 : jsDay; 
       
       const { data } = await supabase.from('store_hours').select('*').eq('day_of_week', dbDay).single();
       
       if (data) {
-        // Αν το έχεις βάλει χειροκίνητα "ΚΛΕΙΣΤΑ" από το Admin:
         if (data.is_closed) {
           setStoreOpen(false);
           return;
         }
 
-        // Αυτόματος έλεγχος με βάση την ώρα
         const now = new Date();
         const currentTimeMins = now.getHours() * 60 + now.getMinutes();
         
@@ -196,7 +196,6 @@ export default function OrderPage() {
         const openMins = openH * 60 + openM;
         let closeMins = closeH * 60 + closeM;
         
-        // Αν κλείνει μετά τα μεσάνυχτα (π.χ. 05:00)
         if (closeMins < openMins) closeMins += 24 * 60; 
         
         let currentAdjusted = currentTimeMins;
@@ -213,7 +212,8 @@ export default function OrderPage() {
     };
 
     checkStoreStatus();
-    const interval = setInterval(checkStoreStatus, 60000);
+    // Τσεκάρει αν έκλεισες το μαγαζί κάθε 15 δευτερόλεπτα (πολύ πιο γρήγορα!)
+    const interval = setInterval(checkStoreStatus, 15000);
     return () => { subscription.unsubscribe(); clearInterval(interval); };
   }, []);
 
@@ -253,28 +253,13 @@ export default function OrderPage() {
     setAuthError('');
     if (authMode === 'signup') {
       if (!regName || !regPhone) { setAuthError('Missing Name or Phone.'); return; }
-      
-      const { data, error } = await supabase.auth.signUp({ 
-        email, 
-        password,
-        options: { data: { full_name: regName, phone: regPhone } } 
-      });
-      
+      const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: regName, phone: regPhone } } });
       if (error) {
         setAuthError(error.message);
       } else if (data.user) {
         setUser(data.user);
-        await supabase.from('customers_loyalty').insert({
-          user_id: data.user.id,
-          full_name: regName,
-          phone: regPhone,
-          date_of_birth: regDob || null,
-          wallet_balance: 0
-        });
-        
-        setCustomerName(regName);
-        setCustomerPhone(regPhone);
-        setCheckoutStep('checkout'); 
+        await supabase.from('customers_loyalty').insert({ user_id: data.user.id, full_name: regName, phone: regPhone, date_of_birth: regDob || null, wallet_balance: 0 });
+        setCustomerName(regName); setCustomerPhone(regPhone); setCheckoutStep('checkout'); 
       }
     } else {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -282,10 +267,7 @@ export default function OrderPage() {
       else { 
         setUser(data.user); 
         const { data: profile } = await supabase.from('customers_loyalty').select('*').eq('user_id', data.user.id).single();
-        if (profile) {
-          setCustomerName(profile.full_name || '');
-          setCustomerPhone(profile.phone || '');
-        }
+        if (profile) { setCustomerName(profile.full_name || ''); setCustomerPhone(profile.phone || ''); }
         setCheckoutStep('checkout'); 
       }
     }
@@ -303,6 +285,13 @@ export default function OrderPage() {
 
   const submitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // ΔΙΟΡΘΩΣΗ: ΑΠΟΛΥΤΟ ΜΠΛΟΚΑΡΙΣΜΑ ΑΝ ΕΙΝΑΙ ΚΛΕΙΣΤΑ
+    if (!storeOpen) {
+      alert(ui.closedStore);
+      return;
+    }
+
     if (isLocked) return alert("Limit reached.");
     if (!customerName || !customerPhone) return alert('Missing details.');
     
@@ -317,20 +306,11 @@ export default function OrderPage() {
         requested_time: requestedTime,
         notes: orderNote, 
         items: cart.map(c => ({
-          id: c.item.id,
-          title_da: c.item.title_da,
-          title_el: c.item.title_el,
-          quantity: c.quantity,
-          unit_price_dkk: getItemPrice(c.item),
-          selectedOptions: c.item.selectedOptions || [],
-          note: c.item.note || "" 
+          id: c.item.id, title_da: c.item.title_da, title_el: c.item.title_el, quantity: c.quantity,
+          unit_price_dkk: getItemPrice(c.item), selectedOptions: c.item.selectedOptions || [], note: c.item.note || "" 
         })),
-        subtotal_dkk: subtotal,
-        discount_dkk: loyaltyDiscount,
-        vat_moms_dkk: vatMoms,
-        total_price: finalTotal,
-        payment_method: paymentMethod === 'card' ? 'ΚΑΡΤΑ' : 'ΜΕΤΡΗΤΑ',
-        status: 'pending'
+        subtotal_dkk: subtotal, discount_dkk: loyaltyDiscount, vat_moms_dkk: vatMoms,
+        total_price: finalTotal, payment_method: paymentMethod === 'card' ? 'ΚΑΡΤΑ' : 'ΜΕΤΡΗΤΑ', status: 'pending'
       };
 
       const { data: orderData, error: orderError } = await supabase.from('orders').insert([payload]).select().single();
@@ -365,9 +345,7 @@ export default function OrderPage() {
     if (error) alert("⚠️ Η βάση δεδομένων απέρριψε την ενημέρωση! Ζητήστε από το ταμείο να πατήσει το '✓'.");
     
     localStorage.removeItem('hellas_active_order');
-    setPlacedOrder(null);
-    setCart([]);
-    setCheckoutStep('review');
+    setPlacedOrder(null); setCart([]); setCheckoutStep('review');
   };
 
   return (
@@ -456,9 +434,7 @@ export default function OrderPage() {
                      <h3 className="text-xl font-black text-white">{customerName || user?.email}</h3>
                      <p className="text-sm text-gray-400 font-bold">{customerPhone}</p>
                   </div>
-                  
                   <LoyaltyWallet userId={user?.id} subtotal={0} lang={lang} onApplyDiscount={() => {}} />
-
                   <div className="bg-slate-900/50 rounded-2xl border border-white/5 p-5">
                     <h4 className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-4 border-b border-slate-700 pb-2">{ui.myOrders}</h4>
                     {userOrderHistory.length === 0 ? <p className="text-sm text-gray-400">No orders yet.</p> : (
@@ -477,25 +453,15 @@ export default function OrderPage() {
                       </ul>
                     )}
                   </div>
-
-                  <button onClick={() => { supabase.auth.signOut(); setUser(null); setIsCartOpen(false); setCheckoutStep('cart'); }} className="w-full bg-red-900/30 text-red-400 hover:bg-red-900/50 font-bold py-3 rounded-xl border border-red-900/50 uppercase transition-colors mt-4">
-                    {ui.logout}
-                  </button>
+                  <button onClick={() => { supabase.auth.signOut(); setUser(null); setIsCartOpen(false); setCheckoutStep('cart'); }} className="w-full bg-red-900/30 text-red-400 hover:bg-red-900/50 font-bold py-3 rounded-xl border border-red-900/50 uppercase transition-colors mt-4">{ui.logout}</button>
                 </div>
-
               ) : checkoutStep === 'review' ? (
                 <div className="flex flex-col items-center justify-center py-10 h-full text-center animate-fade-in">
                   <span className="text-7xl mb-6">🙏</span>
                   <h2 className="text-2xl md:text-3xl font-black text-white mb-4 uppercase italic tracking-wider">{ui.thankYou}</h2>
                   <p className="text-gray-400 font-bold mb-10 px-2 leading-relaxed">{ui.reviewPrompt}</p>
-                  
-                  <a href="https://reviewshellas.dk" target="_blank" rel="noopener noreferrer" className="w-full max-w-xs bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-black uppercase tracking-widest py-4 rounded-2xl shadow-xl shadow-[#38BDF8]/20 transition-transform active:scale-95 mb-4 block">
-                    {ui.leaveReview}
-                  </a>
-                  
-                  <button onClick={() => { setCheckoutStep('cart'); setIsCartOpen(false); }} className="w-full max-w-xs bg-slate-800 text-gray-300 font-bold uppercase py-4 rounded-2xl border border-slate-700 hover:bg-slate-700 transition-colors">
-                    {ui.close}
-                  </button>
+                  <a href="https://reviewshellas.dk" target="_blank" rel="noopener noreferrer" className="w-full max-w-xs bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-black uppercase tracking-widest py-4 rounded-2xl shadow-xl shadow-[#38BDF8]/20 transition-transform active:scale-95 mb-4 block">{ui.leaveReview}</a>
+                  <button onClick={() => { setCheckoutStep('cart'); setIsCartOpen(false); }} className="w-full max-w-xs bg-slate-800 text-gray-300 font-bold uppercase py-4 rounded-2xl border border-slate-700 hover:bg-slate-700 transition-colors">{ui.close}</button>
                 </div>
               ) : checkoutStep === 'success' ? (
                 <div className="flex flex-col items-center py-6 w-full">
@@ -503,7 +469,6 @@ export default function OrderPage() {
                   <div className="w-full max-w-xs mb-10 relative">
                     <div className="absolute top-4 left-0 h-1 bg-gray-700 w-full -z-10 rounded-full"></div>
                     <div className={`absolute top-4 left-0 h-1 bg-[#38BDF8] -z-10 transition-all duration-500 rounded-full ${placedOrder?.status === 'pending' ? 'w-[15%]' : placedOrder?.status === 'preparing' ? 'w-[50%]' : 'w-full !bg-emerald-500'}`}></div>
-                    
                     <div className="flex justify-between">
                       <div className="flex flex-col items-center gap-2">
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm transition-colors duration-500 ${placedOrder?.status === 'pending' || placedOrder?.status === 'preparing' || placedOrder?.status === 'completed' ? 'bg-[#38BDF8] text-[#0B1120]' : 'bg-gray-800 text-gray-500'}`}>1</div>
@@ -519,29 +484,17 @@ export default function OrderPage() {
                       </div>
                     </div>
                   </div>
-
                   <div className="w-full bg-slate-800/50 border border-slate-700 rounded-3xl p-6 mb-8 text-center shadow-xl">
                     {placedOrder?.status === 'pending' && (
                       <div className="animate-fade-in"><div className="w-12 h-12 rounded-full border-4 border-[#38BDF8] border-t-transparent animate-spin mx-auto mb-4"></div><h3 className="text-xl font-black text-white mb-2 uppercase">{ui.trackPendingTitle}</h3><p className="text-sm text-gray-400 font-bold">{ui.trackPendingDesc}</p></div>
                     )}
                     {placedOrder?.status === 'preparing' && (
                       <div className="animate-fade-in"><span className="text-6xl mb-4 block">🔥</span><h3 className="text-xl font-black text-white mb-4 uppercase">{ui.trackPrepTitle}</h3>
-                         <div className="bg-[#38BDF8]/20 border border-[#38BDF8]/50 rounded-2xl p-4 inline-block">
-                           <p className="text-[10px] font-black text-[#38BDF8] uppercase tracking-widest mb-1">{ui.trackPrepTime}</p>
-                           <p className="text-4xl font-black text-white">{placedOrder?.requested_time && placedOrder.requested_time !== 'ASAP' ? placedOrder.requested_time.slice(0, 5) : '...'}</p>
-                         </div>
+                         <div className="bg-[#38BDF8]/20 border border-[#38BDF8]/50 rounded-2xl p-4 inline-block"><p className="text-[10px] font-black text-[#38BDF8] uppercase tracking-widest mb-1">{ui.trackPrepTime}</p><p className="text-4xl font-black text-white">{placedOrder?.requested_time && placedOrder.requested_time !== 'ASAP' ? placedOrder.requested_time.slice(0, 5) : '...'}</p></div>
                       </div>
                     )}
                     {placedOrder?.status === 'completed' && (
-                      <div className="animate-fade-in">
-                        <span className="text-6xl mb-4 block">✅</span>
-                        <h3 className="text-xl font-black text-emerald-400 mb-2 uppercase">{ui.trackReadyTitle}</h3>
-                        <p className="text-sm text-gray-300 font-bold mb-6">{ui.trackReadyDesc}</p>
-                        
-                        <button onClick={handleCustomerPickup} className="w-full bg-emerald-500 hover:bg-emerald-400 text-[#0B1120] font-black text-sm uppercase py-4 rounded-xl shadow-lg active:scale-95 transition-transform">
-                          🖐️ {ui.pickedUpBtn}
-                        </button>
-                      </div>
+                      <div className="animate-fade-in"><span className="text-6xl mb-4 block">✅</span><h3 className="text-xl font-black text-emerald-400 mb-2 uppercase">{ui.trackReadyTitle}</h3><p className="text-sm text-gray-300 font-bold mb-6">{ui.trackReadyDesc}</p><button onClick={handleCustomerPickup} className="w-full bg-emerald-500 hover:bg-emerald-400 text-[#0B1120] font-black text-sm uppercase py-4 rounded-xl shadow-lg active:scale-95 transition-transform">🖐️ {ui.pickedUpBtn}</button></div>
                     )}
                   </div>
                 </div>
@@ -550,37 +503,20 @@ export default function OrderPage() {
                   <h3 className="text-2xl font-bold text-white text-center mb-2">{authMode === 'signup' ? ui.regTitle : ui.loginTitle}</h3>
                   <form onSubmit={handleAuth} className="flex flex-col gap-4">
                     {authError && <div className="bg-red-500/10 border border-red-500 text-red-400 p-3 rounded-lg text-sm">{authError}</div>}
-                    
                     {authMode === 'signup' && (
                       <div className="flex flex-col gap-4 animate-fade-in">
                         <input type="text" placeholder={ui.nameLabel} value={regName} onChange={e => setRegName(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" />
                         <input type="tel" placeholder={ui.phoneLabel} value={regPhone} onChange={e => setRegPhone(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" />
-                        <div>
-                          <label className="text-xs text-gray-400 block mb-1 ml-1">{ui.dobPlh}</label>
-                          <input type="date" value={regDob} onChange={e => setRegDob(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" />
-                        </div>
+                        <div><label className="text-xs text-gray-400 block mb-1 ml-1">{ui.dobPlh}</label><input type="date" value={regDob} onChange={e => setRegDob(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" /></div>
                       </div>
                     )}
-
                     <input type="email" placeholder={ui.emailPlh} value={email} onChange={e => setEmail(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" />
                     <input type="password" placeholder={ui.passPlh} value={password} onChange={e => setPassword(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" />
-                    
-                    <button type="submit" className="w-full bg-[#38BDF8] hover:bg-sky-400 text-slate-900 font-bold py-4 rounded-xl shadow-lg mt-2 uppercase">
-                      {authMode === 'signup' ? ui.regTitle : ui.loginTitle}
-                    </button>
+                    <button type="submit" className="w-full bg-[#38BDF8] hover:bg-sky-400 text-slate-900 font-bold py-4 rounded-xl shadow-lg mt-2 uppercase">{authMode === 'signup' ? ui.regTitle : ui.loginTitle}</button>
                   </form>
-                  <button type="button" onClick={() => { setAuthMode(authMode === 'signup' ? 'login' : 'signup'); setAuthError(''); }} className="text-sm text-gray-400 hover:text-white underline text-center pb-2">
-                    {authMode === 'signup' ? ui.hasAcc : ui.noAcc}
-                  </button>
-                  
-                  <div className="flex items-center gap-4 my-2">
-                    <hr className="flex-1 border-slate-700" />
-                    <span className="text-xs text-gray-500 font-bold uppercase">{ui.or}</span>
-                    <hr className="flex-1 border-slate-700" />
-                  </div>
-                  <button onClick={() => setCheckoutStep('checkout')} className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-4 rounded-xl shadow-lg border border-white/10 uppercase transition-colors">
-                    {ui.guestCheckout}
-                  </button>
+                  <button type="button" onClick={() => { setAuthMode(authMode === 'signup' ? 'login' : 'signup'); setAuthError(''); }} className="text-sm text-gray-400 hover:text-white underline text-center pb-2">{authMode === 'signup' ? ui.hasAcc : ui.noAcc}</button>
+                  <div className="flex items-center gap-4 my-2"><hr className="flex-1 border-slate-700" /><span className="text-xs text-gray-500 font-bold uppercase">{ui.or}</span><hr className="flex-1 border-slate-700" /></div>
+                  <button onClick={() => setCheckoutStep('checkout')} className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-4 rounded-xl shadow-lg border border-white/10 uppercase transition-colors">{ui.guestCheckout}</button>
                 </div>
               ) : cart.length === 0 ? (
                 <div className="text-center text-gray-500 mt-20"><span className="text-4xl mb-3 block">🛒</span><p>{ui.emptyCart}</p></div>
@@ -590,65 +526,25 @@ export default function OrderPage() {
                   {cart.map((cartItem, idx) => (
                     <div key={idx} className="flex flex-col bg-slate-800/30 p-3 rounded-xl border border-white/5">
                       <div className="flex justify-between items-center mb-2">
-                        <div className="flex-1 pr-2">
-                          <p className="font-bold text-white text-sm">{getTitle(cartItem.item)}</p>
-                          <p className="text-xs text-[#38BDF8]">{getItemPrice(cartItem.item)} DKK</p>
-                        </div>
-                        <div className="flex items-center gap-3 bg-slate-900 rounded-lg p-1 border border-white/5">
-                          <button onClick={() => updateQuantity(cartItem.cartId, -1)} className="w-8 h-8 flex items-center justify-center text-white bg-slate-800 hover:bg-slate-700 rounded-md font-bold text-lg">-</button>
-                          <span className="font-bold text-sm w-4 text-center">{cartItem.quantity}</span>
-                          <button onClick={() => updateQuantity(cartItem.cartId, 1)} className="w-8 h-8 flex items-center justify-center text-white bg-slate-800 hover:bg-slate-700 rounded-md font-bold text-lg">+</button>
-                        </div>
+                        <div className="flex-1 pr-2"><p className="font-bold text-white text-sm">{getTitle(cartItem.item)}</p><p className="text-xs text-[#38BDF8]">{getItemPrice(cartItem.item)} DKK</p></div>
+                        <div className="flex items-center gap-3 bg-slate-900 rounded-lg p-1 border border-white/5"><button onClick={() => updateQuantity(cartItem.cartId, -1)} className="w-8 h-8 flex items-center justify-center text-white bg-slate-800 hover:bg-slate-700 rounded-md font-bold text-lg">-</button><span className="font-bold text-sm w-4 text-center">{cartItem.quantity}</span><button onClick={() => updateQuantity(cartItem.cartId, 1)} className="w-8 h-8 flex items-center justify-center text-white bg-slate-800 hover:bg-slate-700 rounded-md font-bold text-lg">+</button></div>
                         <button onClick={() => removeFromCart(cartItem.cartId)} className="ml-3 text-red-400 hover:text-red-300 text-lg bg-red-500/10 w-10 h-10 flex items-center justify-center rounded-lg">🗑️</button>
                       </div>
                       {cartItem.item.selectedOptions?.length > 0 && <p className="text-[10px] text-gray-400 font-bold uppercase ml-1">+ {cartItem.item.selectedOptions.join(', ')}</p>}
                       {cartItem.item.note && <p className="text-[10px] text-yellow-500 font-bold italic ml-1 mt-1">📝 {cartItem.item.note}</p>}
                     </div>
                   ))}
-                  
                   <SmartUpsell cart={cart} menuItems={menuItems} lang={lang} onAdd={(item) => addToCart(item, 1)} />
-
                 </div>
               ) : (
                 <form id="checkoutForm" onSubmit={submitOrder} className="flex flex-col gap-5">
                   <h3 className="font-bold text-lg text-white border-b border-white/10 pb-2">{ui.detailsTitle}</h3>
-                  
                   <LoyaltyWallet userId={user?.id} subtotal={subtotal} lang={lang} onApplyDiscount={setLoyaltyDiscount} />
-
-                  <div>
-                    <label className="text-xs text-gray-400 block mb-1">{ui.nameLabel}</label>
-                    <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-400 block mb-1">{ui.phoneLabel}</label>
-                    <input type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" />
-                  </div>
-
-                  <div>
-                    <label className="text-xs text-gray-400 block mb-1">{ui.timeLabel}</label>
-                    <select value={requestedTime} onChange={e => setRequestedTime(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]">
-                      {generateTimeSlots().map((slot, i) => <option key={i} value={slot.value}>{slot.label}</option>)}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="text-xs text-gray-400 block mb-1">{ui.orderNoteTitle}</label>
-                    <textarea 
-                      value={orderNote} 
-                      onChange={e => setOrderNote(e.target.value)} 
-                      placeholder={ui.orderNotePlh}
-                      rows={2}
-                      className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8] resize-none"
-                    ></textarea>
-                  </div>
-
-                  <div className="mt-2">
-                    <label className="text-xs text-gray-400 block mb-2">{ui.payLabel}</label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div onClick={() => setPaymentMethod('card')} className={`cursor-pointer p-4 rounded-xl border text-center transition-all font-bold ${paymentMethod === 'card' ? 'bg-[#38BDF8]/10 border-[#38BDF8] text-[#38BDF8]' : 'bg-slate-800 border-white/5 text-gray-400'}`}>💳 {ui.card}</div>
-                      <div onClick={() => setPaymentMethod('cash')} className={`cursor-pointer p-4 rounded-xl border text-center transition-all font-bold ${paymentMethod === 'cash' ? 'bg-[#38BDF8]/10 border-[#38BDF8] text-[#38BDF8]' : 'bg-slate-800 border-white/5 text-gray-400'}`}>💵 {ui.cash}</div>
-                    </div>
-                  </div>
+                  <div><label className="text-xs text-gray-400 block mb-1">{ui.nameLabel}</label><input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" /></div>
+                  <div><label className="text-xs text-gray-400 block mb-1">{ui.phoneLabel}</label><input type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" /></div>
+                  <div><label className="text-xs text-gray-400 block mb-1">{ui.timeLabel}</label><select value={requestedTime} onChange={e => setRequestedTime(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]">{generateTimeSlots().map((slot, i) => <option key={i} value={slot.value}>{slot.label}</option>)}</select></div>
+                  <div><label className="text-xs text-gray-400 block mb-1">{ui.orderNoteTitle}</label><textarea value={orderNote} onChange={e => setOrderNote(e.target.value)} placeholder={ui.orderNotePlh} rows={2} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8] resize-none"></textarea></div>
+                  <div className="mt-2"><label className="text-xs text-gray-400 block mb-2">{ui.payLabel}</label><div className="grid grid-cols-2 gap-3"><div onClick={() => setPaymentMethod('card')} className={`cursor-pointer p-4 rounded-xl border text-center transition-all font-bold ${paymentMethod === 'card' ? 'bg-[#38BDF8]/10 border-[#38BDF8] text-[#38BDF8]' : 'bg-slate-800 border-white/5 text-gray-400'}`}>💳 {ui.card}</div><div onClick={() => setPaymentMethod('cash')} className={`cursor-pointer p-4 rounded-xl border text-center transition-all font-bold ${paymentMethod === 'cash' ? 'bg-[#38BDF8]/10 border-[#38BDF8] text-[#38BDF8]' : 'bg-slate-800 border-white/5 text-gray-400'}`}>💵 {ui.cash}</div></div></div>
                 </form>
               )}
             </div>
@@ -659,20 +555,19 @@ export default function OrderPage() {
                 {loyaltyDiscount > 0 && <div className="flex justify-between items-center mb-1 text-[#38BDF8]"><span className="text-xs">{ui.loyaltyDiscount}</span><span className="font-bold">-{loyaltyDiscount.toFixed(2)} kr.</span></div>}
                 <div className="flex justify-between items-center mt-4 mb-6 border-t border-white/10 pt-4"><span className="text-gray-200 font-bold">{ui.totalPay}</span><span className="text-2xl font-black text-[#38BDF8]">{finalTotal.toFixed(2)} kr.</span></div>
                 
-                {checkoutStep === 'cart' ? (
-                  storeOpen ? (
-                    <button onClick={proceedToCheckout} className="w-full bg-[#38BDF8] text-slate-900 font-black uppercase tracking-wider py-4 rounded-xl shadow-lg hover:bg-sky-400 transition-colors">{ui.toCheckout}</button>
-                  ) : (
-                    <div className="w-full bg-red-900/50 border border-red-500 text-red-400 font-black uppercase tracking-wider py-4 rounded-xl text-center shadow-lg">
-                      {ui.closedStore}
-                    </div>
-                  )
+                {/* ΔΙΟΡΘΩΣΗ: ΠΛΗΡΕΣ ΜΠΛΟΚΑΡΙΣΜΑ ΑΝ ΕΙΝΑΙ ΚΛΕΙΣΤΟ (ΑΚΟΜΑ ΚΑΙ ΑΝ ΠΡΟΛΑΒΕ ΝΑ ΠΑΕΙ ΣΤΟ CHECKOUT) */}
+                {!storeOpen ? (
+                  <div className="w-full bg-red-900/50 border border-red-500 text-red-400 font-black uppercase tracking-wider py-4 rounded-xl text-center shadow-lg">
+                    {ui.closedStore}
+                  </div>
+                ) : checkoutStep === 'cart' ? (
+                  <button onClick={proceedToCheckout} className="w-full bg-[#38BDF8] text-slate-900 font-black uppercase tracking-wider py-4 rounded-xl shadow-lg hover:bg-sky-400 transition-colors">{ui.toCheckout}</button>
                 ) : checkoutStep === 'auth' ? (
                   <button type="button" onClick={() => setCheckoutStep('cart')} className="w-full px-6 py-4 rounded-xl bg-slate-800 text-white font-bold border border-white/5 uppercase">{ui.backToCart}</button>
                 ) : (
                   <div className="flex gap-3">
                     <button type="button" onClick={() => setCheckoutStep('cart')} className="px-6 py-4 rounded-xl bg-slate-800 text-white font-bold border border-white/5 uppercase">{ui.back}</button>
-                    <button type="submit" form="checkoutForm" disabled={isSubmitting || !storeOpen} className="flex-1 bg-emerald-500 hover:bg-emerald-400 transition-colors text-[#0B1120] font-black py-4 rounded-xl disabled:opacity-50 uppercase tracking-wider">{isSubmitting ? ui.sending : ui.confirm}</button>
+                    <button type="submit" form="checkoutForm" disabled={isSubmitting} className="flex-1 bg-emerald-500 hover:bg-emerald-400 transition-colors text-[#0B1120] font-black py-4 rounded-xl disabled:opacity-50 uppercase tracking-wider">{isSubmitting ? ui.sending : ui.confirm}</button>
                   </div>
                 )}
               </div>
