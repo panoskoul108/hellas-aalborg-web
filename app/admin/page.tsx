@@ -1,10 +1,11 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase'; 
-import { PrintTicket } from './PrintTicket';
+import { PrintTicket } from './PrintTicket'; 
 import OrderTimer from '@/components/admin/OrderTimer'; 
 import { OrderCard } from '../../components/admin/OrderCard'; 
 import HistoryPanel from '../../components/admin/HistoryPanel'; 
+import SettingsPanel from '../../components/admin/SettingsPanel'; // <--- ΕΙΣΑΓΩΓΗ ΤΩΝ ΡΥΘΜΙΣΕΩΝ
 
 const NOTIFICATION_SOUND = "/notification.mp3.wav"; 
 
@@ -20,7 +21,9 @@ export default function AdminDashboard() {
   const [isPrinting, setIsPrinting] = useState(false);
   const [activePrintOrder, setActivePrintOrder] = useState<any>(null);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'live' | 'history'>('live');
+  
+  // ΠΡΟΣΘΕΣΑΜΕ ΤΟ "settings"
+  const [activeTab, setActiveTab] = useState<'live' | 'history' | 'settings'>('live');
 
   // --- STATES ΓΙΑ ΤΟ PIN PAD ---
   const [expectedPin, setExpectedPin] = useState('1234'); 
@@ -55,28 +58,16 @@ export default function AdminDashboard() {
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session) {
-        setUser(session.user);
-      }
-      
-      const { data: pinData, error } = await supabase.from('pos_settings').select('pin_code').eq('id', 1).single();
-      
-      if (pinData) {
-        setExpectedPin(pinData.pin_code.trim()); 
-      }
-
+      if (session) setUser(session.user);
+      const { data: pinData } = await supabase.from('pos_settings').select('pin_code').eq('id', 1).single();
+      if (pinData) setExpectedPin(pinData.pin_code.trim()); 
       fetchOrders();
     };
     checkAuth();
   }, []);
 
   const fetchOrders = async () => {
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(50);
+    const { data } = await supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(50);
     if (data) setOrders(data);
     setIsLoading(false);
   };
@@ -84,13 +75,9 @@ export default function AdminDashboard() {
   useEffect(() => {
     const channel = supabase.channel('admin-orders-channel')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
-        if (payload.eventType === 'INSERT') {
-          setOrders(prev => [payload.new, ...prev]);
-        } else if (payload.eventType === 'UPDATE') {
-          setOrders(prev => prev.map(o => o.id === payload.new.id ? payload.new : o));
-        } else if (payload.eventType === 'DELETE') {
-          setOrders(prev => prev.filter(o => o.id !== payload.old.id));
-        }
+        if (payload.eventType === 'INSERT') setOrders(prev => [payload.new, ...prev]);
+        else if (payload.eventType === 'UPDATE') setOrders(prev => prev.map(o => o.id === payload.new.id ? payload.new : o));
+        else if (payload.eventType === 'DELETE') setOrders(prev => prev.filter(o => o.id !== payload.old.id));
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -98,30 +85,17 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (!audioUnlocked) return;
-
-    const interval = setInterval(() => {
-      fetchOrders();
-    }, 60000);
-
+    const interval = setInterval(() => fetchOrders(), 60000);
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        fetchOrders();
-        requestWakeLock(); 
-      }
+      if (document.visibilityState === 'visible') { fetchOrders(); requestWakeLock(); }
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
+    return () => { clearInterval(interval); document.removeEventListener("visibilitychange", handleVisibilityChange); };
   }, [audioUnlocked]);
 
   useEffect(() => {
     const pendingCount = orders.filter(o => o.status === 'pending').length;
-    if (pendingCount > prevCount && audioUnlocked) {
-      playSound();
-    }
+    if (pendingCount > prevCount && audioUnlocked) playSound();
     setPrevCount(pendingCount);
   }, [orders, prevCount, audioUnlocked]);
 
@@ -138,22 +112,10 @@ export default function AdminDashboard() {
       const audio = document.getElementById('order-alert-sound') as HTMLAudioElement;
       if (audio) {
         audio.muted = true;
-        audio.play().then(() => {
-          audio.muted = false;
-          setAudioUnlocked(true);
-          requestWakeLock(); 
-        }).catch(e => {
-          setAudioUnlocked(true); 
-          requestWakeLock();
-        });
-      } else {
-        setAudioUnlocked(true);
-        requestWakeLock();
-      }
+        audio.play().then(() => { audio.muted = false; setAudioUnlocked(true); requestWakeLock(); }).catch(e => { setAudioUnlocked(true); requestWakeLock(); });
+      } else { setAudioUnlocked(true); requestWakeLock(); }
     } else {
-      setPinError(true);
-      setEnteredPin('');
-      setTimeout(() => setPinError(false), 800);
+      setPinError(true); setEnteredPin(''); setTimeout(() => setPinError(false), 800);
     }
   };
 
@@ -171,9 +133,7 @@ export default function AdminDashboard() {
     setOrders(prev => prev.map(o => o.id === order.id ? updatedOrder : o));
     const { error } = await supabase.from('orders').update({ status: 'preparing', requested_time: confirmedTime }).eq('id', order.id);
     if (error) { alert("Σφάλμα: " + error.message); fetchOrders(); return; }
-    setActivePrintOrder(updatedOrder);
-    setIsPrinting(true);
-    setSelectedOrder(null); 
+    setActivePrintOrder(updatedOrder); setIsPrinting(true); setSelectedOrder(null); 
   };
 
   const handleCompleteOrder = async (order: any) => {
@@ -196,21 +156,15 @@ export default function AdminDashboard() {
       <div className="min-h-screen bg-[#0B1120] flex flex-col items-center justify-center p-6 text-center bg-[url('/bg.jpg')] bg-cover bg-fixed bg-center relative">
         <div className="absolute inset-0 bg-[#0B1120]/90 -z-10 backdrop-blur-sm"></div>
         <audio id="order-alert-sound" src={NOTIFICATION_SOUND} preload="auto" />
-        
         <h1 className="text-3xl font-black text-white uppercase tracking-widest mb-2 shadow-black drop-shadow-md">HELLAS AALBORG</h1>
         <p className="text-[#38BDF8] font-black uppercase tracking-widest text-xs mb-8">ΣΥΣΤΗΜΑ ΤΑΜΕΙΟΥ</p>
-        
         <div className={`bg-slate-800/80 p-8 rounded-[2.5rem] shadow-2xl border ${pinError ? 'border-red-500 animate-shake' : 'border-slate-600/50'} w-full max-w-xs backdrop-blur-md transition-colors duration-300`}>
-          
           <div className={`mb-8 h-14 bg-slate-900 rounded-2xl flex items-center justify-center tracking-[0.5em] text-3xl font-black border shadow-inner transition-colors ${pinError ? 'text-red-500 border-red-500/50' : 'text-[#38BDF8] border-slate-700'}`}>
              {enteredPin.length > 0 ? enteredPin.replace(/./g, '•') : <span className="text-slate-700 tracking-normal text-sm">PIN CODE</span>}
           </div>
-          
           <div className="grid grid-cols-3 gap-3">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
-              <button key={num} onClick={() => { if(enteredPin.length < 8) setEnteredPin(prev => prev + num); }} className="bg-slate-700 hover:bg-slate-600 text-white text-2xl font-black rounded-2xl aspect-square active:scale-90 transition-all shadow-md border border-slate-600">
-                {num}
-              </button>
+              <button key={num} onClick={() => { if(enteredPin.length < 8) setEnteredPin(prev => prev + num); }} className="bg-slate-700 hover:bg-slate-600 text-white text-2xl font-black rounded-2xl aspect-square active:scale-90 transition-all shadow-md border border-slate-600">{num}</button>
             ))}
             <button onClick={() => setEnteredPin('')} className="bg-red-900/40 hover:bg-red-500 text-red-400 hover:text-white text-lg font-black rounded-2xl aspect-square active:scale-90 transition-all shadow-md border border-red-900/50">C</button>
             <button onClick={() => { if(enteredPin.length < 8) setEnteredPin(prev => prev + '0'); }} className="bg-slate-700 hover:bg-slate-600 text-white text-2xl font-black rounded-2xl aspect-square active:scale-90 transition-all shadow-md border border-slate-600">0</button>
@@ -232,7 +186,6 @@ export default function AdminDashboard() {
       <div className={`min-h-screen font-sans bg-[#0B1120] text-gray-200 bg-[url('/bg.jpg')] bg-cover bg-fixed bg-center relative print:hidden ${isPrinting ? "hidden" : "block"}`}>
         <div className="absolute inset-0 bg-[#0B1120]/85 -z-10"></div>
         
-        {/* --- ΕΝΔΕΙΞΗ OFFLINE --- */}
         {isOffline && (
           <div className="bg-red-600 text-white font-black text-center py-1.5 uppercase tracking-widest animate-pulse z-50 fixed top-0 w-full shadow-lg">
             ⚠️ ΕΚΤΟΣ ΣΥΝΔΕΣΗΣ (OFFLINE) - ΕΛΕΓΞΤΕ ΤΟ INTERNET ⚠️
@@ -246,6 +199,8 @@ export default function AdminDashboard() {
             <div className="hidden md:flex bg-slate-900 rounded-xl p-1 border border-slate-700">
               <button onClick={() => setActiveTab('live')} className={`px-5 py-2 rounded-lg text-xs font-black uppercase transition-colors ${activeTab === 'live' ? 'bg-[#38BDF8] text-[#0B1120]' : 'text-gray-400 hover:text-white'}`}>LIVE ΤΑΜΕΙΟ</button>
               <button onClick={() => setActiveTab('history')} className={`px-5 py-2 rounded-lg text-xs font-black uppercase transition-colors ${activeTab === 'history' ? 'bg-[#38BDF8] text-[#0B1120]' : 'text-gray-400 hover:text-white'}`}>ΙΣΤΟΡΙΚΟ & Z</button>
+              {/* ΤΟ ΝΕΟ ΚΟΥΜΠΙ ΡΥΘΜΙΣΕΩΝ */}
+              <button onClick={() => setActiveTab('settings')} className={`px-5 py-2 rounded-lg text-xs font-black uppercase transition-colors ${activeTab === 'settings' ? 'bg-[#38BDF8] text-[#0B1120]' : 'text-gray-400 hover:text-white'}`}>ΡΥΘΜΙΣΕΙΣ</button>
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -327,9 +282,13 @@ export default function AdminDashboard() {
               </div>
             </div>
           </main>
-        ) : (
+        ) : activeTab === 'history' ? (
           <div className="p-4 md:p-6 max-w-[1800px] mx-auto animate-fade-in">
             <HistoryPanel />
+          </div>
+        ) : (
+          <div className="p-4 md:p-6 max-w-[1800px] mx-auto animate-fade-in">
+            <SettingsPanel />
           </div>
         )}
       </div>
