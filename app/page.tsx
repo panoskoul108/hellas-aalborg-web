@@ -21,7 +21,8 @@ const translations = {
     callNow: 'Ring nu', orderTakeaway: 'Bestil Takeaway',
     cateringTitle: 'Græsk Catering & Events',
     cateringDesc: 'Vi bringer den autentiske græske smag til dit arrangement. Vi håndterer store ordrer med særlige priser og gratis levering til din dør.',
-    cateringBtn: 'Ring for Tilbud'
+    cateringBtn: 'Ring for Tilbud',
+    days: ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'] // <-- ΝΕΟ: ΜΕΤΑΦΡΑΣΗ ΗΜΕΡΩΝ
   },
   en: {
     menu: 'Menu', location: 'Find Us', orderWolt: 'Order Wolt', tag: 'Taste of Greece',
@@ -40,7 +41,8 @@ const translations = {
     callNow: 'Call Now', orderTakeaway: 'Order Takeaway',
     cateringTitle: 'Greek Catering & Events',
     cateringDesc: 'Bring authentic Greek flavors to your event. We accommodate large orders with special pricing and complimentary delivery to your venue.',
-    cateringBtn: 'Call for a Quote'
+    cateringBtn: 'Call for a Quote',
+    days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
   },
   el: {
     menu: 'Μενού', location: 'Βρείτε μας', orderWolt: 'Μέσω Wolt', tag: 'Η Γεύση της Ελλάδας',
@@ -59,7 +61,8 @@ const translations = {
     callNow: 'Κλήση', orderTakeaway: 'Παραγγελία Takeaway',
     cateringTitle: 'Ελληνικό Catering & Εκδηλώσεις',
     cateringDesc: 'Φέρνουμε την αυθεντική ελληνική γεύση στην εκδήλωσή σας. Αναλαμβάνουμε μεγάλες παραγγελίες με ειδικές προνομιακές τιμές και δωρεάν διανομή.',
-    cateringBtn: 'Καλέστε μας'
+    cateringBtn: 'Καλέστε μας',
+    days: ['Δευτέρα', 'Τρίτη', 'Τετάρτη', 'Πέμπτη', 'Παρασκευή', 'Σάββατο', 'Κυριακή']
   }
 };
 
@@ -77,7 +80,7 @@ export default function Home() {
   const [isScrolled, setIsScrolled] = useState(false);
   
   const [menuItems, setMenuItems] = useState<any[]>([]);
-  const [storeHours, setStoreHours] = useState<any[]>([]); // Δυναμικό Ωράριο
+  const [storeHours, setStoreHours] = useState<any[]>([]); 
   const [isLoading, setIsLoading] = useState(true);
   
   const [selectedItem, setSelectedItem] = useState<any>(null);
@@ -336,9 +339,10 @@ export default function Home() {
           <div>
             <h4 className="text-lg font-bold text-white mb-8 tracking-wide">{t.hoursTitle}</h4>
             <ul className="space-y-4 text-sm">
+              {/* ΔΙΟΡΘΩΣΗ: ΧΡΗΣΗ ΜΕΤΑΦΡΑΣΜΕΝΩΝ ΗΜΕΡΩΝ */}
               {storeHours.length > 0 ? storeHours.map(day => (
                 <li key={day.day_of_week} className="flex justify-between border-b border-white/5 pb-3">
-                  <span className="text-gray-400">{day.day_name}</span>
+                  <span className="text-gray-400">{t.days[day.day_of_week - 1]}</span>
                   <span className={`font-bold ${day.is_closed ? 'text-red-400' : 'text-white'}`}>
                     {day.is_closed ? (lang === 'da' ? 'LUKKET' : lang === 'en' ? 'CLOSED' : 'ΚΛΕΙΣΤΑ') : `${day.open_time.slice(0,5)} - ${day.close_time.slice(0,5)}`}
                   </span>
@@ -374,7 +378,7 @@ export default function Home() {
         <a href="https://wolt.com/da/dnk/aalborg/restaurant/hellas-food1" target="_blank" rel="noopener noreferrer" className="flex-1 bg-gradient-to-r from-[#009de0] to-[#007fb5] text-white text-center font-bold py-3 rounded-2xl flex justify-center items-center gap-2 active:scale-95 transition-transform">🛵 {t.orderWolt}</a>
       </div>
 
-      {/* ΝΕΟ: ΑΝΑΔΥΟΜΕΝΟ ΠΑΡΑΘΥΡΟ ΠΙΑΤΟΥ (MODAL) */}
+      {/* ΑΝΑΔΥΟΜΕΝΟ ΠΑΡΑΘΥΡΟ ΠΙΑΤΟΥ (MODAL) */}
       {selectedItem && (
         <div 
           className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 md:p-6 opacity-100 transition-opacity"
@@ -439,6 +443,7 @@ export default function Home() {
           </div>
         </div>
       )}
+
     </div>
   );
 }
