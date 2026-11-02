@@ -5,7 +5,7 @@ import { PrintTicket } from './PrintTicket';
 import OrderTimer from '@/components/admin/OrderTimer'; 
 import { OrderCard } from '../../components/admin/OrderCard'; 
 import HistoryPanel from '../../components/admin/HistoryPanel'; 
-import SettingsPanel from '../../components/admin/SettingsPanel';
+import SettingsPanel from '../../components/admin/SettingsPanel'; // <-- ΑΥΤΟ ΕΛΕΙΠΕ
 
 const NOTIFICATION_SOUND = "/notification.mp3.wav"; 
 
