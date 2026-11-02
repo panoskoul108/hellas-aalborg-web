@@ -4,8 +4,7 @@ import Image from 'next/image';
 import { supabase } from '../supabase';
 import ProductModal from './ProductModal';
 import LoyaltyWallet from '../../components/order/LoyaltyWallet'; 
-import SmartUpsell from '../../components/order/SmartUpsell'; // <--- ΕΙΣΑΓΩΓΗ ΤΟΥ UPSELL
-import { isStoreOpen } from '../../lib/storeHours';
+import SmartUpsell from '../../components/order/SmartUpsell';
 
 const MAX_ORDERS = 50; 
 const LOCKOUT_MS = 5 * 60 * 1000;
@@ -71,7 +70,8 @@ export default function OrderPage() {
       orderNoteTitle: "Ordrebemærkning", orderNotePlh: "F.eks. 'Ekstra servietter tak'",
       emailPlh: "Email", passPlh: "Adgangskode", dobPlh: "Fødselsdato (Frivillig)",
       hasAcc: "Har du allerede en konto? Log ind", noAcc: "Opret en ny konto",
-      profileTitle: "Min Profil", myOrders: "Mine seneste ordrer", logout: "Log ud"
+      profileTitle: "Min Profil", myOrders: "Mine seneste ordrer", logout: "Log ud",
+      closedStore: "RESTAURANTEN ER LUKKET"
     },
     en: { 
       menuTitle: "Choose your dishes", add: "Add", wolt: "Want delivery? Order via Wolt 🛵",
@@ -95,7 +95,8 @@ export default function OrderPage() {
       orderNoteTitle: "Order Note", orderNotePlh: "e.g., 'Extra napkins please'",
       emailPlh: "Email", passPlh: "Password", dobPlh: "Date of Birth (Optional)",
       hasAcc: "Already have an account? Login", noAcc: "Create a new account",
-      profileTitle: "My Profile", myOrders: "My Recent Orders", logout: "Logout"
+      profileTitle: "My Profile", myOrders: "My Recent Orders", logout: "Logout",
+      closedStore: "RESTAURANT IS CLOSED"
     },
     el: { 
       menuTitle: "Επιλέξτε τα πιάτα σας", add: "Προσθήκη", wolt: "Θέλετε Delivery; Παραγγείλτε μέσω Wolt 🛵",
@@ -119,7 +120,8 @@ export default function OrderPage() {
       orderNoteTitle: "Γενικό Σχόλιο Παραγγελίας", orderNotePlh: "π.χ. 'Χτυπήστε το κουδούνι'",
       emailPlh: "Email", passPlh: "Κωδικός", dobPlh: "Ημερομηνία Γέννησης (Προαιρετικό)",
       hasAcc: "Έχετε ήδη λογαριασμό; Σύνδεση", noAcc: "Δημιουργία νέου λογαριασμού",
-      profileTitle: "Το Προφίλ μου", myOrders: "Πρόσφατες Παραγγελίες", logout: "Αποσύνδεση"
+      profileTitle: "Το Προφίλ μου", myOrders: "Πρόσφατες Παραγγελίες", logout: "Αποσύνδεση",
+      closedStore: "ΤΟ ΚΑΤΑΣΤΗΜΑ ΕΙΝΑΙ ΚΛΕΙΣΤΟ"
     }
   };
   const ui = dict[lang];
@@ -170,8 +172,48 @@ export default function OrderPage() {
     };
     checkSavedOrder();
 
-    setStoreOpen(isStoreOpen());
-    const interval = setInterval(() => { setStoreOpen(isStoreOpen()); }, 60000);
+    // ΕΛΕΓΧΟΣ ΩΡΑΡΙΟΥ ΑΠΕΥΘΕΙΑΣ ΑΠΟ ΤΗ ΒΑΣΗ ΔΕΔΟΜΕΝΩΝ
+    const checkStoreStatus = async () => {
+      const jsDay = new Date().getDay();
+      const dbDay = jsDay === 0 ? 7 : jsDay; // Μετατροπή Κυριακής (0) σε 7
+      
+      const { data } = await supabase.from('store_hours').select('*').eq('day_of_week', dbDay).single();
+      
+      if (data) {
+        // Αν το έχεις βάλει χειροκίνητα "ΚΛΕΙΣΤΑ" από το Admin:
+        if (data.is_closed) {
+          setStoreOpen(false);
+          return;
+        }
+
+        // Αυτόματος έλεγχος με βάση την ώρα
+        const now = new Date();
+        const currentTimeMins = now.getHours() * 60 + now.getMinutes();
+        
+        const [openH, openM] = data.open_time.split(':').map(Number);
+        const [closeH, closeM] = data.close_time.split(':').map(Number);
+        
+        const openMins = openH * 60 + openM;
+        let closeMins = closeH * 60 + closeM;
+        
+        // Αν κλείνει μετά τα μεσάνυχτα (π.χ. 05:00)
+        if (closeMins < openMins) closeMins += 24 * 60; 
+        
+        let currentAdjusted = currentTimeMins;
+        if (currentTimeMins < openMins && closeMins > 24 * 60) {
+           currentAdjusted += 24 * 60; 
+        }
+
+        if (currentAdjusted >= openMins && currentAdjusted <= closeMins) {
+           setStoreOpen(true);
+        } else {
+           setStoreOpen(false);
+        }
+      }
+    };
+
+    checkStoreStatus();
+    const interval = setInterval(checkStoreStatus, 60000);
     return () => { subscription.unsubscribe(); clearInterval(interval); };
   }, []);
 
@@ -564,7 +606,6 @@ export default function OrderPage() {
                     </div>
                   ))}
                   
-                  {/* --- ΕΔΩ ΕΜΦΑΝΙΖΕΤΑΙ ΤΟ ΕΞΥΠΝΟ UPSELL --- */}
                   <SmartUpsell cart={cart} menuItems={menuItems} lang={lang} onAdd={(item) => addToCart(item, 1)} />
 
                 </div>
@@ -623,7 +664,7 @@ export default function OrderPage() {
                     <button onClick={proceedToCheckout} className="w-full bg-[#38BDF8] text-slate-900 font-black uppercase tracking-wider py-4 rounded-xl shadow-lg hover:bg-sky-400 transition-colors">{ui.toCheckout}</button>
                   ) : (
                     <div className="w-full bg-red-900/50 border border-red-500 text-red-400 font-black uppercase tracking-wider py-4 rounded-xl text-center shadow-lg">
-                      {lang === 'da' ? 'RESTAURANTEN ER LUKKET' : lang === 'en' ? 'RESTAURANT IS CLOSED' : 'ΤΟ ΚΑΤΑΣΤΗΜΑ ΕΙΝΑΙ ΚΛΕΙΣΤΟ'}
+                      {ui.closedStore}
                     </div>
                   )
                 ) : checkoutStep === 'auth' ? (
