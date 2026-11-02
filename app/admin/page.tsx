@@ -37,22 +37,28 @@ export default function AdminDashboard() {
     }
   };
 
-  // ΕΠΙΘΕΤΙΚΟΣ ΕΛΕΓΧΟΣ OFFLINE (Ειδικά για Android POS)
+  // ΔΙΟΡΘΩΣΗ: ΠΡΑΓΜΑΤΙΚΟΣ ΕΛΕΓΧΟΣ ΙΝΤΕΡΝΕΤ (Real Ping) ΓΙΑ ANDROID
   useEffect(() => {
-    const checkOnlineStatus = () => setIsOffline(!navigator.onLine);
-    
-    window.addEventListener('online', checkOnlineStatus);
-    window.addEventListener('offline', checkOnlineStatus);
-    
-    // Έλεγχος κάθε 3 δευτερόλεπτα για να "ξυπνάει" το POS
-    const interval = setInterval(checkOnlineStatus, 3000);
-    checkOnlineStatus();
-
-    return () => {
-      window.removeEventListener('online', checkOnlineStatus);
-      window.removeEventListener('offline', checkOnlineStatus);
-      clearInterval(interval);
+    const checkRealConnection = async () => {
+      if (!navigator.onLine) {
+        setIsOffline(true);
+        return;
+      }
+      try {
+        const { error } = await supabase.from('pos_settings').select('id').limit(1);
+        if (error && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
+          setIsOffline(true);
+        } else {
+          setIsOffline(false);
+        }
+      } catch (e) {
+        setIsOffline(true);
+      }
     };
+
+    checkRealConnection();
+    const interval = setInterval(checkRealConnection, 4000); 
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -149,8 +155,9 @@ export default function AdminDashboard() {
     await supabase.from('orders').update({ is_delivered: true }).eq('id', orderId);
   };
 
+  // ΔΙΟΡΘΩΣΗ: ΑΠΟΛΥΤΗ ΤΟΠΟΘΕΤΗΣΗ ΓΙΑ ΤΟ BANNER OFFLINE
   const OfflineBanner = isOffline ? (
-    <div className="bg-red-600 text-white font-black text-center py-1.5 uppercase tracking-widest animate-pulse z-[9999] fixed top-0 left-0 w-full shadow-lg">
+    <div className="bg-red-600 text-white font-black text-center py-2 uppercase tracking-widest animate-pulse z-[99999] fixed top-0 left-0 w-full shadow-2xl text-lg print:hidden">
       ⚠️ ΕΚΤΟΣ ΣΥΝΔΕΣΗΣ (OFFLINE) - ΕΛΕΓΞΤΕ ΤΟ INTERNET ⚠️
     </div>
   ) : null;
@@ -194,7 +201,7 @@ export default function AdminDashboard() {
       <div className={`min-h-screen font-sans bg-[#0B1120] text-gray-200 bg-[url('/bg.jpg')] bg-cover bg-fixed bg-center relative print:hidden ${isPrinting ? "hidden" : "block"}`}>
         <div className="absolute inset-0 bg-[#0B1120]/85 -z-10"></div>
 
-        <header className="bg-[#0F172A]/90 border-b border-white/10 p-4 md:p-6 sticky top-0 z-40 flex justify-between items-center shadow-lg backdrop-blur-md mt-6">
+        <header className={`bg-[#0F172A]/90 border-b border-white/10 p-4 md:p-6 sticky top-0 z-40 flex justify-between items-center shadow-lg backdrop-blur-md ${isOffline ? 'mt-12' : ''}`}>
           <div className="flex items-center gap-6">
             <h1 className="text-xl md:text-2xl font-black text-white italic tracking-tight">HELLAS AALBORG <span className="text-[#38BDF8]">ADMIN</span></h1>
             
