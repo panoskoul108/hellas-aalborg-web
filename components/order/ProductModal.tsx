@@ -19,21 +19,28 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
     en: { add: "Add to Cart", qty: "Quantity", extras: "Extras & Removals", note: "Special requests", notePlh: "e.g., no tomato...", cancel: "Close" },
     el: { add: "Προσθήκη", qty: "Ποσότητα", extras: "Επιλογές & Έξτρα", note: "Ειδικές Οδηγίες", notePlh: "π.χ. χωρίς ντομάτα...", cancel: "Κλείσιμο" }
   };
-  const ui = dict[lang];
+  // Ασφάλεια σε περίπτωση που το lang είναι κάτι άκυρο
+  const ui = dict[lang] || dict['da'];
 
-  const getTitle = (item: any) => item[`title_${lang}`] || item.title_da || item.title_el || item.name;
-  const getDesc = (item: any) => item[`desc_${lang}`] || item.desc_da;
-  const getBasePrice = () => Number(activeProduct.price_takeaway || activeProduct.price || 0);
+  // Ασφαλής ανάγνωση τίτλου, περιγραφής και τιμής
+  const getTitle = (item: any) => item?.[`title_${lang}`] || item?.title_da || item?.title_el || item?.name || "Unknown Product";
+  const getDesc = (item: any) => item?.[`desc_${lang}`] || item?.desc_da || "";
+  const getBasePrice = () => Number(activeProduct?.price_takeaway || activeProduct?.price || 0);
 
-  // Ασφαλής ανάγνωση των Extras από τη βάση
+  // ΕΛΕΓΧΟΣ ΑΣΦΑΛΕΙΑΣ ΓΙΑ ΤΑ EXTRAS (Αποτρέπει το Application Error)
   let extrasList: any[] = [];
   try {
-    if (typeof activeProduct.extras === 'string') {
-      extrasList = JSON.parse(activeProduct.extras);
-    } else if (Array.isArray(activeProduct.extras)) {
-      extrasList = activeProduct.extras;
+    if (activeProduct?.extras) {
+      if (typeof activeProduct.extras === 'string') {
+        extrasList = JSON.parse(activeProduct.extras);
+      } else if (Array.isArray(activeProduct.extras)) {
+        extrasList = activeProduct.extras;
+      }
     }
-  } catch (e) {}
+  } catch (e) {
+    console.error("Σφάλμα στην ανάγνωση των extras:", e);
+    extrasList = [];
+  }
 
   const handleExtraToggle = (extra: any) => {
     const exists = selectedExtras.find(e => e.name_da === extra.name_da);
@@ -44,15 +51,13 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
     }
   };
 
-  const getExtraName = (extra: any) => extra[`name_${lang}`] || extra.name_da;
+  const getExtraName = (extra: any) => extra?.[`name_${lang}`] || extra?.name_da || "Option";
   
-  // Υπολογισμός τελικής τιμής με βάση τα έξτρα
   const extrasTotal = selectedExtras.reduce((sum, extra) => sum + Number(extra.price || 0), 0);
   const finalUnitPrice = getBasePrice() + extrasTotal;
   const totalPrice = finalUnitPrice * quantity;
 
   const handleAdd = () => {
-    // Φορμάρισμα των επιλογών για το χαρτάκι του ταμείου
     const formattedOptions = selectedExtras.map(e => {
       const priceStr = e.price > 0 ? ` (+${e.price} kr.)` : '';
       return `${getExtraName(e)}${priceStr}`;
@@ -60,7 +65,7 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
 
     const customItem = {
       ...activeProduct,
-      final_price: finalUnitPrice, // Στέλνουμε στο καλάθι τη νέα τιμή (Βάση + Έξτρα)
+      final_price: finalUnitPrice,
       selectedOptions: formattedOptions,
       note: note.trim()
     };
@@ -69,11 +74,14 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
     closeModal();
   };
 
+  // Αν για κάποιο λόγο το activeProduct είναι null, μην προσπαθήσεις να φορτώσεις το Modal
+  if (!activeProduct) return null;
+
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={closeModal}>
       <div className="bg-[#0F172A] border border-white/10 rounded-[2rem] w-full max-w-md overflow-hidden relative shadow-2xl flex flex-col max-h-[90vh] animate-fade-in-up" onClick={e => e.stopPropagation()}>
         
-        {activeProduct.image_path ? (
+        {activeProduct?.image_path ? (
           <div className="relative w-full h-48 sm:h-56 bg-slate-800 shrink-0">
             <img src={`${supabaseImageUrl}${activeProduct.image_path}`} alt={getTitle(activeProduct)} className="w-full h-full object-cover" />
             <button onClick={closeModal} className="absolute top-4 right-4 bg-black/60 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/90 z-10 backdrop-blur-md border border-white/20 transition-colors">&times;</button>
@@ -89,7 +97,7 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
           <p className="text-gray-400 text-sm mb-6 leading-relaxed">{getDesc(activeProduct)}</p>
 
           {/* ΛΙΣΤΑ ΜΕ ΕΠΙΛΟΓΕΣ & ΕΞΤΡΑ */}
-          {extrasList.length > 0 && (
+          {extrasList && extrasList.length > 0 && (
             <div className="mb-6">
               <h4 className="text-[10px] text-[#38BDF8] font-bold uppercase tracking-widest mb-3">{ui.extras}</h4>
               <div className="flex flex-col gap-2">
