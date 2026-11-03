@@ -37,52 +37,47 @@ export default function AdminDashboard() {
     }
   };
 
-// --- ΕΞΥΠΝΟΣ ΚΑΙ ΕΠΙΘΕΤΙΚΟΣ ΕΛΕΓΧΟΣ ΙΝΤΕΡΝΕΤ (Αόρατο Image Ping) ---
+  // --- ΕΞΥΠΝΟΣ ΚΑΙ ΕΠΙΘΕΤΙΚΟΣ ΕΛΕΓΧΟΣ ΙΝΤΕΡΝΕΤ (Αξιόπιστο Local Ping) ---
   useEffect(() => {
     let checkInterval: NodeJS.Timeout;
 
-    const checkInternetConnection = () => {
-      // 1. Γρήγορος έλεγχος λειτουργικού
+    const checkInternetConnection = async () => {
+      // 1. Έλεγχος από το λειτουργικό
       if (!navigator.onLine) {
         setIsOffline(true);
         return;
       }
 
-      // 2. Το κλασικό και αξιόπιστο Image Ping
-      // Προσπαθούμε να κατεβάσουμε μια τυχαία εικόνα 1x1. Αν αποτύχει, δεν έχουμε ίντερνετ.
-      const img = new Image();
-      
-      // Ορίζουμε αυστηρό χρονόμετρο. Αν δεν κατέβει σε 2.5 δευτερόλεπτα, το θεωρούμε νεκρό
-      const timeoutId = setTimeout(() => {
-        img.src = ''; 
-        setIsOffline(true);
-      }, 2500);
+      // 2. Fetch στο δικό μας site (favicon) για επιβεβαίωση της σύνδεσης.
+      // Είναι ελαφρύ και δεν μπλοκάρεται από AdBlockers όπως το Google Ping.
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 δευτερόλεπτα timeout
 
-      img.onload = () => {
+        const response = await fetch(`/favicon.ico?t=${Date.now()}`, {
+          method: 'HEAD',
+          signal: controller.signal,
+          cache: 'no-store'
+        });
+
         clearTimeout(timeoutId);
-        setIsOffline(false);
-      };
 
-      img.onerror = () => {
-        clearTimeout(timeoutId);
+        if (response.ok) {
+          setIsOffline(false);
+        } else {
+          setIsOffline(true);
+        }
+      } catch (error) {
         setIsOffline(true);
-      };
-
-      // Χρησιμοποιούμε μια 1x1 εικόνα Google, με ένα τυχαίο νούμερο (Date.now()) 
-      // στο τέλος για να ξεγελάσουμε την προσωρινή μνήμη (cache) του browser
-      img.src = `https://www.google.com/images/phd/px.gif?${Date.now()}`;
+      }
     };
 
-    // Αρχικός έλεγχος
     checkInternetConnection();
-    
-    // Έλεγχος κάθε 3 δευτερόλεπτα
-    checkInterval = setInterval(checkInternetConnection, 3000); 
+    checkInterval = setInterval(checkInternetConnection, 5000); // Έλεγχος κάθε 5 δεύτερα
 
-    // Ακούμε και τις αντιδράσεις του λειτουργικού συστήματος
     const handleOnline = () => checkInternetConnection();
     const handleOffline = () => setIsOffline(true);
-    
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
@@ -92,6 +87,7 @@ export default function AdminDashboard() {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
