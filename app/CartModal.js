@@ -31,6 +31,7 @@ export default function CartModal({
   const [customerPhone, setCustomerPhone] = useState("");
   const [requestedTime, setRequestedTime] = useState("ASAP");
   const [redeemReward, setRedeemReward] = useState(false);
+  const [cooldown, setCooldown] = useState(0); // ΠΡΟΣΘΗΚΗ: Κατάσταση για την αντίστροφη μέτρηση spam
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -40,6 +41,25 @@ export default function CartModal({
     }, 500);
     return () => clearTimeout(timer);
   }, [customerPhone]);
+
+  // ΠΡΟΣΘΗΚΗ: Έλεγχος για Anti-Spam (Αν έχει παραγγείλει πρόσφατα)
+  useEffect(() => {
+    const checkCooldown = () => {
+      const lastOrder = localStorage.getItem('last_order_time_takeaway');
+      if (lastOrder) {
+        const elapsed = Date.now() - parseInt(lastOrder, 10);
+        const remaining = 180000 - elapsed; // 3 λεπτά (180.000 ms) κόφτης
+        if (remaining > 0) {
+          setCooldown(Math.ceil(remaining / 1000));
+        } else {
+          setCooldown(0);
+        }
+      }
+    };
+    checkCooldown();
+    const interval = setInterval(checkCooldown, 1000);
+    return () => clearInterval(interval);
+  }, [isCartOpen]);
 
   if (!isCartOpen) return null;
   const isDark = theme === "dark";
@@ -66,6 +86,7 @@ export default function CartModal({
       fillRequired: "UDFYLD NAVN & TELEFON",
       sendOrder: "BESTIL TIL AFHENTNING",
       processing: "SENDER...",
+      waitMsg: "VENT VENLIGST", // ΠΡΟΣΘΗΚΗ
       pausedMsg: "Vi modtager desværre ikke online ordrer i øjeblikket.",
       privacyLink: "Privatlivspolitik & Handelsbetingelser (Nordic-mythos 1 ApS)",
     },
@@ -90,6 +111,7 @@ export default function CartModal({
       fillRequired: "ENTER NAME & PHONE",
       sendOrder: "ORDER FOR PICKUP",
       processing: "PROCESSING...",
+      waitMsg: "PLEASE WAIT", // ΠΡΟΣΘΗΚΗ
       pausedMsg: "We are currently not accepting online orders.",
       privacyLink: "Privacy Policy & Terms (Nordic-mythos 1 ApS)",
     },
@@ -114,6 +136,7 @@ export default function CartModal({
       fillRequired: "ΣΥΜΠΛΗΡΩΣΤΕ ΟΝΟΜΑ & ΤΗΛΕΦΩΝΟ",
       sendOrder: "ΑΠΟΣΤΟΛΗ ΠΑΡΑΓΓΕΛΙΑΣ",
       processing: "ΑΠΟΣΤΟΛΗ...",
+      waitMsg: "ΠΑΡΑΚΑΛΩ ΠΕΡΙΜΕΝΕΤΕ", // ΠΡΟΣΘΗΚΗ
       pausedMsg: "Προς το παρόν δεν δεχόμαστε online παραγγελίες.",
       privacyLink: "Πολιτική Απορρήτου & Όροι (Nordic-mythos 1 ApS)",
     },
@@ -153,7 +176,12 @@ export default function CartModal({
     paymentMethod;
 
   const triggerOrderSubmit = () => {
-    if (!isFormValid || isSubmitting) return;
+    if (!isFormValid || isSubmitting || cooldown > 0) return; // Ελέγχει και το cooldown
+
+    // Καταγράφει την ώρα αποστολής για να κόψει τα spam
+    localStorage.setItem('last_order_time_takeaway', Date.now().toString());
+    setCooldown(180);
+
     onSubmitOrder({
       order_type: "takeaway",
       customer_name: customerName.trim(),
@@ -439,20 +467,26 @@ export default function CartModal({
         ) : (
           <button
             onClick={triggerOrderSubmit}
-            disabled={!isFormValid || isSubmitting}
+            disabled={!isFormValid || isSubmitting || cooldown > 0}
             className={`w-full py-5 rounded-2xl font-black flex justify-between px-6 items-center transition-all active:scale-95 mb-1 ${
-              isFormValid && !isSubmitting
+              isFormValid && !isSubmitting && cooldown === 0
                 ? "text-white shadow-xl hover:opacity-90"
                 : isDark
                 ? "bg-gray-700 text-gray-500 cursor-not-allowed"
                 : "bg-gray-200 text-gray-400 cursor-not-allowed"
             }`}
-            style={isFormValid && !isSubmitting ? { backgroundColor: themeColor } : {}}
+            style={isFormValid && !isSubmitting && cooldown === 0 ? { backgroundColor: themeColor } : {}}
           >
             <span className="uppercase text-sm tracking-widest">
-              {isSubmitting ? ui.processing : !isFormValid ? ui.fillRequired : ui.sendOrder}
+              {cooldown > 0 
+                ? `${ui.waitMsg} ${cooldown}s` 
+                : isSubmitting 
+                  ? ui.processing 
+                  : !isFormValid 
+                    ? ui.fillRequired 
+                    : ui.sendOrder}
             </span>
-            <span className="text-xl">{finalTotalDkk.toFixed(0)} kr.</span>
+            {cooldown === 0 && <span className="text-xl">{finalTotalDkk.toFixed(0)} kr.</span>}
           </button>
         )}
 
