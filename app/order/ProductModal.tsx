@@ -11,18 +11,15 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
   const basePrice = Number(activeProduct.final_price || activeProduct.price_takeaway || activeProduct.price || 0);
   const addBtnText = lang === 'da' ? 'TILFØJ' : lang === 'en' ? 'ADD' : 'ΠΡΟΣΘΗΚΗ';
 
-  // ΑΣΦΑΛΗΣ ΑΝΑΓΝΩΣΗ EXTRAS: Δεν κρασάρει ποτέ!
   let extras: Record<string, any> = {};
   try { 
-    if (activeProduct.extras) {
-      extras = typeof activeProduct.extras === 'string' ? JSON.parse(activeProduct.extras) : activeProduct.extras; 
-    }
-  } catch (e) {
-    console.error("Σφάλμα στην ανάγνωση των extras:", e);
-    extras = {};
-  }
+    if (activeProduct.extras) extras = typeof activeProduct.extras === 'string' ? JSON.parse(activeProduct.extras) : activeProduct.extras; 
+  } catch (e) { extras = {}; }
 
-  // Ασφαλής υπολογισμός έξτρα τιμής
+  // Συναρτήσεις για δυναμική μετάφραση των κατηγοριών και επιλογών
+  const getGroupTitle = (group: any, key: string) => group[`title_${lang}`] || group.title_da || key;
+  const getOptLabel = (opt: any) => opt[`label_${lang}`] || opt.label_da || opt.name;
+
   let extraPrice = 0;
   Object.keys(extras).forEach(groupKey => {
     const group = extras[groupKey];
@@ -53,32 +50,27 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
   const handleAdd = () => {
     for (const groupKey of Object.keys(extras)) {
       if (extras[groupKey].type === 'single' && (!selections[groupKey] || selections[groupKey].length === 0)) {
-        alert(lang === 'da' ? `Vælg venligst: ${groupKey}` : lang === 'en' ? `Please select: ${groupKey}` : `Παρακαλώ επιλέξτε: ${groupKey}`);
+        alert(lang === 'da' ? `Vælg venligst: ${getGroupTitle(extras[groupKey], groupKey)}` : lang === 'en' ? `Please select: ${getGroupTitle(extras[groupKey], groupKey)}` : `Παρακαλώ επιλέξτε: ${getGroupTitle(extras[groupKey], groupKey)}`);
         return;
       }
     }
     
-    // Ασφαλής συλλογή όλων των επιλογών
     const flatSelections: string[] = [];
     Object.keys(selections).forEach(groupKey => {
        const group = extras[groupKey];
        if (group && Array.isArray(group.options)) {
            selections[groupKey].forEach(optName => {
                const optionDef = group.options.find((o: any) => o.name === optName);
-               const priceStr = optionDef && Number(optionDef.price) > 0 ? ` (+${optionDef.price} kr.)` : '';
-               flatSelections.push(`${optName}${priceStr}`);
+               if (optionDef) {
+                 const label = getOptLabel(optionDef);
+                 const priceStr = Number(optionDef.price) > 0 ? ` (+${optionDef.price} kr.)` : '';
+                 flatSelections.push(`${label}${priceStr}`);
+               }
            });
        }
     });
 
-    addToCart({ 
-      ...activeProduct, 
-      final_price: basePrice + extraPrice, 
-      price_takeaway: basePrice + extraPrice, 
-      selectedOptions: flatSelections, 
-      note 
-    }, quantity);
-    
+    addToCart({ ...activeProduct, final_price: basePrice + extraPrice, price_takeaway: basePrice + extraPrice, selectedOptions: flatSelections, note }, quantity);
     closeModal();
   };
 
@@ -111,13 +103,9 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
                 return (
                   <div key={groupKey} className="bg-slate-900/60 p-4 rounded-2xl border border-white/5 shadow-inner">
                     <div className="flex justify-between items-center mb-4">
-                      <h3 className="font-bold text-white text-sm uppercase tracking-wide">{groupKey}</h3>
+                      <h3 className="font-bold text-white text-sm uppercase tracking-wide">{getGroupTitle(group, groupKey)}</h3>
                       <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-md ${isSingle ? 'bg-[#38BDF8]/20 text-[#38BDF8]' : 'bg-gray-800 text-gray-400'}`}>
-                        {isSingle 
-                          ? (lang === 'da' ? 'OBLIGATORISK (Vælg 1)' : lang === 'en' ? 'REQUIRED (Select 1)' : 'ΥΠΟΧΡΕΩΤΙΚΟ (Επιλέξτε 1)')
-                          : group.max 
-                            ? (lang === 'da' ? `MAX ${group.max} VALG` : lang === 'en' ? `UP TO ${group.max} OPTIONS` : `ΕΩΣ ${group.max} ΕΠΙΛΟΓΕΣ`)
-                            : (lang === 'da' ? 'VALGFRIT' : lang === 'en' ? 'OPTIONAL' : 'ΠΡΟΑΙΡΕΤΙΚΟ')}
+                        {isSingle ? (lang === 'da' ? 'OBLIGATORISK (Vælg 1)' : lang === 'en' ? 'REQUIRED (Select 1)' : 'ΥΠΟΧΡΕΩΤΙΚΟ (Επιλέξτε 1)') : group.max ? (lang === 'da' ? `MAX ${group.max} VALG` : lang === 'en' ? `UP TO ${group.max} OPTIONS` : `ΕΩΣ ${group.max} ΕΠΙΛΟΓΕΣ`) : (lang === 'da' ? 'VALGFRIT' : lang === 'en' ? 'OPTIONAL' : 'ΠΡΟΑΙΡΕΤΙΚΟ')}
                       </span>
                     </div>
 
@@ -132,7 +120,7 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
                               <div className={`w-5 h-5 shrink-0 flex items-center justify-center border-2 transition-colors ${isSingle ? 'rounded-full' : 'rounded-md'} ${isSelected ? 'border-[#38BDF8] bg-[#38BDF8]' : 'border-gray-500'}`}>
                                 {isSelected && <span className={`bg-[#0F172A] ${isSingle ? 'w-2 h-2 rounded-full' : 'w-3 h-3'}`} style={!isSingle ? { clipPath: 'polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%)', backgroundColor: '#0F172A'} : {}}></span>}
                               </div>
-                              <span className={`text-sm font-bold ${isSelected ? 'text-white' : 'text-gray-300'}`}>{opt.name}</span>
+                              <span className={`text-sm font-bold ${isSelected ? 'text-white' : 'text-gray-300'}`}>{getOptLabel(opt)}</span>
                             </div>
                             <span className="text-xs font-black text-gray-400">{Number(opt.price) > 0 ? `+${opt.price} kr.` : ''}</span>
                             <input type={isSingle ? "radio" : "checkbox"} name={groupKey} checked={isSelected} disabled={isDisabled} onChange={() => handleSelect(groupKey, opt.name, isSingle, group.max)} className="hidden" />
