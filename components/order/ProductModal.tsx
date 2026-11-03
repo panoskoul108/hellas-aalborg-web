@@ -19,28 +19,31 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
     en: { add: "Add to Cart", qty: "Quantity", extras: "Extras & Removals", note: "Special requests", notePlh: "e.g., no tomato...", cancel: "Close" },
     el: { add: "Προσθήκη", qty: "Ποσότητα", extras: "Επιλογές & Έξτρα", note: "Ειδικές Οδηγίες", notePlh: "π.χ. χωρίς ντομάτα...", cancel: "Κλείσιμο" }
   };
-  // Ασφάλεια σε περίπτωση που το lang είναι κάτι άκυρο
+  
   const ui = dict[lang] || dict['da'];
 
-  // Ασφαλής ανάγνωση τίτλου, περιγραφής και τιμής
   const getTitle = (item: any) => item?.[`title_${lang}`] || item?.title_da || item?.title_el || item?.name || "Unknown Product";
   const getDesc = (item: any) => item?.[`desc_${lang}`] || item?.desc_da || "";
   const getBasePrice = () => Number(activeProduct?.price_takeaway || activeProduct?.price || 0);
 
-  // ΕΛΕΓΧΟΣ ΑΣΦΑΛΕΙΑΣ ΓΙΑ ΤΑ EXTRAS (Αποτρέπει το Application Error)
-  let extrasList: any[] = [];
+  // ΑΠΟΛΥΤΑ ΑΣΦΑΛΗΣ ΑΝΑΓΝΩΣΗ ΕΞΤΡΑ - Αποτρέπει το "Cannot read properties of undefined (reading 'map')"
+  let parsedExtras: any[] = [];
   try {
-    if (activeProduct?.extras) {
-      if (typeof activeProduct.extras === 'string') {
-        extrasList = JSON.parse(activeProduct.extras);
-      } else if (Array.isArray(activeProduct.extras)) {
-        extrasList = activeProduct.extras;
+    const raw = activeProduct?.extras;
+    if (Array.isArray(raw)) {
+      parsedExtras = raw;
+    } else if (typeof raw === 'string' && raw.trim() !== '') {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        parsedExtras = parsed;
       }
     }
   } catch (e) {
     console.error("Σφάλμα στην ανάγνωση των extras:", e);
-    extrasList = [];
   }
+
+  // Διπλή ασφάλεια: Σιγουρευόμαστε ότι είναι πάντα Array πριν μπει στο JSX
+  const safeExtrasList = Array.isArray(parsedExtras) ? parsedExtras : [];
 
   const handleExtraToggle = (extra: any) => {
     const exists = selectedExtras.find(e => e.name_da === extra.name_da);
@@ -58,7 +61,8 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
   const totalPrice = finalUnitPrice * quantity;
 
   const handleAdd = () => {
-    const formattedOptions = selectedExtras.map(e => {
+    const safeSelected = Array.isArray(selectedExtras) ? selectedExtras : [];
+    const formattedOptions = safeSelected.map(e => {
       const priceStr = e.price > 0 ? ` (+${e.price} kr.)` : '';
       return `${getExtraName(e)}${priceStr}`;
     });
@@ -74,7 +78,6 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
     closeModal();
   };
 
-  // Αν για κάποιο λόγο το activeProduct είναι null, μην προσπαθήσεις να φορτώσεις το Modal
   if (!activeProduct) return null;
 
   return (
@@ -97,22 +100,22 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
           <p className="text-gray-400 text-sm mb-6 leading-relaxed">{getDesc(activeProduct)}</p>
 
           {/* ΛΙΣΤΑ ΜΕ ΕΠΙΛΟΓΕΣ & ΕΞΤΡΑ */}
-          {extrasList && extrasList.length > 0 && (
+          {safeExtrasList.length > 0 && (
             <div className="mb-6">
               <h4 className="text-[10px] text-[#38BDF8] font-bold uppercase tracking-widest mb-3">{ui.extras}</h4>
               <div className="flex flex-col gap-2">
-                {extrasList.map((extra, idx) => (
+                {safeExtrasList.map((extra, idx) => (
                   <label key={idx} className="flex items-center justify-between bg-slate-800/50 p-3 rounded-xl border border-white/5 cursor-pointer hover:bg-slate-800 transition-colors">
                     <div className="flex items-center gap-3">
                       <input 
                         type="checkbox" 
                         className="w-5 h-5 accent-[#38BDF8] rounded bg-slate-900 border-slate-700" 
-                        checked={!!selectedExtras.find(e => e.name_da === extra.name_da)}
+                        checked={!!selectedExtras.find(e => e.name_da === extra?.name_da)}
                         onChange={() => handleExtraToggle(extra)}
                       />
                       <span className="text-white font-medium text-sm">{getExtraName(extra)}</span>
                     </div>
-                    {extra.price > 0 && <span className="text-gray-400 text-xs font-bold">+{extra.price} kr.</span>}
+                    {extra?.price > 0 && <span className="text-gray-400 text-xs font-bold">+{extra.price} kr.</span>}
                   </label>
                 ))}
               </div>
