@@ -37,37 +37,27 @@ export default function AdminDashboard() {
     }
   };
 
-// --- ΕΞΥΠΝΟΣ ΚΑΙ ΕΠΙΘΕΤΙΚΟΣ ΕΛΕΓΧΟΣ ΙΝΤΕΡΝΕΤ (Άμεσο Ping) ---
+// --- ΑΞΙΟΠΙΣΤΟΣ ΕΛΕΓΧΟΣ ΙΝΤΕΡΝΕΤ (Supabase Health Check) ---
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
     const checkRealConnection = async () => {
-      // 1. Άμεσος έλεγχος λειτουργικού
       if (!navigator.onLine) {
         setIsOffline(true);
         return;
       }
       
-      // 2. Πραγματικό Ping χωρίς το Supabase (για να μην "κρεμάει" στα dropped connections)
       try {
-        const controller = new AbortController();
-        // Βάζουμε ένα πολύ αυστηρό όριο (timeout) 2.5 δευτερολέπτων. Αν δεν απαντήσει, κόπηκε.
-        const timeoutId = setTimeout(() => controller.abort(), 2500);
+        // Κάνουμε μια ελάχιστη κλήση στο Supabase (fetching 1 σειρά, μόνο το ID)
+        // Αυτό δεν επιβαρύνει καθόλου τη βάση και δεν μπλοκάρεται από τον browser
+        const { error } = await supabase.from('menu_items').select('id').limit(1);
         
-        // Καλούμε το favicon του ίδιου μας του site προσθέτοντας το Date.now() για να μην το διαβάσει από την προσωρινή μνήμη (cache)
-        const response = await fetch('/favicon.ico?' + Date.now(), { 
-          method: 'HEAD', 
-          signal: controller.signal,
-          cache: 'no-store'
-        });
-        
-        clearTimeout(timeoutId);
-        
-        if (response.ok) {
-          setIsOffline(false);
-        } else {
+        if (error) {
           setIsOffline(true);
+        } else {
+          setIsOffline(false);
         }
       } catch (e) {
-        // Αν το fetch αποτύχει ή γίνει abort από το timeout, ξέρουμε 100% ότι είμαστε offline
         setIsOffline(true);
       }
     };
@@ -75,11 +65,15 @@ export default function AdminDashboard() {
     // Αρχικός έλεγχος
     checkRealConnection();
     
-    // Έλεγχος κάθε 3 δευτερόλεπτα
-    const interval = setInterval(checkRealConnection, 3000); 
+    // Έλεγχος κάθε 5 δευτερόλεπτα (αρκετά γρήγορο, αλλά όχι τόσο ώστε να το μπλοκάρει ο browser για σπαμ)
+    const interval = setInterval(checkRealConnection, 5000); 
 
-    // Ακούμε τα events του browser και ελέγχουμε ξανά αμέσως
-    const handleOnline = () => checkRealConnection();
+    const handleOnline = () => {
+      // Βάζουμε μια μικρή καθυστέρηση (timeout) 1 δευτερολέπτου όταν επιστρέφει το ίντερνετ, 
+      // γιατί συχνά ο browser λέει "είμαι online" ένα δευτερόλεπτο πριν πραγματικά αποκατασταθεί η σύνδεση.
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(checkRealConnection, 1000);
+    };
     const handleOffline = () => setIsOffline(true);
     
     window.addEventListener('online', handleOnline);
@@ -87,6 +81,7 @@ export default function AdminDashboard() {
 
     return () => {
       clearInterval(interval);
+      clearTimeout(timeoutId);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
