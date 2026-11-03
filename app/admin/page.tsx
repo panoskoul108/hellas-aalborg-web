@@ -5,7 +5,7 @@ import { PrintTicket } from './PrintTicket';
 import OrderTimer from '@/components/admin/OrderTimer'; 
 import { OrderCard } from '../../components/admin/OrderCard'; 
 import HistoryPanel from '../../components/admin/HistoryPanel'; 
-import SettingsPanel from '../../components/admin/SettingsPanel'; // <-- ΑΥΤΟ ΕΛΕΙΠΕ
+import SettingsPanel from '../../components/admin/SettingsPanel';
 
 const NOTIFICATION_SOUND = "/notification.mp3.wav"; 
 
@@ -37,13 +37,15 @@ export default function AdminDashboard() {
     }
   };
 
-  // ΔΙΟΡΘΩΣΗ: ΠΡΑΓΜΑΤΙΚΟΣ ΕΛΕΓΧΟΣ ΙΝΤΕΡΝΕΤ (Real Ping) ΓΙΑ ANDROID
+  // --- ΕΞΥΠΝΟΣ ΚΑΙ ΕΠΙΘΕΤΙΚΟΣ ΕΛΕΓΧΟΣ ΙΝΤΕΡΝΕΤ (WiFi Ping) ---
   useEffect(() => {
     const checkRealConnection = async () => {
+      // 1. Έλεγχος σε επίπεδο λειτουργικού
       if (!navigator.onLine) {
         setIsOffline(true);
         return;
       }
+      // 2. Έλεγχος πραγματικής σύνδεσης με τη βάση
       try {
         const { error } = await supabase.from('pos_settings').select('id').limit(1);
         if (error && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
@@ -56,9 +58,23 @@ export default function AdminDashboard() {
       }
     };
 
+    // Αρχικός έλεγχος
     checkRealConnection();
+    
+    // Επαναληπτικός επιθετικός έλεγχος κάθε 4 δευτερόλεπτα
     const interval = setInterval(checkRealConnection, 4000); 
-    return () => clearInterval(interval);
+
+    // Ακούμε και τις άμεσες αλλαγές του Browser
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
   useEffect(() => {
@@ -155,10 +171,10 @@ export default function AdminDashboard() {
     await supabase.from('orders').update({ is_delivered: true }).eq('id', orderId);
   };
 
-  // ΔΙΟΡΘΩΣΗ: ΑΠΟΛΥΤΗ ΤΟΠΟΘΕΤΗΣΗ ΓΙΑ ΤΟ BANNER OFFLINE
+  // --- ΚΟΚΚΙΝΗ ΜΠΑΡΑ ΕΚΤΑΚΤΗΣ ΑΝΑΓΚΗΣ ---
   const OfflineBanner = isOffline ? (
-    <div className="bg-red-600 text-white font-black text-center py-2 uppercase tracking-widest animate-pulse z-[99999] fixed top-0 left-0 w-full shadow-2xl text-lg print:hidden">
-      ⚠️ ΕΚΤΟΣ ΣΥΝΔΕΣΗΣ (OFFLINE) - ΕΛΕΓΞΤΕ ΤΟ INTERNET ⚠️
+    <div className="bg-red-600 text-white font-black text-center py-3 uppercase tracking-widest animate-pulse z-[99999] fixed top-0 left-0 w-full shadow-2xl text-base md:text-xl print:hidden flex items-center justify-center gap-3">
+      <span className="text-2xl">⚠️</span> ΠΡΟΣΟΧΗ: ΕΚΤΟΣ ΣΥΝΔΕΣΗΣ (OFFLINE) - ΕΛΕΓΞΤΕ ΤΟ INTERNET Ή ΤΟ ROUTER <span className="text-2xl">⚠️</span>
     </div>
   ) : null;
 
@@ -172,7 +188,7 @@ export default function AdminDashboard() {
         <audio id="order-alert-sound" src={NOTIFICATION_SOUND} preload="auto" />
         <h1 className="text-3xl font-black text-white uppercase tracking-widest mb-2 shadow-black drop-shadow-md">HELLAS AALBORG</h1>
         <p className="text-[#38BDF8] font-black uppercase tracking-widest text-xs mb-8">ΣΥΣΤΗΜΑ ΤΑΜΕΙΟΥ</p>
-        <div className={`bg-slate-800/80 p-8 rounded-[2.5rem] shadow-2xl border ${pinError ? 'border-red-500 animate-shake' : 'border-slate-600/50'} w-full max-w-xs backdrop-blur-md transition-colors duration-300`}>
+        <div className={`bg-slate-800/80 p-8 rounded-[2.5rem] shadow-2xl border ${pinError ? 'border-red-500 animate-shake' : 'border-slate-600/50'} w-full max-w-xs backdrop-blur-md transition-colors duration-300 ${isOffline ? 'mt-12' : ''}`}>
           <div className={`mb-8 h-14 bg-slate-900 rounded-2xl flex items-center justify-center tracking-[0.5em] text-3xl font-black border shadow-inner transition-colors ${pinError ? 'text-red-500 border-red-500/50' : 'text-[#38BDF8] border-slate-700'}`}>
              {enteredPin.length > 0 ? enteredPin.replace(/./g, '•') : <span className="text-slate-700 tracking-normal text-sm">PIN CODE</span>}
           </div>
@@ -201,7 +217,7 @@ export default function AdminDashboard() {
       <div className={`min-h-screen font-sans bg-[#0B1120] text-gray-200 bg-[url('/bg.jpg')] bg-cover bg-fixed bg-center relative print:hidden ${isPrinting ? "hidden" : "block"}`}>
         <div className="absolute inset-0 bg-[#0B1120]/85 -z-10"></div>
 
-        <header className={`bg-[#0F172A]/90 border-b border-white/10 p-4 md:p-6 sticky top-0 z-40 flex justify-between items-center shadow-lg backdrop-blur-md ${isOffline ? 'mt-12' : ''}`}>
+        <header className={`bg-[#0F172A]/90 border-b border-white/10 p-4 md:p-6 sticky top-0 z-40 flex justify-between items-center shadow-lg backdrop-blur-md transition-all ${isOffline ? 'top-12' : 'top-0'}`}>
           <div className="flex items-center gap-6">
             <h1 className="text-xl md:text-2xl font-black text-white italic tracking-tight">HELLAS AALBORG <span className="text-[#38BDF8]">ADMIN</span></h1>
             
@@ -223,7 +239,7 @@ export default function AdminDashboard() {
         </header>
 
         {activeTab === 'live' ? (
-          <main className="p-4 md:p-6 max-w-[1800px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
+          <main className={`p-4 md:p-6 max-w-[1800px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in ${isOffline ? 'mt-12' : ''}`}>
             <div className="bg-[#0F172A]/80 border border-[#38BDF8]/30 rounded-[2rem] p-5 shadow-2xl min-h-[80vh] backdrop-blur-sm">
               <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
                 <h2 className="font-black text-lg uppercase text-[#38BDF8] tracking-widest flex items-center gap-2">
@@ -291,11 +307,11 @@ export default function AdminDashboard() {
             </div>
           </main>
         ) : activeTab === 'history' ? (
-          <div className="p-4 md:p-6 max-w-[1800px] mx-auto animate-fade-in">
+          <div className={`p-4 md:p-6 max-w-[1800px] mx-auto animate-fade-in ${isOffline ? 'mt-12' : ''}`}>
             <HistoryPanel />
           </div>
         ) : (
-          <div className="p-4 md:p-6 max-w-[1800px] mx-auto animate-fade-in">
+          <div className={`p-4 md:p-6 max-w-[1800px] mx-auto animate-fade-in ${isOffline ? 'mt-12' : ''}`}>
             <SettingsPanel />
           </div>
         )}
@@ -308,7 +324,7 @@ export default function AdminDashboard() {
       )}
 
       {selectedOrder && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm" onClick={() => setSelectedOrder(null)}>
+        <div className="fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm" onClick={() => setSelectedOrder(null)}>
           <div className="bg-slate-800 border border-slate-600 w-full max-w-xl rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
             <div className="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-900">
               <div>
