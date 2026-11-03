@@ -37,52 +37,18 @@ export default function AdminDashboard() {
     }
   };
 
-  // --- ΕΞΥΠΝΟΣ ΚΑΙ ΕΠΙΘΕΤΙΚΟΣ ΕΛΕΓΧΟΣ ΙΝΤΕΡΝΕΤ (Αξιόπιστο Local Ping) ---
+  // --- ΑΠΛΟΣ ΚΑΙ ΣΙΓΟΥΡΟΣ ΕΛΕΓΧΟΣ ΙΝΤΕΡΝΕΤ (Όπως στο Servato) ---
   useEffect(() => {
-    let checkInterval: NodeJS.Timeout;
+    // Θέτουμε την αρχική κατάσταση με το που φορτώσει η σελίδα
+    setIsOffline(!navigator.onLine);
 
-    const checkInternetConnection = async () => {
-      // 1. Έλεγχος από το λειτουργικό
-      if (!navigator.onLine) {
-        setIsOffline(true);
-        return;
-      }
-
-      // 2. Fetch στο δικό μας site (favicon) για επιβεβαίωση της σύνδεσης.
-      // Είναι ελαφρύ και δεν μπλοκάρεται από AdBlockers όπως το Google Ping.
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 δευτερόλεπτα timeout
-
-        const response = await fetch(`/favicon.ico?t=${Date.now()}`, {
-          method: 'HEAD',
-          signal: controller.signal,
-          cache: 'no-store'
-        });
-
-        clearTimeout(timeoutId);
-
-        if (response.ok) {
-          setIsOffline(false);
-        } else {
-          setIsOffline(true);
-        }
-      } catch (error) {
-        setIsOffline(true);
-      }
-    };
-
-    checkInternetConnection();
-    checkInterval = setInterval(checkInternetConnection, 5000); // Έλεγχος κάθε 5 δεύτερα
-
-    const handleOnline = () => checkInternetConnection();
+    const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
     return () => {
-      clearInterval(checkInterval);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
