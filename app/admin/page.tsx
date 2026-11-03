@@ -37,23 +37,37 @@ export default function AdminDashboard() {
     }
   };
 
-  // --- ΕΞΥΠΝΟΣ ΚΑΙ ΕΠΙΘΕΤΙΚΟΣ ΕΛΕΓΧΟΣ ΙΝΤΕΡΝΕΤ (WiFi Ping) ---
+// --- ΕΞΥΠΝΟΣ ΚΑΙ ΕΠΙΘΕΤΙΚΟΣ ΕΛΕΓΧΟΣ ΙΝΤΕΡΝΕΤ (Άμεσο Ping) ---
   useEffect(() => {
     const checkRealConnection = async () => {
-      // 1. Έλεγχος σε επίπεδο λειτουργικού
+      // 1. Άμεσος έλεγχος λειτουργικού
       if (!navigator.onLine) {
         setIsOffline(true);
         return;
       }
-      // 2. Έλεγχος πραγματικής σύνδεσης με τη βάση
+      
+      // 2. Πραγματικό Ping χωρίς το Supabase (για να μην "κρεμάει" στα dropped connections)
       try {
-        const { error } = await supabase.from('pos_settings').select('id').limit(1);
-        if (error && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
-          setIsOffline(true);
-        } else {
+        const controller = new AbortController();
+        // Βάζουμε ένα πολύ αυστηρό όριο (timeout) 2.5 δευτερολέπτων. Αν δεν απαντήσει, κόπηκε.
+        const timeoutId = setTimeout(() => controller.abort(), 2500);
+        
+        // Καλούμε το favicon του ίδιου μας του site προσθέτοντας το Date.now() για να μην το διαβάσει από την προσωρινή μνήμη (cache)
+        const response = await fetch('/favicon.ico?' + Date.now(), { 
+          method: 'HEAD', 
+          signal: controller.signal,
+          cache: 'no-store'
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
           setIsOffline(false);
+        } else {
+          setIsOffline(true);
         }
       } catch (e) {
+        // Αν το fetch αποτύχει ή γίνει abort από το timeout, ξέρουμε 100% ότι είμαστε offline
         setIsOffline(true);
       }
     };
@@ -61,12 +75,13 @@ export default function AdminDashboard() {
     // Αρχικός έλεγχος
     checkRealConnection();
     
-    // Επαναληπτικός επιθετικός έλεγχος κάθε 4 δευτερόλεπτα
-    const interval = setInterval(checkRealConnection, 4000); 
+    // Έλεγχος κάθε 3 δευτερόλεπτα
+    const interval = setInterval(checkRealConnection, 3000); 
 
-    // Ακούμε και τις άμεσες αλλαγές του Browser
-    const handleOnline = () => setIsOffline(false);
+    // Ακούμε τα events του browser και ελέγχουμε ξανά αμέσως
+    const handleOnline = () => checkRealConnection();
     const handleOffline = () => setIsOffline(true);
+    
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
