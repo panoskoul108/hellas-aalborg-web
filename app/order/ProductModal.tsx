@@ -11,16 +11,27 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
   const basePrice = Number(activeProduct.final_price || activeProduct.price_takeaway || activeProduct.price || 0);
   const addBtnText = lang === 'da' ? 'TILFØJ' : lang === 'en' ? 'ADD' : 'ΠΡΟΣΘΗΚΗ';
 
+  // ΑΣΦΑΛΗΣ ΑΝΑΓΝΩΣΗ EXTRAS: Δεν κρασάρει ποτέ!
   let extras: Record<string, any> = {};
-  try { extras = typeof activeProduct.extras === 'string' ? JSON.parse(activeProduct.extras) : activeProduct.extras || {}; } catch (e) {}
+  try { 
+    if (activeProduct.extras) {
+      extras = typeof activeProduct.extras === 'string' ? JSON.parse(activeProduct.extras) : activeProduct.extras; 
+    }
+  } catch (e) {
+    console.error("Σφάλμα στην ανάγνωση των extras:", e);
+    extras = {};
+  }
 
+  // Ασφαλής υπολογισμός έξτρα τιμής
   let extraPrice = 0;
   Object.keys(extras).forEach(groupKey => {
     const group = extras[groupKey];
-    (selections[groupKey] || []).forEach(optName => {
-      const optionDef = group.options.find((o: any) => o.name === optName);
-      if (optionDef) extraPrice += Number(optionDef.price || 0);
-    });
+    if (group && Array.isArray(group.options)) {
+      (selections[groupKey] || []).forEach(optName => {
+        const optionDef = group.options.find((o: any) => o.name === optName);
+        if (optionDef) extraPrice += Number(optionDef.price || 0);
+      });
+    }
   });
   
   const totalPrice = (basePrice + extraPrice) * quantity;
@@ -42,25 +53,44 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
   const handleAdd = () => {
     for (const groupKey of Object.keys(extras)) {
       if (extras[groupKey].type === 'single' && (!selections[groupKey] || selections[groupKey].length === 0)) {
-        alert(lang === 'da' ? `Vælg venligst: ${groupKey}` : `Please select: ${groupKey}`);
+        alert(lang === 'da' ? `Vælg venligst: ${groupKey}` : lang === 'en' ? `Please select: ${groupKey}` : `Παρακαλώ επιλέξτε: ${groupKey}`);
         return;
       }
     }
+    
+    // Ασφαλής συλλογή όλων των επιλογών
     const flatSelections: string[] = [];
-    Object.keys(selections).forEach(groupKey => selections[groupKey].forEach(optName => flatSelections.push(optName)));
-    addToCart({ ...activeProduct, final_price: basePrice + extraPrice, price_takeaway: basePrice + extraPrice, selectedOptions: flatSelections, note }, quantity);
+    Object.keys(selections).forEach(groupKey => {
+       const group = extras[groupKey];
+       if (group && Array.isArray(group.options)) {
+           selections[groupKey].forEach(optName => {
+               const optionDef = group.options.find((o: any) => o.name === optName);
+               const priceStr = optionDef && Number(optionDef.price) > 0 ? ` (+${optionDef.price} kr.)` : '';
+               flatSelections.push(`${optName}${priceStr}`);
+           });
+       }
+    });
+
+    addToCart({ 
+      ...activeProduct, 
+      final_price: basePrice + extraPrice, 
+      price_takeaway: basePrice + extraPrice, 
+      selectedOptions: flatSelections, 
+      note 
+    }, quantity);
+    
     closeModal();
   };
 
+  if (!activeProduct) return null;
+
   return (
-    <div className="fixed inset-0 bg-black/90 md:bg-black/80 z-50 flex items-end md:items-center justify-center md:p-4 backdrop-blur-sm animate-fade-in" onClick={closeModal}>
-      {/* MOBILE UI POLISH: Full width & height on mobile (h-[95vh] rounded-t-3xl), Max-width & auto-height on desktop */}
+    <div className="fixed inset-0 bg-black/90 md:bg-black/80 z-[100] flex items-end md:items-center justify-center md:p-4 backdrop-blur-sm animate-fade-in" onClick={closeModal}>
       <div className="bg-[#0F172A] w-full h-[95vh] md:h-auto md:max-w-xl rounded-t-3xl md:rounded-3xl overflow-hidden flex flex-col shadow-2xl md:max-h-[90vh] md:border border-white/10" onClick={e => e.stopPropagation()}>
         
         <div className="relative h-48 sm:h-56 shrink-0 bg-slate-800">
-          {/* Bigger, clearer close button for mobile */}
           <button onClick={closeModal} className="absolute top-4 right-4 bg-black/60 text-white w-10 h-10 rounded-full flex items-center justify-center hover:bg-black transition-colors z-10 text-xl font-light shadow-lg">✕</button>
-          {activeProduct.image_path ? (
+          {activeProduct?.image_path ? (
             <img src={`${supabaseImageUrl}${activeProduct.image_path}`} alt={title} className="w-full h-full object-cover" />
           ) : <div className="w-full h-full flex items-center justify-center text-5xl">🍽️</div>}
           <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A] to-transparent"></div>
@@ -92,7 +122,7 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
                     </div>
 
                     <div className="flex flex-col gap-2.5">
-                      {group.options.map((opt: any, idx: number) => {
+                      {(Array.isArray(group.options) ? group.options : []).map((opt: any, idx: number) => {
                         const isSelected = currentSelections.includes(opt.name);
                         const isDisabled = !isSingle && !isSelected && group.max && currentSelections.length >= group.max;
 
@@ -124,7 +154,6 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
           </div>
         </div>
 
-        {/* Footer is now fully pinned to the bottom on mobile */}
         <div className="p-4 md:p-5 border-t border-slate-800 bg-slate-900 shrink-0 flex flex-col md:flex-row items-stretch md:items-center gap-4">
           <div className="flex items-center justify-between md:justify-start gap-4 bg-slate-800 rounded-xl p-2 md:p-1.5 border border-white/5">
             <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-12 h-12 md:w-10 md:h-10 flex items-center justify-center text-white bg-slate-700 md:bg-transparent md:hover:bg-slate-700 rounded-lg font-black text-2xl transition-colors">-</button>
