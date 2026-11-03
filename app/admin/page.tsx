@@ -37,56 +37,61 @@ export default function AdminDashboard() {
     }
   };
 
-// --- ΑΞΙΟΠΙΣΤΟΣ ΕΛΕΓΧΟΣ ΙΝΤΕΡΝΕΤ (Supabase Health Check) ---
+// --- ΕΞΥΠΝΟΣ ΚΑΙ ΕΠΙΘΕΤΙΚΟΣ ΕΛΕΓΧΟΣ ΙΝΤΕΡΝΕΤ (Αόρατο Image Ping) ---
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
+    let checkInterval: NodeJS.Timeout;
 
-    const checkRealConnection = async () => {
+    const checkInternetConnection = () => {
+      // 1. Γρήγορος έλεγχος λειτουργικού
       if (!navigator.onLine) {
         setIsOffline(true);
         return;
       }
+
+      // 2. Το κλασικό και αξιόπιστο Image Ping
+      // Προσπαθούμε να κατεβάσουμε μια τυχαία εικόνα 1x1. Αν αποτύχει, δεν έχουμε ίντερνετ.
+      const img = new Image();
       
-      try {
-        // Κάνουμε μια ελάχιστη κλήση στο Supabase (fetching 1 σειρά, μόνο το ID)
-        // Αυτό δεν επιβαρύνει καθόλου τη βάση και δεν μπλοκάρεται από τον browser
-        const { error } = await supabase.from('menu_items').select('id').limit(1);
-        
-        if (error) {
-          setIsOffline(true);
-        } else {
-          setIsOffline(false);
-        }
-      } catch (e) {
+      // Ορίζουμε αυστηρό χρονόμετρο. Αν δεν κατέβει σε 2.5 δευτερόλεπτα, το θεωρούμε νεκρό
+      const timeoutId = setTimeout(() => {
+        img.src = ''; 
         setIsOffline(true);
-      }
+      }, 2500);
+
+      img.onload = () => {
+        clearTimeout(timeoutId);
+        setIsOffline(false);
+      };
+
+      img.onerror = () => {
+        clearTimeout(timeoutId);
+        setIsOffline(true);
+      };
+
+      // Χρησιμοποιούμε μια 1x1 εικόνα Google, με ένα τυχαίο νούμερο (Date.now()) 
+      // στο τέλος για να ξεγελάσουμε την προσωρινή μνήμη (cache) του browser
+      img.src = `https://www.google.com/images/phd/px.gif?${Date.now()}`;
     };
 
     // Αρχικός έλεγχος
-    checkRealConnection();
+    checkInternetConnection();
     
-    // Έλεγχος κάθε 5 δευτερόλεπτα (αρκετά γρήγορο, αλλά όχι τόσο ώστε να το μπλοκάρει ο browser για σπαμ)
-    const interval = setInterval(checkRealConnection, 5000); 
+    // Έλεγχος κάθε 3 δευτερόλεπτα
+    checkInterval = setInterval(checkInternetConnection, 3000); 
 
-    const handleOnline = () => {
-      // Βάζουμε μια μικρή καθυστέρηση (timeout) 1 δευτερολέπτου όταν επιστρέφει το ίντερνετ, 
-      // γιατί συχνά ο browser λέει "είμαι online" ένα δευτερόλεπτο πριν πραγματικά αποκατασταθεί η σύνδεση.
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(checkRealConnection, 1000);
-    };
+    // Ακούμε και τις αντιδράσεις του λειτουργικού συστήματος
+    const handleOnline = () => checkInternetConnection();
     const handleOffline = () => setIsOffline(true);
     
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
     return () => {
-      clearInterval(interval);
-      clearTimeout(timeoutId);
+      clearInterval(checkInterval);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
-
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
