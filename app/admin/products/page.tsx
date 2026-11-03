@@ -151,16 +151,19 @@ export default function ProductsPage() {
     }
   };
 
-  const saveEdit = async () => {
+ const saveEdit = async () => {
     const safeCategory = editForm.category?.trim().toUpperCase() || "ΓΕΝΙΚΑ";
-    const { addons, ...dbData } = editForm;
+    
+    // ΔΙΟΡΘΩΣΗ: Αφαιρούμε το 'id' (και το 'created_at') πριν την αποθήκευση!
+    const { id, created_at, addons, ...dbData } = editForm; 
+    
     const finalData = { ...dbData, category: safeCategory, extras: buildExtrasForDB(addons) };
 
     const { error } = await supabase.from("menu_items").update(finalData).eq("id", editingId);
     if (error) alert("Σφάλμα Αποθήκευσης: " + error.message);
     else { setEditingId(null); setIsCustomCategory(false); fetchProducts(); }
   };
-
+  
   const addNewProduct = async () => {
     const safeCategory = editForm.category?.trim().toUpperCase() || "ΓΕΝΙΚΑ";
     const { addons, ...dbData } = editForm;
