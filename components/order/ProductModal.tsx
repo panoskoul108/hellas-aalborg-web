@@ -1,80 +1,32 @@
 'use client';
 import React, { useState } from 'react';
 
-interface ProductModalProps {
-  activeProduct: any;
-  lang: 'da' | 'en' | 'el';
-  closeModal: () => void;
-  addToCart: (item: any, quantity: number) => void;
-  supabaseImageUrl: string;
-}
-
-export default function ProductModal({ activeProduct, lang, closeModal, addToCart, supabaseImageUrl }: ProductModalProps) {
+export default function ProductModal({ activeProduct, lang, closeModal, addToCart, supabaseImageUrl }: any) {
   const [quantity, setQuantity] = useState(1);
-  const [selectedExtras, setSelectedExtras] = useState<any[]>([]);
   const [note, setNote] = useState('');
 
   const dict = {
-    da: { add: "Tilføj til kurv", qty: "Antal", extras: "Tilvalg & Fravalg", note: "Særlige ønsker", notePlh: "F.eks. ingen tomat...", cancel: "Luk" },
-    en: { add: "Add to Cart", qty: "Quantity", extras: "Extras & Removals", note: "Special requests", notePlh: "e.g., no tomato...", cancel: "Close" },
-    el: { add: "Προσθήκη", qty: "Ποσότητα", extras: "Επιλογές & Έξτρα", note: "Ειδικές Οδηγίες", notePlh: "π.χ. χωρίς ντομάτα...", cancel: "Κλείσιμο" }
+    da: { add: "Tilføj til kurv", qty: "Antal", note: "Særlige ønsker", notePlh: "F.eks. ingen tomat..." },
+    en: { add: "Add to Cart", qty: "Quantity", note: "Special requests", notePlh: "e.g., no tomato..." },
+    el: { add: "Προσθήκη", qty: "Ποσότητα", note: "Ειδικές Οδηγίες", notePlh: "π.χ. χωρίς ντομάτα..." }
   };
   
-  const ui = dict[lang] || dict['da'];
+  const ui = dict[lang as keyof typeof dict] || dict['da'];
 
-  const getTitle = (item: any) => item?.[`title_${lang}`] || item?.title_da || item?.title_el || item?.name || "Unknown Product";
+  const getTitle = (item: any) => item?.[`title_${lang}`] || item?.title_da || item?.title_el || item?.name || "Product";
   const getDesc = (item: any) => item?.[`desc_${lang}`] || item?.desc_da || "";
   const getBasePrice = () => Number(activeProduct?.price_takeaway || activeProduct?.price || 0);
 
-  // ΑΠΟΛΥΤΑ ΑΣΦΑΛΗΣ ΑΝΑΓΝΩΣΗ ΕΞΤΡΑ - Αποτρέπει το "Cannot read properties of undefined (reading 'map')"
-  let parsedExtras: any[] = [];
-  try {
-    const raw = activeProduct?.extras;
-    if (Array.isArray(raw)) {
-      parsedExtras = raw;
-    } else if (typeof raw === 'string' && raw.trim() !== '') {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        parsedExtras = parsed;
-      }
-    }
-  } catch (e) {
-    console.error("Σφάλμα στην ανάγνωση των extras:", e);
-  }
-
-  // Διπλή ασφάλεια: Σιγουρευόμαστε ότι είναι πάντα Array πριν μπει στο JSX
-  const safeExtrasList = Array.isArray(parsedExtras) ? parsedExtras : [];
-
-  const handleExtraToggle = (extra: any) => {
-    const exists = selectedExtras.find(e => e.name_da === extra.name_da);
-    if (exists) {
-      setSelectedExtras(selectedExtras.filter(e => e.name_da !== extra.name_da));
-    } else {
-      setSelectedExtras([...selectedExtras, extra]);
-    }
-  };
-
-  const getExtraName = (extra: any) => extra?.[`name_${lang}`] || extra?.name_da || "Option";
-  
-  const extrasTotal = selectedExtras.reduce((sum, extra) => sum + Number(extra.price || 0), 0);
-  const finalUnitPrice = getBasePrice() + extrasTotal;
-  const totalPrice = finalUnitPrice * quantity;
+  const totalPrice = getBasePrice() * quantity;
 
   const handleAdd = () => {
-    const safeSelected = Array.isArray(selectedExtras) ? selectedExtras : [];
-    const formattedOptions = safeSelected.map(e => {
-      const priceStr = e.price > 0 ? ` (+${e.price} kr.)` : '';
-      return `${getExtraName(e)}${priceStr}`;
-    });
-
-    const customItem = {
-      ...activeProduct,
-      final_price: finalUnitPrice,
-      selectedOptions: formattedOptions,
-      note: note.trim()
-    };
-
-    addToCart(customItem, quantity);
+    // Στέλνει το προϊόν στο καλάθι με ασφάλεια (κενά options για να μην κρασάρει το καλάθι)
+    addToCart({ 
+      ...activeProduct, 
+      final_price: getBasePrice(), 
+      selectedOptions: [], 
+      note: note.trim() 
+    }, quantity);
     closeModal();
   };
 
@@ -98,31 +50,7 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
         <div className="p-5 sm:p-6 flex-1 overflow-y-auto">
           <h3 className="text-2xl font-black text-white mb-2">{getTitle(activeProduct)}</h3>
           <p className="text-gray-400 text-sm mb-6 leading-relaxed">{getDesc(activeProduct)}</p>
-
-          {/* ΛΙΣΤΑ ΜΕ ΕΠΙΛΟΓΕΣ & ΕΞΤΡΑ */}
-          {safeExtrasList.length > 0 && (
-            <div className="mb-6">
-              <h4 className="text-[10px] text-[#38BDF8] font-bold uppercase tracking-widest mb-3">{ui.extras}</h4>
-              <div className="flex flex-col gap-2">
-                {safeExtrasList.map((extra, idx) => (
-                  <label key={idx} className="flex items-center justify-between bg-slate-800/50 p-3 rounded-xl border border-white/5 cursor-pointer hover:bg-slate-800 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <input 
-                        type="checkbox" 
-                        className="w-5 h-5 accent-[#38BDF8] rounded bg-slate-900 border-slate-700" 
-                        checked={!!selectedExtras.find(e => e.name_da === extra?.name_da)}
-                        onChange={() => handleExtraToggle(extra)}
-                      />
-                      <span className="text-white font-medium text-sm">{getExtraName(extra)}</span>
-                    </div>
-                    {extra?.price > 0 && <span className="text-gray-400 text-xs font-bold">+{extra.price} kr.</span>}
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* ΕΙΔΙΚΕΣ ΟΔΗΓΙΕΣ ΠΙΑΤΟΥ */}
+          
           <div className="mb-6">
             <h4 className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-2">{ui.note}</h4>
             <textarea 
@@ -130,11 +58,10 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
               onChange={e => setNote(e.target.value)} 
               placeholder={ui.notePlh} 
               rows={2} 
-              className="w-full bg-slate-800/50 border border-slate-700 rounded-xl p-3 text-white text-sm outline-none focus:border-[#38BDF8] resize-none transition-colors"
+              className="w-full bg-slate-800/50 border border-slate-700 rounded-xl p-3 text-white text-sm outline-none focus:border-[#38BDF8] resize-none transition-colors" 
             />
           </div>
-
-          {/* ΠΟΣΟΤΗΤΑ */}
+          
           <div className="flex items-center justify-between bg-slate-900 p-2 rounded-2xl border border-white/5 mb-2 shadow-inner">
             <span className="text-xs text-gray-400 font-bold uppercase ml-3">{ui.qty}</span>
             <div className="flex items-center gap-4">
@@ -145,14 +72,12 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
           </div>
         </div>
 
-        {/* ΚΟΥΜΠΙ ΠΡΟΣΘΗΚΗΣ */}
         <div className="p-5 bg-slate-900 border-t border-white/10 shrink-0">
           <button onClick={handleAdd} className="w-full bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-black uppercase tracking-wider py-4 rounded-xl shadow-[0_0_20px_rgba(56,189,248,0.2)] transition-transform active:scale-95 flex justify-between px-6">
-            <span>{ui.add}</span>
-            <span>{totalPrice} kr.</span>
+            <span>{ui.add}</span><span>{totalPrice} kr.</span>
           </button>
         </div>
-        
+
       </div>
     </div>
   );
