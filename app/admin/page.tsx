@@ -16,7 +16,6 @@ export default function AdminDashboard() {
   
   const [prevCount, setPrevCount] = useState(0);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
-  const [isOffline, setIsOffline] = useState(false);
   
   const [isPrinting, setIsPrinting] = useState(false);
   const [activePrintOrder, setActivePrintOrder] = useState<any>(null);
@@ -36,23 +35,6 @@ export default function AdminDashboard() {
       console.log('Το Wake Lock απορρίφθηκε ή δεν υποστηρίζεται:', err);
     }
   };
-
-  // --- ΑΠΛΟΣ ΚΑΙ ΣΙΓΟΥΡΟΣ ΕΛΕΓΧΟΣ ΙΝΤΕΡΝΕΤ (Όπως στο Servato) ---
-  useEffect(() => {
-    // Θέτουμε την αρχική κατάσταση με το που φορτώσει η σελίδα
-    setIsOffline(!navigator.onLine);
-
-    const handleOnline = () => setIsOffline(false);
-    const handleOffline = () => setIsOffline(true);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -148,24 +130,16 @@ export default function AdminDashboard() {
     await supabase.from('orders').update({ is_delivered: true }).eq('id', orderId);
   };
 
-  // --- ΚΟΚΚΙΝΗ ΜΠΑΡΑ ΕΚΤΑΚΤΗΣ ΑΝΑΓΚΗΣ ---
-  const OfflineBanner = isOffline ? (
-    <div className="bg-red-600 text-white font-black text-center py-3 uppercase tracking-widest animate-pulse z-[99999] fixed top-0 left-0 w-full shadow-2xl text-base md:text-xl print:hidden flex items-center justify-center gap-3">
-      <span className="text-2xl">⚠️</span> ΠΡΟΣΟΧΗ: ΕΚΤΟΣ ΣΥΝΔΕΣΗΣ (OFFLINE) - ΕΛΕΓΞΤΕ ΤΟ INTERNET Ή ΤΟ ROUTER <span className="text-2xl">⚠️</span>
-    </div>
-  ) : null;
-
   if (isLoading) return <div className="min-h-screen bg-[#0B1120] flex items-center justify-center text-[#38BDF8] font-bold text-xl animate-pulse">Φόρτωση Ταμείου...</div>;
 
   if (!audioUnlocked) {
     return (
       <div className="min-h-screen bg-[#0B1120] flex flex-col items-center justify-center p-6 text-center bg-[url('/bg.jpg')] bg-cover bg-fixed bg-center relative">
-        {OfflineBanner}
         <div className="absolute inset-0 bg-[#0B1120]/90 -z-10 backdrop-blur-sm"></div>
         <audio id="order-alert-sound" src={NOTIFICATION_SOUND} preload="auto" />
         <h1 className="text-3xl font-black text-white uppercase tracking-widest mb-2 shadow-black drop-shadow-md">HELLAS AALBORG</h1>
         <p className="text-[#38BDF8] font-black uppercase tracking-widest text-xs mb-8">ΣΥΣΤΗΜΑ ΤΑΜΕΙΟΥ</p>
-        <div className={`bg-slate-800/80 p-8 rounded-[2.5rem] shadow-2xl border ${pinError ? 'border-red-500 animate-shake' : 'border-slate-600/50'} w-full max-w-xs backdrop-blur-md transition-colors duration-300 ${isOffline ? 'mt-12' : ''}`}>
+        <div className={`bg-slate-800/80 p-8 rounded-[2.5rem] shadow-2xl border ${pinError ? 'border-red-500 animate-shake' : 'border-slate-600/50'} w-full max-w-xs backdrop-blur-md transition-colors duration-300`}>
           <div className={`mb-8 h-14 bg-slate-900 rounded-2xl flex items-center justify-center tracking-[0.5em] text-3xl font-black border shadow-inner transition-colors ${pinError ? 'text-red-500 border-red-500/50' : 'text-[#38BDF8] border-slate-700'}`}>
              {enteredPin.length > 0 ? enteredPin.replace(/./g, '•') : <span className="text-slate-700 tracking-normal text-sm">PIN CODE</span>}
           </div>
@@ -189,12 +163,11 @@ export default function AdminDashboard() {
   return (
     <>
       <audio id="order-alert-sound" src={NOTIFICATION_SOUND} preload="auto" />
-      {OfflineBanner}
 
       <div className={`min-h-screen font-sans bg-[#0B1120] text-gray-200 bg-[url('/bg.jpg')] bg-cover bg-fixed bg-center relative print:hidden ${isPrinting ? "hidden" : "block"}`}>
         <div className="absolute inset-0 bg-[#0B1120]/85 -z-10"></div>
 
-        <header className={`bg-[#0F172A]/90 border-b border-white/10 p-4 md:p-6 sticky top-0 z-40 flex justify-between items-center shadow-lg backdrop-blur-md transition-all ${isOffline ? 'top-12' : 'top-0'}`}>
+        <header className="bg-[#0F172A]/90 border-b border-white/10 p-4 md:p-6 sticky top-0 z-40 flex justify-between items-center shadow-lg backdrop-blur-md transition-all">
           <div className="flex items-center gap-6">
             <h1 className="text-xl md:text-2xl font-black text-white italic tracking-tight">HELLAS AALBORG <span className="text-[#38BDF8]">ADMIN</span></h1>
             
@@ -216,7 +189,7 @@ export default function AdminDashboard() {
         </header>
 
         {activeTab === 'live' ? (
-          <main className={`p-4 md:p-6 max-w-[1800px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in ${isOffline ? 'mt-12' : ''}`}>
+          <main className="p-4 md:p-6 max-w-[1800px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
             <div className="bg-[#0F172A]/80 border border-[#38BDF8]/30 rounded-[2rem] p-5 shadow-2xl min-h-[80vh] backdrop-blur-sm">
               <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
                 <h2 className="font-black text-lg uppercase text-[#38BDF8] tracking-widest flex items-center gap-2">
@@ -284,11 +257,11 @@ export default function AdminDashboard() {
             </div>
           </main>
         ) : activeTab === 'history' ? (
-          <div className={`p-4 md:p-6 max-w-[1800px] mx-auto animate-fade-in ${isOffline ? 'mt-12' : ''}`}>
+          <div className="p-4 md:p-6 max-w-[1800px] mx-auto animate-fade-in">
             <HistoryPanel />
           </div>
         ) : (
-          <div className={`p-4 md:p-6 max-w-[1800px] mx-auto animate-fade-in ${isOffline ? 'mt-12' : ''}`}>
+          <div className="p-4 md:p-6 max-w-[1800px] mx-auto animate-fade-in">
             <SettingsPanel />
           </div>
         )}
