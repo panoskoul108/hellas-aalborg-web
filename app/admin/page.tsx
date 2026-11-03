@@ -6,6 +6,7 @@ import OrderTimer from '@/components/admin/OrderTimer';
 import { OrderCard } from '../../components/admin/OrderCard'; 
 import HistoryPanel from '../../components/admin/HistoryPanel'; 
 import SettingsPanel from '../../components/admin/SettingsPanel';
+import Link from 'next/link';
 
 const NOTIFICATION_SOUND = "/notification.mp3.wav"; 
 
@@ -88,8 +89,17 @@ export default function AdminDashboard() {
     }
   };
 
+  // ΠΡΟΣΘΗΚΗ: Θυμάται ότι έχεις ξεκλειδώσει το ταμείο ακόμα και μετά από refresh
+  useEffect(() => {
+    if (sessionStorage.getItem('admin_unlocked') === 'true') {
+      setAudioUnlocked(true);
+    }
+  }, []);
+
+  // ΑΛΛΑΓΗ: Αποθηκεύει το ξεκλείδωμα όταν βάζεις σωστό PIN
   const handlePinSubmit = () => {
     if (enteredPin === expectedPin) {
+      sessionStorage.setItem('admin_unlocked', 'true'); // Αποθήκευση!
       const audio = document.getElementById('order-alert-sound') as HTMLAudioElement;
       if (audio) {
         audio.muted = true;
@@ -179,9 +189,9 @@ export default function AdminDashboard() {
           </div>
           <div className="flex items-center gap-4">
             <button onClick={playSound} className="hidden sm:block bg-gray-800 text-gray-300 border border-gray-600 px-3 py-2 rounded-xl text-xs font-bold hover:bg-gray-700 transition-colors">🔊 Δοκιμή Ήχου</button>
-            <a href="/admin/products" className="hidden sm:block bg-purple-600 hover:bg-purple-500 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase shadow-lg transition-colors">📋 ΔΙΑΧΕΙΡΙΣΗ ΚΑΤΑΛΟΓΟΥ</a>
+            <Link href="/admin/products" className="hidden sm:block bg-purple-600 hover:bg-purple-500 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase shadow-lg transition-colors">📋 ΔΙΑΧΕΙΡΙΣΗ ΚΑΤΑΛΟΓΟΥ</Link>
             <button onClick={fetchOrders} className="w-10 h-10 rounded-xl bg-slate-800 text-[#38BDF8] flex items-center justify-center hover:bg-slate-700 text-xl shadow-md transition-colors">🔄</button>
-            <button onClick={() => { setAudioUnlocked(false); setEnteredPin(''); }} className="text-xs text-orange-400 hover:text-orange-300 font-bold uppercase ml-2 border border-orange-400/30 px-3 py-2 rounded-lg transition-colors">ΚΛΕΙΔΩΜΑ</button>
+            <button onClick={() => { setAudioUnlocked(false); setEnteredPin(''); sessionStorage.removeItem('admin_unlocked'); }} className="text-xs text-orange-400 hover:text-orange-300 font-bold uppercase ml-2 border border-orange-400/30 px-3 py-2 rounded-lg transition-colors">ΚΛΕΙΔΩΜΑ</button>
             {user && (
                <button onClick={() => supabase.auth.signOut().then(() => window.location.href="/")} className="text-xs text-red-500 hover:text-red-400 font-bold uppercase ml-1 transition-colors">ΕΞΟΔΟΣ</button>
             )}
