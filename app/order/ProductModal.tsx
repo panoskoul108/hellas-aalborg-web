@@ -1,15 +1,32 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 export default function ProductModal({ activeProduct, lang, closeModal, addToCart, supabaseImageUrl }: any) {
   const [quantity, setQuantity] = useState(1);
   const [note, setNote] = useState('');
   const [selections, setSelections] = useState<Record<string, string[]>>({});
 
+  // ΠΡΟΣΘΗΚΗ: Όταν ανοίγει το Modal, αν το προϊόν είναι ήδη στο καλάθι, φορτώνει τις παλιές επιλογές του
+  useEffect(() => {
+    if (activeProduct) {
+      setQuantity(activeProduct.quantity || 1);
+      setNote(activeProduct.note || '');
+      setSelections(activeProduct.rawSelections || {}); // Φορτώνει τα τσεκαρισμένα υλικά
+    }
+  }, [activeProduct]);
+
+  // Ελέγχει αν το προϊόν υπάρχει ήδη στο καλάθι (έχει cartId)
+  const isEditing = !!activeProduct?.cartId;
+
   const title = activeProduct[`title_${lang}`] || activeProduct.title_da || activeProduct.title_el || activeProduct.name;
   const desc = activeProduct[`desc_${lang}`] || activeProduct.desc_da;
-  const basePrice = Number(activeProduct.final_price || activeProduct.price_takeaway || activeProduct.price || 0);
-  const addBtnText = lang === 'da' ? 'TILFØJ' : lang === 'en' ? 'ADD' : 'ΠΡΟΣΘΗΚΗ';
+  
+  // ΠΡΟΣΘΗΚΗ: Χρησιμοποιεί την original_price για να μην διπλο-προσθέτει την τιμή των έξτρα στην επεξεργασία
+  const basePrice = Number(activeProduct.original_price || activeProduct.price_takeaway || activeProduct.price || 0);
+  
+  const addBtnText = isEditing 
+    ? (lang === 'da' ? 'GEM ÆNDRINGER' : lang === 'en' ? 'SAVE CHANGES' : 'ΑΠΟΘΗΚΕΥΣΗ')
+    : (lang === 'da' ? 'TILFØJ' : lang === 'en' ? 'ADD' : 'ΠΡΟΣΘΗΚΗ');
 
   let extras: Record<string, any> = {};
   try { 
@@ -70,7 +87,17 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
        }
     });
 
-    addToCart({ ...activeProduct, final_price: basePrice + extraPrice, price_takeaway: basePrice + extraPrice, selectedOptions: flatSelections, note }, quantity);
+    // ΠΡΟΣΘΗΚΗ: Αποθηκεύει το original_price και το rawSelections (για να μπορεί να τα διαβάσει αν ξαναπατήσει επεξεργασία)
+    addToCart({ 
+      ...activeProduct, 
+      original_price: basePrice,
+      final_price: basePrice + extraPrice, 
+      price_takeaway: basePrice + extraPrice, 
+      selectedOptions: flatSelections, 
+      rawSelections: selections, 
+      note 
+    }, quantity);
+    
     closeModal();
   };
 
