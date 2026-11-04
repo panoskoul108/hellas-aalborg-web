@@ -15,7 +15,7 @@ export default function PrivacyPolicy() {
 
         <div className="space-y-6 text-sm leading-relaxed text-gray-700">
           <section>
-            <h2 className="text-lg font-black uppercase text-gray-900 mb-2">1. Dataansvarlig (Υπεύθυνος Δεδομένων)</h2>
+            <h2 className="text-lg font-black uppercase text-gray-900 mb-2">1. Dataansvarlig </h2>
             <p>Den dataansvarlige for indsamling og behandling af personoplysninger er:<br/>
             <strong>Nordic-mythos 1 ApS (Hellas Aalborg)</strong><br/>
             Ved Stranden 21, 9000 Aalborg<br/>
@@ -23,16 +23,16 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="text-lg font-black uppercase text-gray-900 mb-2">2. Hvilke data vi indsamler (Τι συλλέγουμε)</h2>
+            <h2 className="text-lg font-black uppercase text-gray-900 mb-2">2. Hvilke data vi indsamler </h2>
             <p>Når du afgiver en takeaway-bestilling på vores hjemmeside, indsamler vi kun de oplysninger, der er strengt nødvendige for at gennemføre ordren:</p>
             <ul className="list-disc pl-5 mt-2 space-y-1">
-              <li>Dit fulde navn (Όνομα)</li>
-              <li>Dit telefonnummer (Τηλέφωνο)</li>
+              <li>Dit fulde navn</li>
+              <li>Dit telefonnummer </li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-lg font-black uppercase text-gray-900 mb-2">3. Formål med behandlingen (Σκοπός)</h2>
+            <h2 className="text-lg font-black uppercase text-gray-900 mb-2">3. Formål med behandlingen </h2>
             <p>Dine personoplysninger bruges udelukkende til at:</p>
             <ul className="list-disc pl-5 mt-2 mb-2 space-y-1">
               <li>Forberede og udlevere din madbestilling.</li>
@@ -42,12 +42,12 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="text-lg font-black uppercase text-gray-900 mb-2">4. Opbevaring & Cookies (Αποθήκευση & Cookies)</h2>
+            <h2 className="text-lg font-black uppercase text-gray-900 mb-2">4. Opbevaring & Cookies</h2>
             <p>Vi bruger kun "nødvendige cookies" (lokal lagring i din browser) for at huske indholdet af din indkøbskurv og forhindre spam. Dine ordreoplysninger gemmes i vores system af hensyn til regnskabsloven og slettes rutinemæssigt derefter.</p>
           </section>
 
           <section>
-            <h2 className="text-lg font-black uppercase text-gray-900 mb-2">5. Dine rettigheder (Τα δικαιώματά σου)</h2>
+            <h2 className="text-lg font-black uppercase text-gray-900 mb-2">5. Dine rettigheder </h2>
             <p>Du har altid ret til at anmode om indsigt i, hvilke data vi har om dig, eller bede om at få dem slettet. Kontakt os blot i restauranten.</p>
           </section>
         </div>
