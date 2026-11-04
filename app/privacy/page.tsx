@@ -33,13 +33,12 @@ export default function PrivacyPolicy() {
 
           <section>
             <h2 className="text-lg font-black uppercase text-gray-900 mb-2">3. Formål med behandlingen (Σκοπός)</h2>
-            <p>Dine personoplysninger bruges udelukkende til at:
-              <ul className="list-disc pl-5 mt-2 space-y-1">
-                <li>Forberede og udlevere din madbestilling.</li>
-                <li>Kontakte dig i tilfælde af ændringer eller problemer med din ordre.</li>
-              </ul>
-              Vi deler <strong>aldrig</strong> dine oplysninger med tredjeparter til markedsføring.
-            </p>
+            <p>Dine personoplysninger bruges udelukkende til at:</p>
+            <ul className="list-disc pl-5 mt-2 mb-2 space-y-1">
+              <li>Forberede og udlevere din madbestilling.</li>
+              <li>Kontakte dig i tilfælde af ændringer eller problemer med din ordre.</li>
+            </ul>
+            <p>Vi deler <strong>aldrig</strong> dine oplysninger med tredjeparter til markedsføring.</p>
           </section>
 
           <section>
