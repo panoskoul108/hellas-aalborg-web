@@ -6,24 +6,19 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
   const [note, setNote] = useState('');
   const [selections, setSelections] = useState<Record<string, string[]>>({});
 
-  // ΠΡΟΣΘΗΚΗ: Όταν ανοίγει το Modal, αν το προϊόν είναι ήδη στο καλάθι, φορτώνει τις παλιές επιλογές του
   useEffect(() => {
     if (activeProduct) {
       setQuantity(activeProduct.quantity || 1);
       setNote(activeProduct.note || '');
-      setSelections(activeProduct.rawSelections || {}); // Φορτώνει τα τσεκαρισμένα υλικά
+      setSelections(activeProduct.rawSelections || {}); 
     }
   }, [activeProduct]);
 
-  // Ελέγχει αν το προϊόν υπάρχει ήδη στο καλάθι (έχει cartId)
   const isEditing = !!activeProduct?.cartId;
-
   const title = activeProduct[`title_${lang}`] || activeProduct.title_da || activeProduct.title_el || activeProduct.name;
   const desc = activeProduct[`desc_${lang}`] || activeProduct.desc_da;
   
-  // ΠΡΟΣΘΗΚΗ: Χρησιμοποιεί την original_price για να μην διπλο-προσθέτει την τιμή των έξτρα στην επεξεργασία
   const basePrice = Number(activeProduct.original_price || activeProduct.price_takeaway || activeProduct.price || 0);
-  
   const addBtnText = isEditing 
     ? (lang === 'da' ? 'GEM ÆNDRINGER' : lang === 'en' ? 'SAVE CHANGES' : 'ΑΠΟΘΗΚΕΥΣΗ')
     : (lang === 'da' ? 'TILFØJ' : lang === 'en' ? 'ADD' : 'ΠΡΟΣΘΗΚΗ');
@@ -33,7 +28,6 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
     if (activeProduct.extras) extras = typeof activeProduct.extras === 'string' ? JSON.parse(activeProduct.extras) : activeProduct.extras; 
   } catch (e) { extras = {}; }
 
-  // Συναρτήσεις για δυναμική μετάφραση των κατηγοριών και επιλογών
   const getGroupTitle = (group: any, key: string) => group[`title_${lang}`] || group.title_da || key;
   const getOptLabel = (opt: any) => opt[`label_${lang}`] || opt.label_da || opt.name;
 
@@ -50,14 +44,15 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
   
   const totalPrice = (basePrice + extraPrice) * quantity;
 
-  const handleSelect = (groupKey: string, optionName: string, isSingle: boolean, max?: number) => {
+  // Βελτιωμένη λογική επιλογής (Λαμβάνει υπόψη το maxVal)
+  const handleSelect = (groupKey: string, optionName: string, isSingle: boolean, maxVal: number) => {
     setSelections(prev => {
       const currentSelections = prev[groupKey] || [];
       if (isSingle) return { ...prev, [groupKey]: [optionName] };
       else {
         if (currentSelections.includes(optionName)) return { ...prev, [groupKey]: currentSelections.filter(n => n !== optionName) };
         else {
-          if (max && currentSelections.length >= max) return prev; 
+          if (maxVal > 0 && currentSelections.length >= maxVal) return prev; 
           return { ...prev, [groupKey]: [...currentSelections, optionName] };
         }
       }
@@ -66,8 +61,12 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
 
   const handleAdd = () => {
     for (const groupKey of Object.keys(extras)) {
-      if (extras[groupKey].type === 'single' && (!selections[groupKey] || selections[groupKey].length === 0)) {
-        alert(lang === 'da' ? `Vælg venligst: ${getGroupTitle(extras[groupKey], groupKey)}` : lang === 'en' ? `Please select: ${getGroupTitle(extras[groupKey], groupKey)}` : `Παρακαλώ επιλέξτε: ${getGroupTitle(extras[groupKey], groupKey)}`);
+      const group = extras[groupKey];
+      const maxVal = Number(group.max) || 0;
+      const isSingle = (group.type === 'single' && maxVal <= 1) || maxVal === 1;
+
+      if (isSingle && (!selections[groupKey] || selections[groupKey].length === 0)) {
+        alert(lang === 'da' ? `Vælg venligst: ${getGroupTitle(group, groupKey)}` : lang === 'en' ? `Please select: ${getGroupTitle(group, groupKey)}` : `Παρακαλώ επιλέξτε: ${getGroupTitle(group, groupKey)}`);
         return;
       }
     }
@@ -87,7 +86,6 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
        }
     });
 
-    // ΠΡΟΣΘΗΚΗ: Αποθηκεύει το original_price και το rawSelections (για να μπορεί να τα διαβάσει αν ξαναπατήσει επεξεργασία)
     addToCart({ 
       ...activeProduct, 
       original_price: basePrice,
@@ -124,7 +122,10 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
             <div className="flex flex-col gap-6 mb-8">
               {Object.keys(extras).map((groupKey) => {
                 const group = extras[groupKey];
-                const isSingle = group.type === 'single';
+                const maxVal = Number(group.max) || 0;
+                
+                // ΕΞΥΠΝΟΣ ΕΛΕΓΧΟΣ: Ακυρώνει το "single" από το Supabase αν το max είναι >= 2
+                const isSingle = (group.type === 'single' && maxVal <= 1) || maxVal === 1;
                 const currentSelections = selections[groupKey] || [];
 
                 return (
@@ -132,14 +133,14 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="font-bold text-white text-sm uppercase tracking-wide">{getGroupTitle(group, groupKey)}</h3>
                       <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-md ${isSingle ? 'bg-[#38BDF8]/20 text-[#38BDF8]' : 'bg-gray-800 text-gray-400'}`}>
-                        {isSingle ? (lang === 'da' ? 'OBLIGATORISK (Vælg 1)' : lang === 'en' ? 'REQUIRED (Select 1)' : 'ΥΠΟΧΡΕΩΤΙΚΟ (Επιλέξτε 1)') : group.max ? (lang === 'da' ? `MAX ${group.max} VALG` : lang === 'en' ? `UP TO ${group.max} OPTIONS` : `ΕΩΣ ${group.max} ΕΠΙΛΟΓΕΣ`) : (lang === 'da' ? 'VALGFRIT' : lang === 'en' ? 'OPTIONAL' : 'ΠΡΟΑΙΡΕΤΙΚΟ')}
+                        {isSingle ? (lang === 'da' ? 'OBLIGATORISK (Vælg 1)' : lang === 'en' ? 'REQUIRED (Select 1)' : 'ΥΠΟΧΡΕΩΤΙΚΟ (Επιλέξτε 1)') : maxVal > 0 ? (lang === 'da' ? `MAX ${maxVal} VALG` : lang === 'en' ? `UP TO ${maxVal} OPTIONS` : `ΕΩΣ ${maxVal} ΕΠΙΛΟΓΕΣ`) : (lang === 'da' ? 'VALGFRIT' : lang === 'en' ? 'OPTIONAL' : 'ΠΡΟΑΙΡΕΤΙΚΟ')}
                       </span>
                     </div>
 
                     <div className="flex flex-col gap-2.5">
                       {(Array.isArray(group.options) ? group.options : []).map((opt: any, idx: number) => {
                         const isSelected = currentSelections.includes(opt.name);
-                        const isDisabled = !isSingle && !isSelected && group.max && currentSelections.length >= group.max;
+                        const isDisabled = !isSingle && !isSelected && maxVal > 0 && currentSelections.length >= maxVal;
 
                         return (
                           <label key={idx} className={`flex items-center justify-between p-4 rounded-xl border transition-colors cursor-pointer ${isSelected ? 'border-[#38BDF8] bg-[#38BDF8]/10' : 'border-white/5 bg-slate-800/80 hover:bg-slate-800'} ${isDisabled ? 'opacity-40 cursor-not-allowed' : ''}`}>
@@ -150,7 +151,7 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
                               <span className={`text-sm font-bold ${isSelected ? 'text-white' : 'text-gray-300'}`}>{getOptLabel(opt)}</span>
                             </div>
                             <span className="text-xs font-black text-gray-400">{Number(opt.price) > 0 ? `+${opt.price} kr.` : ''}</span>
-                            <input type={isSingle ? "radio" : "checkbox"} name={groupKey} checked={isSelected} disabled={isDisabled} onChange={() => handleSelect(groupKey, opt.name, isSingle, group.max)} className="hidden" />
+                            <input type={isSingle ? "radio" : "checkbox"} name={groupKey} checked={isSelected} disabled={isDisabled} onChange={() => handleSelect(groupKey, opt.name, isSingle, maxVal)} className="hidden" />
                           </label>
                         );
                       })}
