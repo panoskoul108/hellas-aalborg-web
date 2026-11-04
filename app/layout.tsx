@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import CookieBanner from './CookieBanner';
+import CookieBanner from '@/components/CookieBanner'; // Βεβαιώσου ότι το αρχείο είναι στον φάκελο components
 
 // Εδώ ρυθμίζουμε το SEO και το Εικονίδιο
 export const metadata: Metadata = {
@@ -37,21 +37,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="da" className="scroll-smooth">
-      <body className="bg-[#0B1120] text-gray-200 antialiased selection:bg-[#38BDF8] selection:text-[#0B1120]">
+    // ΠΡΟΣΘΗΚΗ: suppressHydrationWarning για να μην κρασάρει το React από Adblockers ή Google Translate
+    <html lang="da" className="scroll-smooth" suppressHydrationWarning>
+      <body className="bg-[#0B1120] text-gray-200 antialiased selection:bg-[#38BDF8] selection:text-[#0B1120]" suppressHydrationWarning>
         {children}
         <CookieBanner />
-        import CookieBanner from '@/components/CookieBanner'; // Ή το σωστό path σου
-
-// ... μέσα στο return του layout ή της αρχικής:
-  return (
-    <html lang="da">
-      <body>
-        {children}
-        <CookieBanner /> {/* <--- Πρόσθεσε αυτή τη γραμμή εδώ */}
-      </body>
-    </html>
-  );
       </body>
     </html>
   );
