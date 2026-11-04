@@ -41,6 +41,17 @@ export default function RootLayout({
       <body className="bg-[#0B1120] text-gray-200 antialiased selection:bg-[#38BDF8] selection:text-[#0B1120]">
         {children}
         <CookieBanner />
+        import CookieBanner from '@/components/CookieBanner'; // Ή το σωστό path σου
+
+// ... μέσα στο return του layout ή της αρχικής:
+  return (
+    <html lang="da">
+      <body>
+        {children}
+        <CookieBanner /> {/* <--- Πρόσθεσε αυτή τη γραμμή εδώ */}
+      </body>
+    </html>
+  );
       </body>
     </html>
   );
