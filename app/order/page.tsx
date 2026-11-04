@@ -42,7 +42,7 @@ export default function OrderPage() {
   const [isLocked, setIsLocked] = useState(false);
   
   const [storeOpen, setStoreOpen] = useState(true);
-  const [todayCloseTime, setTodayCloseTime] = useState('22:00'); // Νέο state για δυναμικές ώρες
+  const [todayCloseTime, setTodayCloseTime] = useState('22:00'); 
 
   const [placedOrder, setPlacedOrder] = useState<any>(null);
   const [userOrderHistory, setUserOrderHistory] = useState<any[]>([]); 
@@ -127,12 +127,10 @@ export default function OrderPage() {
   };
   const ui = dict[lang];
 
-  // ΝΕΑ ΛΟΓΙΚΗ ΩΡΩΝ: Αρχίζει 30 λεπτά μετά και φτάνει μέχρι το δυναμικό κλείσιμο
   const generateTimeSlots = () => {
     const slots = [{ value: 'ASAP', label: ui.asap }];
     const now = new Date();
     
-    // Ξεκινάμε +30 λεπτά από τώρα, στρογγυλοποιημένο στο επόμενο τέταρτο
     let current = new Date(now.getTime() + 30 * 60000); 
     current.setMinutes(Math.ceil(current.getMinutes() / 15) * 15);
     
@@ -140,7 +138,6 @@ export default function OrderPage() {
     const closeDate = new Date(now);
     closeDate.setHours(closeH, closeM, 0, 0);
     
-    // Αν κλείνει μετά τα μεσάνυχτα (π.χ. 05:00) και τώρα είναι βράδυ
     if (closeH < 12 && now.getHours() >= 12) {
       closeDate.setDate(closeDate.getDate() + 1);
     }
@@ -187,7 +184,7 @@ export default function OrderPage() {
       const { data } = await supabase.from('store_hours').select('*').eq('day_of_week', dbDay).single();
       
       if (data) {
-        setTodayCloseTime(data.close_time); // Αποθηκεύουμε την ώρα κλεισίματος
+        setTodayCloseTime(data.close_time); 
         
         if (data.is_closed) {
           setStoreOpen(false);
@@ -233,17 +230,28 @@ export default function OrderPage() {
   const getDesc = (item: any) => item[`desc_${lang}`] || item.desc_da;
   const getItemPrice = (item: any) => Number(item.final_price || item.price_takeaway || item.price || 0);
 
+  // ΔΙΟΡΘΩΜΕΝΗ ΣΥΝΑΡΤΗΣΗ addToCart (Για να λειτουργεί η Επεξεργασία)
   const addToCart = (item: any, quantity: number = 1) => {
     setCart(prev => {
-      const cartId = item.id + (item.selectedOptions?.join('-') || '') + (item.note || '');
-      const existing = prev.find(cartItem => cartItem.cartId === cartId);
-      if (existing) return prev.map(cartItem => cartItem.cartId === cartId ? { ...cartItem, quantity: cartItem.quantity + quantity } : cartItem);
+      // Αν το προϊόν έχει ήδη cartId (δηλαδή πατήθηκε το μολυβάκι '✏️' για edit), κάνε Update αντί για νέα εγγραφή
+      if (item.cartId) {
+        return prev.map(cartItem => cartItem.cartId === item.cartId ? { item, quantity, cartId: item.cartId } : cartItem);
+      }
+      
+      // Αλλιώς είναι νέα προσθήκη (Generate a new unique cartId)
+      const cartId = item.id + (item.selectedOptions?.join('-') || '') + (item.note || '') + Date.now().toString();
       return [...prev, { item, quantity, cartId }];
     });
   };
 
   const removeFromCart = (cartId: string) => setCart(prev => prev.filter(cartItem => cartItem.cartId !== cartId));
   const updateQuantity = (cartId: string, delta: number) => setCart(prev => prev.map(cartItem => cartItem.cartId === cartId ? (cartItem.quantity + delta > 0 ? { ...cartItem, quantity: cartItem.quantity + delta } : cartItem) : cartItem));
+
+  // ΠΡΟΣΘΗΚΗ: Συνάρτηση για να ανοίγει το Modal Επεξεργασίας (Edit)
+  const handleEditCartItem = (cartItem: any) => {
+    // Βάζει το cartId και την παλιά quantity μέσα στο προϊόν, για να το "καταλάβει" το ProductModal
+    setActiveProduct({ ...cartItem.item, cartId: cartItem.cartId, quantity: cartItem.quantity });
+  };
 
   const subtotal = cart.reduce((total, cartItem) => total + (getItemPrice(cartItem.item) * cartItem.quantity), 0);
   const finalTotal = Math.max(0, subtotal - loyaltyDiscount);
@@ -413,7 +421,6 @@ export default function OrderPage() {
                   </div>
                 </div>
               ) : checkoutStep === 'auth' ? (
-                // --- ΝΕΟΣ ΣΧΕΔΙΑΣΜΟΣ ΓΙΑ GUEST / AUTH ---
                 <div className="flex flex-col gap-6 animate-fade-in py-2">
                   <div className="text-center mb-2">
                     <h3 className="text-2xl font-black text-white uppercase tracking-widest">{ui.guestCheckout}</h3>
@@ -465,8 +472,18 @@ export default function OrderPage() {
                     <div key={idx} className="flex flex-col bg-slate-800/30 p-3 rounded-xl border border-white/5">
                       <div className="flex justify-between items-center mb-2">
                         <div className="flex-1 pr-2"><p className="font-bold text-white text-sm">{getTitle(cartItem.item)}</p><p className="text-xs text-[#38BDF8]">{getItemPrice(cartItem.item)} DKK</p></div>
-                        <div className="flex items-center gap-3 bg-slate-900 rounded-lg p-1 border border-white/5"><button onClick={() => updateQuantity(cartItem.cartId, -1)} className="w-8 h-8 flex items-center justify-center text-white bg-slate-800 hover:bg-slate-700 rounded-md font-bold text-lg">-</button><span className="font-bold text-sm w-4 text-center">{cartItem.quantity}</span><button onClick={() => updateQuantity(cartItem.cartId, 1)} className="w-8 h-8 flex items-center justify-center text-white bg-slate-800 hover:bg-slate-700 rounded-md font-bold text-lg">+</button></div>
-                        <button onClick={() => removeFromCart(cartItem.cartId)} className="ml-3 text-red-400 hover:text-red-300 text-lg bg-red-500/10 w-10 h-10 flex items-center justify-center rounded-lg">🗑️</button>
+                        <div className="flex items-center gap-3 bg-slate-900 rounded-lg p-1 border border-white/5">
+                          <button onClick={() => updateQuantity(cartItem.cartId, -1)} className="w-8 h-8 flex items-center justify-center text-white bg-slate-800 hover:bg-slate-700 rounded-md font-bold text-lg">-</button>
+                          <span className="font-bold text-sm w-4 text-center">{cartItem.quantity}</span>
+                          <button onClick={() => updateQuantity(cartItem.cartId, 1)} className="w-8 h-8 flex items-center justify-center text-white bg-slate-800 hover:bg-slate-700 rounded-md font-bold text-lg">+</button>
+                        </div>
+                        
+                        {/* ΠΡΟΣΘΗΚΗ: Κουμπί Επεξεργασίας (✏️) δίπλα στον κάδο */}
+                        <div className="flex items-center gap-1 ml-2">
+                          <button onClick={() => handleEditCartItem(cartItem)} className="text-[#38BDF8] hover:text-sky-300 text-lg bg-[#38BDF8]/10 w-10 h-10 flex items-center justify-center rounded-lg transition-colors">✏️</button>
+                          <button onClick={() => removeFromCart(cartItem.cartId)} className="text-red-400 hover:text-red-300 text-lg bg-red-500/10 w-10 h-10 flex items-center justify-center rounded-lg transition-colors">🗑️</button>
+                        </div>
+                        
                       </div>
                       {cartItem.item.selectedOptions?.length > 0 && <p className="text-[10px] text-gray-400 font-bold uppercase ml-1">+ {cartItem.item.selectedOptions.join(', ')}</p>}
                       {cartItem.item.note && <p className="text-[10px] text-yellow-500 font-bold italic ml-1 mt-1">📝 {cartItem.item.note}</p>}
@@ -481,7 +498,6 @@ export default function OrderPage() {
                   <div><label className="text-xs text-gray-400 block mb-1">{ui.nameLabel}</label><input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" /></div>
                   <div><label className="text-xs text-gray-400 block mb-1">{ui.phoneLabel}</label><input type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" /></div>
                   
-                  {/* Dropdown με Δυναμικές Ώρες */}
                   <div><label className="text-xs text-gray-400 block mb-1">{ui.timeLabel}</label><select value={requestedTime} onChange={e => setRequestedTime(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8] font-bold">{generateTimeSlots().map((slot, i) => <option key={i} value={slot.value}>{slot.label}</option>)}</select></div>
                   
                   <div><label className="text-xs text-gray-400 block mb-1">{ui.orderNoteTitle}</label><textarea value={orderNote} onChange={e => setOrderNote(e.target.value)} placeholder={ui.orderNotePlh} rows={2} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8] resize-none"></textarea></div>
