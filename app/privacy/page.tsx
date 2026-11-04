@@ -19,7 +19,7 @@ export default function PrivacyPolicy() {
             <p>Den dataansvarlige for indsamling og behandling af personoplysninger er:<br/>
             <strong>Nordic-mythos 1 ApS (Hellas Aalborg)</strong><br/>
             Ved Stranden 21, 9000 Aalborg<br/>
-            CVR: [Βάλε το CVR σου εδώ αν θες, αλλιώς σβήσε τη γραμμή]</p>
+            CVR: 46414373</p>
           </section>
 
           <section>
