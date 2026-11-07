@@ -5,6 +5,7 @@ import { supabase } from '../supabase';
 import ProductModal from './ProductModal';
 import LoyaltyWallet from '../../components/order/LoyaltyWallet'; 
 import SmartUpsell from '../../components/order/SmartUpsell';
+import { dict } from '../../utils/dict'; // ΕΙΣΑΓΩΓΗ ΤΟΥ ΛΕΞΙΚΟΥ ΑΠΟ ΤΟ ΝΕΟ ΑΡΧΕΙΟ
 
 const MAX_ORDERS = 50; 
 const LOCKOUT_MS = 5 * 60 * 1000;
@@ -48,83 +49,7 @@ export default function OrderPage() {
   const [userOrderHistory, setUserOrderHistory] = useState<any[]>([]); 
   const supabaseImageUrl = "https://keolpijcsvwsrzkjqtkc.supabase.co/storage/v1/object/public/menu-images/";
 
-  const dict = {
-    da: { 
-      menuTitle: "Vælg dine retter", add: "Tilføj", wolt: "Ønsker du levering? Bestil via Wolt 🛵",
-      cartTitle: "Din Bestilling", emptyCart: "Din kurv er tom.",
-      detailsTitle: "Dine oplysninger (Afhentning)", nameLabel: "Fulde Navn", phoneLabel: "Telefonnummer",
-      timeLabel: "Afhentningstidspunkt", asap: "Hurtigst muligt",
-      payLabel: "Betalingsmetode", card: "Kort", cash: "Kontant",
-      subtotal: "Subtotal", loyaltyDiscount: "Brugt fra Pung", vat: "Heraf 25% moms",
-      totalPay: "Total at betale", back: "Tilbage", confirm: "Bekræft Bestilling", sending: "Sender...",
-      close: "Luk", loginTitle: "Log ind", regTitle: "Opret Konto", toCheckout: "Gå til Kassen", backToCart: "Tilbage til kurv",
-      trackPending: "Afventer", trackPrep: "Tilberedes", trackReady: "Klar",
-      trackPendingTitle: "Afventer Godkendelse", trackPendingDesc: "Restauranten gennemgår din ordre...",
-      trackPrepTitle: "Tilberedes!", trackPrepTime: "Klar klokken:",
-      trackReadyTitle: "Klar til afhentning!", trackReadyDesc: "Din ordre venter på dig ved kassen.",
-      summaryTitle: "Din Ordre", summaryTotal: "Total",
-      guestCheckout: "Fortsæt som gæst", guestDesc: "Hurtig bestilling uden konto", or: "ELLER",
-      pickedUpBtn: "JEG HAR MODTAGET ORDREN",
-      thankYou: "MANGE TAK!",
-      reviewPrompt: "Vi håber, du nyder din mad! Vi vil sætte stor pris på, hvis du vil give os en anmeldelse på Google.",
-      leaveReview: "BEDØM OS PÅ GOOGLE ⭐",
-      orderNoteTitle: "Ordrebemærkning", orderNotePlh: "F.eks. 'Ekstra servietter tak'",
-      emailPlh: "Email", passPlh: "Adgangskode", dobPlh: "Fødselsdato (Frivillig)",
-      hasAcc: "Har du allerede en konto? Log ind", noAcc: "Opret en ny konto",
-      profileTitle: "Min Profil", myOrders: "Mine seneste ordrer", logout: "Log ud",
-      closedStore: "RESTAURANTEN ER LUKKET"
-    },
-    en: { 
-      menuTitle: "Choose your dishes", add: "Add", wolt: "Want delivery? Order via Wolt 🛵",
-      cartTitle: "Your Order", emptyCart: "Your cart is empty.",
-      detailsTitle: "Your Details (Pickup)", nameLabel: "Full Name", phoneLabel: "Phone Number",
-      timeLabel: "Pickup Time", asap: "As soon as possible",
-      payLabel: "Payment Method", card: "Card", cash: "Cash",
-      subtotal: "Subtotal", loyaltyDiscount: "Wallet Used", vat: "Includes 25% VAT",
-      totalPay: "Total to pay", back: "Back", confirm: "Confirm Order", sending: "Sending...",
-      close: "Close", loginTitle: "Login", regTitle: "Register", toCheckout: "Proceed to Checkout", backToCart: "Back to Cart",
-      trackPending: "Pending", trackPrep: "Preparing", trackReady: "Ready",
-      trackPendingTitle: "Awaiting Approval", trackPendingDesc: "The restaurant is reviewing your order...",
-      trackPrepTitle: "Preparing!", trackPrepTime: "Will be ready at:",
-      trackReadyTitle: "Ready for Pickup!", trackReadyDesc: "Your order is waiting for you at the counter.",
-      summaryTitle: "Your Order", summaryTotal: "Total",
-      guestCheckout: "Continue as Guest", guestDesc: "Quick order without an account", or: "OR",
-      pickedUpBtn: "I PICKED UP MY ORDER",
-      thankYou: "THANK YOU!",
-      reviewPrompt: "We hope you enjoy your meal! We would really appreciate it if you could leave us a quick review on Google.",
-      leaveReview: "RATE US ON GOOGLE ⭐",
-      orderNoteTitle: "Order Note", orderNotePlh: "e.g., 'Extra napkins please'",
-      emailPlh: "Email", passPlh: "Password", dobPlh: "Date of Birth (Optional)",
-      hasAcc: "Already have an account? Login", noAcc: "Create a new account",
-      profileTitle: "My Profile", myOrders: "My Recent Orders", logout: "Logout",
-      closedStore: "RESTAURANT IS CLOSED"
-    },
-    el: { 
-      menuTitle: "Επιλέξτε τα πιάτα σας", add: "Προσθήκη", wolt: "Θέλετε Delivery; Παραγγείλτε μέσω Wolt 🛵",
-      cartTitle: "Η Παραγγελία σας", emptyCart: "Το καλάθι σας είναι άδειο.",
-      detailsTitle: "Τα στοιχεία σας (Takeaway)", nameLabel: "Ονοματεπώνυμο", phoneLabel: "Τηλέφωνο",
-      timeLabel: "Ώρα Παραλαβής", asap: "Το συντομότερο δυνατό",
-      payLabel: "Τρόπος Πληρωμής", card: "Κάρτα (POS)", cash: "Μετρητά",
-      subtotal: "Μερικό Σύνολο", loyaltyDiscount: "Από Πορτοφόλι", vat: "Περιλαμβάνει 25% ΦΠΑ",
-      totalPay: "Σύνολο Πληρωμής", back: "Πίσω", confirm: "Επιβεβαίωση", sending: "Αποστολή...",
-      close: "Κλείσιμο", loginTitle: "Σύνδεση", regTitle: "Εγγραφή", toCheckout: "Ολοκλήρωση", backToCart: "Πίσω στο καλάθι",
-      trackPending: "Αναμονη", trackPrep: "Προετοιμασια", trackReady: "Ετοιμο",
-      trackPendingTitle: "Αναμονη Αποδοχης", trackPendingDesc: "Το κατάστημα εξετάζει την παραγγελία σας...",
-      trackPrepTitle: "Ετοιμαζεται!", trackPrepTime: "Θα ειναι ετοιμο στις:",
-      trackReadyTitle: "Ετοιμο για Παραλαβη!", trackReadyDesc: "Η παραγγελία σας περιμένει στο ταμείο.",
-      summaryTitle: "Η Παραγγελια Σας", summaryTotal: "Συνολο",
-      guestCheckout: "Συνεχεια ως Επισκεπτης", guestDesc: "Γρήγορη παραγγελία χωρίς λογαριασμό", or: "Η",
-      pickedUpBtn: "ΠΑΡΕΛΑΒΑ ΤΗΝ ΠΑΡΑΓΓΕΛΙΑ",
-      thankYou: "ΕΥΧΑΡΙΣΤΟΥΜΕ ΠΟΛΥ!",
-      reviewPrompt: "Ελπίζουμε να απολαύσετε το γεύμα σας! Θα εκτιμούσαμε πολύ αν αφιερώνατε 1 λεπτό για μια αξιολόγηση στο Google.",
-      leaveReview: "ΑΞΙΟΛΟΓΗΣΤΕ ΜΑΣ ⭐",
-      orderNoteTitle: "Γενικό Σχόλιο Παραγγελίας", orderNotePlh: "π.χ. 'Χτυπήστε το κουδούνι'",
-      emailPlh: "Email", passPlh: "Κωδικός", dobPlh: "Ημερομηνία Γέννησης (Προαιρετικό)",
-      hasAcc: "Έχετε ήδη λογαριασμό; Σύνδεση", noAcc: "Δημιουργία νέου λογαριασμού",
-      profileTitle: "Το Προφίλ μου", myOrders: "Πρόσφατες Παραγγελίες", logout: "Αποσύνδεση",
-      closedStore: "ΤΟ ΚΑΤΑΣΤΗΜΑ ΕΙΝΑΙ ΚΛΕΙΣΤΟ"
-    }
-  };
+  // Χρησιμοποιούμε το UI λεξικό που κάναμε import!
   const ui = dict[lang];
 
   const generateTimeSlots = () => {
@@ -230,15 +155,12 @@ export default function OrderPage() {
   const getDesc = (item: any) => item[`desc_${lang}`] || item.desc_da;
   const getItemPrice = (item: any) => Number(item.final_price || item.price_takeaway || item.price || 0);
 
-  // ΔΙΟΡΘΩΜΕΝΗ ΣΥΝΑΡΤΗΣΗ addToCart (Για να λειτουργεί η Επεξεργασία)
   const addToCart = (item: any, quantity: number = 1) => {
     setCart(prev => {
-      // Αν το προϊόν έχει ήδη cartId (δηλαδή πατήθηκε το μολυβάκι '✏️' για edit), κάνε Update αντί για νέα εγγραφή
       if (item.cartId) {
         return prev.map(cartItem => cartItem.cartId === item.cartId ? { item, quantity, cartId: item.cartId } : cartItem);
       }
       
-      // Αλλιώς είναι νέα προσθήκη (Generate a new unique cartId)
       const cartId = item.id + (item.selectedOptions?.join('-') || '') + (item.note || '') + Date.now().toString();
       return [...prev, { item, quantity, cartId }];
     });
@@ -247,9 +169,7 @@ export default function OrderPage() {
   const removeFromCart = (cartId: string) => setCart(prev => prev.filter(cartItem => cartItem.cartId !== cartId));
   const updateQuantity = (cartId: string, delta: number) => setCart(prev => prev.map(cartItem => cartItem.cartId === cartId ? (cartItem.quantity + delta > 0 ? { ...cartItem, quantity: cartItem.quantity + delta } : cartItem) : cartItem));
 
-  // ΠΡΟΣΘΗΚΗ: Συνάρτηση για να ανοίγει το Modal Επεξεργασίας (Edit)
   const handleEditCartItem = (cartItem: any) => {
-    // Βάζει το cartId και την παλιά quantity μέσα στο προϊόν, για να το "καταλάβει" το ProductModal
     setActiveProduct({ ...cartItem.item, cartId: cartItem.cartId, quantity: cartItem.quantity });
   };
 
@@ -478,7 +398,6 @@ export default function OrderPage() {
                           <button onClick={() => updateQuantity(cartItem.cartId, 1)} className="w-8 h-8 flex items-center justify-center text-white bg-slate-800 hover:bg-slate-700 rounded-md font-bold text-lg">+</button>
                         </div>
                         
-                        {/* ΠΡΟΣΘΗΚΗ: Κουμπί Επεξεργασίας (✏️) δίπλα στον κάδο */}
                         <div className="flex items-center gap-1 ml-2">
                           <button onClick={() => handleEditCartItem(cartItem)} className="text-[#38BDF8] hover:text-sky-300 text-lg bg-[#38BDF8]/10 w-10 h-10 flex items-center justify-center rounded-lg transition-colors">✏️</button>
                           <button onClick={() => removeFromCart(cartItem.cartId)} className="text-red-400 hover:text-red-300 text-lg bg-red-500/10 w-10 h-10 flex items-center justify-center rounded-lg transition-colors">🗑️</button>
