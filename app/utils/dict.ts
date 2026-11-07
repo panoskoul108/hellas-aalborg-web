@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { supabase } from '../supabase';
 import ProductModal from './ProductModal';
-import LoyaltyWallet from '../../components/order/LoyaltyWallet'; 
+import LoyaltyWallet from '../../components/order/LoyaltyWallet';  
 import SmartUpsell from '../../components/order/SmartUpsell';
 import { dict } from '../../utils/dict'; // ΕΙΣΑΓΩΓΗ ΤΟΥ ΛΕΞΙΚΟΥ ΑΠΟ ΤΟ ΝΕΟ ΑΡΧΕΙΟ
 
