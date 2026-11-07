@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../supabase'; // Βεβαιώσου ότι το path είναι το σωστό
+import { supabase } from '../supabase';
 
 export function useAuth() {
   const [user, setUser] = useState<any>(null);
@@ -16,10 +16,35 @@ export function useAuth() {
   const [customerPhone, setCustomerPhone] = useState('');
   const [userOrderHistory, setUserOrderHistory] = useState<any[]>([]);
 
-  // Παρακολούθηση της σύνδεσης του χρήστη
+  // Λήψη Στοιχείων Πελάτη (Όνομα & Τηλέφωνο)
+  const fetchUserProfile = async (userId: string) => {
+    const { data } = await supabase.from('customers_loyalty').select('*').eq('user_id', userId).single();
+    if (data) {
+      setCustomerName(data.full_name || '');
+      setCustomerPhone(data.phone || '');
+    }
+  };
+
+  // Παρακολούθηση της σύνδεσης & Φόρτωση Στοιχείων σε Refresh
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setUser(session?.user || null));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user || null));
+    const initSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUser(session.user);
+        fetchUserProfile(session.user.id); // Φέρνει τα στοιχεία αυτόματα!
+      }
+    };
+    initSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null);
+      if (session?.user) {
+        fetchUserProfile(session.user.id);
+      } else {
+        setCustomerName('');
+        setCustomerPhone('');
+      }
+    });
     return () => { subscription.unsubscribe(); };
   }, []);
 
@@ -42,8 +67,7 @@ export function useAuth() {
       if (error) setAuthError('Wrong email or password.');
       else { 
         setUser(data.user); 
-        const { data: profile } = await supabase.from('customers_loyalty').select('*').eq('user_id', data.user.id).single();
-        if (profile) { setCustomerName(profile.full_name || ''); setCustomerPhone(profile.phone || ''); }
+        // Η fetchUserProfile καλείται αυτόματα από το onAuthStateChange παραπάνω!
         onSuccess();
       }
     }
