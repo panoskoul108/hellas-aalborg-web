@@ -16,7 +16,6 @@ export function useAuth() {
   const [customerPhone, setCustomerPhone] = useState('');
   const [userOrderHistory, setUserOrderHistory] = useState<any[]>([]);
 
-  // Λήψη Στοιχείων Πελάτη (Όνομα & Τηλέφωνο)
   const fetchUserProfile = async (userId: string) => {
     const { data } = await supabase.from('customers_loyalty').select('*').eq('user_id', userId).single();
     if (data) {
@@ -25,13 +24,12 @@ export function useAuth() {
     }
   };
 
-  // Παρακολούθηση της σύνδεσης & Φόρτωση Στοιχείων σε Refresh
   useEffect(() => {
     const initSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         setUser(session.user);
-        fetchUserProfile(session.user.id); // Φέρνει τα στοιχεία αυτόματα!
+        fetchUserProfile(session.user.id); 
       }
     };
     initSession();
@@ -48,7 +46,6 @@ export function useAuth() {
     return () => { subscription.unsubscribe(); };
   }, []);
 
-  // Λογική Σύνδεσης / Εγγραφής
   const handleAuth = async (e: React.FormEvent, onSuccess: () => void) => {
     e.preventDefault();
     setAuthError('');
@@ -58,7 +55,14 @@ export function useAuth() {
       if (error) { setAuthError(error.message); } 
       else if (data.user) {
         setUser(data.user);
-        await supabase.from('customers_loyalty').insert({ user_id: data.user.id, full_name: regName, phone: regPhone, date_of_birth: regDob || null, wallet_balance: 0 });
+        // ΕΔΩ ΜΠΑΙΝΕΙ ΤΟ BONUS: Δίνουμε 35 DKK αρχικό υπόλοιπο!
+        await supabase.from('customers_loyalty').insert({ 
+          user_id: data.user.id, 
+          full_name: regName, 
+          phone: regPhone, 
+          date_of_birth: regDob || null, 
+          wallet_balance: 35 
+        });
         setCustomerName(regName); setCustomerPhone(regPhone); 
         onSuccess();
       }
@@ -67,20 +71,17 @@ export function useAuth() {
       if (error) setAuthError('Wrong email or password.');
       else { 
         setUser(data.user); 
-        // Η fetchUserProfile καλείται αυτόματα από το onAuthStateChange παραπάνω!
         onSuccess();
       }
     }
   };
 
-  // Άντληση ιστορικού παραγγελιών
   const fetchOrderHistory = async () => {
     if (!user) return;
     const { data } = await supabase.from('orders').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10);
     if (data) setUserOrderHistory(data);
   };
 
-  // Αποσύνδεση
   const logout = async (onLogout: () => void) => {
     await supabase.auth.signOut();
     setUser(null);
