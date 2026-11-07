@@ -14,9 +14,9 @@ export default function LoyaltyWallet({ userId, subtotal, lang, onApplyDiscount 
   const [useWallet, setUseWallet] = useState(false);
 
   const dict = {
-    da: { walletTitle: "Dit Digitale Pung", balanceMsg: "Din saldo:", useBtn: "Brug saldo", earnMsg: "Du tjener" },
-    en: { walletTitle: "Your Digital Wallet", balanceMsg: "Your balance:", useBtn: "Use balance", earnMsg: "You will earn" },
-    el: { walletTitle: "Το Ψηφιακό σας Πορτοφόλι", balanceMsg: "Το υπόλοιπό σας:", useBtn: "Χρήση υπολοίπου", earnMsg: "Θα κερδίσετε" }
+    da: { walletTitle: "Dit Digitale Pung", balanceMsg: "Din saldo:", useBtn: "Brug saldo", earnMsg: "Du tjener", limitMsg: "Du kan betale op til 50% af din ordre med point." },
+    en: { walletTitle: "Your Digital Wallet", balanceMsg: "Your balance:", useBtn: "Use balance", earnMsg: "You will earn", limitMsg: "You can pay up to 50% of your order with points." },
+    el: { walletTitle: "Το Ψηφιακό σας Πορτοφόλι", balanceMsg: "Το υπόλοιπό σας:", useBtn: "Χρήση υπολοίπου", earnMsg: "Θα κερδίσετε", limitMsg: "Μπορείτε να καλύψετε έως το 50% της παραγγελίας με πόντους." }
   };
   const ui = dict[lang];
 
@@ -29,20 +29,21 @@ export default function LoyaltyWallet({ userId, subtotal, lang, onApplyDiscount 
     fetchBalance();
   }, [userId]);
 
-  // Ανάλογα με την επιλογή, υπολογίζουμε την έκπτωση
+  // Υπολογισμός μέγιστης επιτρεπόμενης έκπτωσης (50% του subtotal)
+  const maxUsable = subtotal * 0.5;
+  const potentialDiscount = Math.min(balance, maxUsable);
+
   useEffect(() => {
     if (useWallet && balance > 0) {
-      // Δεν μπορεί να χρησιμοποιήσει περισσότερα από όσα κοστίζει η παραγγελία
-      const maxDiscount = Math.min(balance, subtotal);
-      onApplyDiscount(maxDiscount);
+      onApplyDiscount(potentialDiscount);
     } else {
       onApplyDiscount(0);
     }
-  }, [useWallet, balance, subtotal, onApplyDiscount]);
+  }, [useWallet, balance, potentialDiscount, onApplyDiscount]);
 
   if (!userId) return null; // Αν δεν έχει κάνει login, το Component κρύβεται εντελώς!
 
-  const appliedDiscount = useWallet ? Math.min(balance, subtotal) : 0;
+  const appliedDiscount = useWallet ? potentialDiscount : 0;
   const finalPay = Math.max(0, subtotal - appliedDiscount);
   const willEarn = (finalPay * 0.05).toFixed(2); // 5% επιστροφή επί του τελικού ποσού
 
@@ -61,15 +62,18 @@ export default function LoyaltyWallet({ userId, subtotal, lang, onApplyDiscount 
       </div>
 
       {balance > 0 && (
-        <div className="flex items-center justify-between border-t border-slate-700/50 pt-3 mb-2">
-          <span className="text-sm font-bold text-gray-300">{ui.useBtn} (-{Math.min(balance, subtotal).toFixed(2)} kr)</span>
-          <button 
-            type="button"
-            onClick={() => setUseWallet(!useWallet)}
-            className={`w-12 h-6 rounded-full transition-colors relative shadow-inner flex items-center ${useWallet ? 'bg-[#38BDF8]' : 'bg-slate-700'}`}
-          >
-            <div className={`w-4 h-4 bg-white rounded-full shadow-md absolute transition-transform ${useWallet ? 'translate-x-7' : 'translate-x-1'}`}></div>
-          </button>
+        <div className="border-t border-slate-700/50 pt-3 mb-2">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-sm font-bold text-gray-300">{ui.useBtn} (-{potentialDiscount.toFixed(2)} kr)</span>
+            <button 
+              type="button"
+              onClick={() => setUseWallet(!useWallet)}
+              className={`w-12 h-6 rounded-full transition-colors relative shadow-inner flex items-center ${useWallet ? 'bg-[#38BDF8]' : 'bg-slate-700'}`}
+            >
+              <div className={`w-4 h-4 bg-white rounded-full shadow-md absolute transition-transform ${useWallet ? 'translate-x-7' : 'translate-x-1'}`}></div>
+            </button>
+          </div>
+          <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wide">{ui.limitMsg}</p>
         </div>
       )}
 
