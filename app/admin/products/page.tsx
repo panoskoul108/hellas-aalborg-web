@@ -21,7 +21,8 @@ export default function ProductsPage() {
     isCustomCategory, setIsCustomCategory, resetForm, startEdit, closeModal, saveProduct, uploadImage,
     addAddonGroup, removeAddonGroup, updateAddonGroup, addAddonOption, removeAddonOption, updateAddonOption
   } = useProductForm(() => {
-    // on success (add or update)
+    // On success refresh the products
+    window.location.reload(); 
   }, setIsUploading);
 
   const hasRecommended = products.some(p => p.popular);
@@ -304,4 +305,32 @@ export default function ProductsPage() {
                       <div className="space-y-3">
                         <span className="text-[10px] font-black text-gray-500 tracking-widest uppercase flex items-center gap-2 border-b pb-2 border-gray-700">🇬🇧 Αγγλικα (English)</span>
                         <input type="text" placeholder="Product Name" className="w-full p-3 rounded-xl font-bold border text-sm outline-none bg-slate-900 border-slate-700 text-white focus:border-[#38BDF8]" value={editForm.title_en || ""} onChange={(e) => setEditForm({ ...editForm, title_en: e.target.value })} />
-                        <textarea rows={3} placeholder="Description / Ingredients" className="w-full p-3 rounded-xl font-
+                        <textarea rows={3} placeholder="Description / Ingredients" className="w-full p-3 rounded-xl font-medium border text-xs outline-none resize-none bg-slate-900 border-slate-700 text-white focus:border-[#38BDF8]" value={editForm.desc_en || ""} onChange={(e) => setEditForm({ ...editForm, desc_en: e.target.value })} />
+                      </div>
+                      <div className="space-y-3">
+                        <span className="text-[10px] font-black text-gray-500 tracking-widest uppercase flex items-center gap-2 border-b pb-2 border-gray-700">🇬🇷 Ελληνικα (Greek)</span>
+                        <input type="text" placeholder="Όνομα Προϊόντος" className="w-full p-3 rounded-xl font-bold border text-sm outline-none bg-slate-900 border-slate-700 text-white focus:border-[#38BDF8]" value={editForm.title_el || ""} onChange={(e) => setEditForm({ ...editForm, title_el: e.target.value })} />
+                        <textarea rows={3} placeholder="Συστατικά / Περιγραφή" className="w-full p-3 rounded-xl font-medium border text-xs outline-none resize-none bg-slate-900 border-slate-700 text-white focus:border-[#38BDF8]" value={editForm.desc_el || ""} onChange={(e) => setEditForm({ ...editForm, desc_el: e.target.value })} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="shrink-0 p-4 sm:p-6 border-t flex flex-col sm:flex-row gap-3 bg-[#0F172A] border-slate-800">
+                <button onClick={saveProduct} disabled={isUploading} className="flex-1 sm:flex-[2] bg-emerald-500 text-[#0B1120] py-4 rounded-2xl font-black text-sm uppercase tracking-widest disabled:opacity-50 transition-transform active:scale-95 shadow-lg hover:bg-emerald-400">
+                  {isAdding ? "Δημιουργια Προϊοντος" : "Αποθηκευση Αλλαγων"}
+                </button>
+                <button onClick={closeModal} className="flex-1 py-4 rounded-2xl font-black text-sm uppercase transition-colors border bg-slate-800 text-gray-300 border-slate-700 hover:bg-slate-700">
+                  Ακυρωση
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
