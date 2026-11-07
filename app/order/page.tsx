@@ -5,10 +5,10 @@ import { supabase } from '../supabase';
 import ProductModal from './ProductModal';
 import LoyaltyWallet from '../../components/order/LoyaltyWallet'; 
 import SmartUpsell from '../../components/order/SmartUpsell';
-import { dict } from '../../utils/dict'; 
-import { useCart } from '../../hooks/useCart'; 
-import { useStore } from '../../hooks/useStore';
-import { useAuth } from '../../hooks/useAuth';
+import { dict } from '../utils/dict'; 
+import { useCart } from '../hooks/useCart'; 
+import { useStore } from '../hooks/useStore';
+import { useAuth } from '../hooks/useAuth';
 
 const MAX_ORDERS = 50; 
 const LOCKOUT_MS = 5 * 60 * 1000;
