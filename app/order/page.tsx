@@ -6,80 +6,41 @@ import ProductModal from './ProductModal';
 import LoyaltyWallet from '../../components/order/LoyaltyWallet'; 
 import SmartUpsell from '../../components/order/SmartUpsell';
 import { dict } from '../../utils/dict'; 
-import { useCart } from '../../hooks/useCart'; // <--- ΕΙΣΑΓΩΓΗ ΤΟΥ ΝΕΟΥ HOOK!
+import { useCart } from '../../hooks/useCart'; 
+import { useStore } from '../../hooks/useStore';
+import { useAuth } from '../../hooks/useAuth';
 
 const MAX_ORDERS = 50; 
 const LOCKOUT_MS = 5 * 60 * 1000;
+const supabaseImageUrl = "https://keolpijcsvwsrzkjqtkc.supabase.co/storage/v1/object/public/menu-images/";
 
 export default function OrderPage() {
+  const [lang, setLang] = useState<'da' | 'en' | 'el'>('da');
+  const ui = dict[lang];
+
+  // --- HOOKS ---
+  const { storeOpen, generateTimeSlots } = useStore(ui);
+  const auth = useAuth();
+  const [loyaltyDiscount, setLoyaltyDiscount] = useState(0); 
+  const { cart, addToCart, removeFromCart, updateQuantity, clearCart, subtotal, finalTotal, vatMoms, getItemPrice } = useCart(loyaltyDiscount);
+
+  // --- LOCAL STATE ---
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [lang, setLang] = useState<'da' | 'en' | 'el'>('da');
-  
   const [activeProduct, setActiveProduct] = useState<any>(null);
-  
-  const [user, setUser] = useState<any>(null);
-  const [authMode, setAuthMode] = useState<'signup' | 'login'>('signup');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [authError, setAuthError] = useState('');
-
-  const [regName, setRegName] = useState('');
-  const [regPhone, setRegPhone] = useState('');
-  const [regDob, setRegDob] = useState('');
-
   const [checkoutStep, setCheckoutStep] = useState<'cart' | 'auth' | 'checkout' | 'success' | 'review' | 'profile'>('cart');
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
+  
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [requestedTime, setRequestedTime] = useState('ASAP');
-  
   const [orderNote, setOrderNote] = useState(''); 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [loyaltyDiscount, setLoyaltyDiscount] = useState(0); 
-
-  // ΕΔΩ ΕΙΝΑΙ Η ΜΑΓΕΙΑ: Καλούμε τον εγκέφαλο του καλαθιού με 1 γραμμή κώδικα!
-  const { 
-    cart, addToCart, removeFromCart, updateQuantity, clearCart, 
-    subtotal, finalTotal, vatMoms, getItemPrice 
-  } = useCart(loyaltyDiscount);
-
+  
   const [ordersPlaced, setOrdersPlaced] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
-  
-  const [storeOpen, setStoreOpen] = useState(true);
-  const [todayCloseTime, setTodayCloseTime] = useState('22:00'); 
-
   const [placedOrder, setPlacedOrder] = useState<any>(null);
-  const [userOrderHistory, setUserOrderHistory] = useState<any[]>([]); 
-  const supabaseImageUrl = "https://keolpijcsvwsrzkjqtkc.supabase.co/storage/v1/object/public/menu-images/";
 
-  const ui = dict[lang];
-
-  const generateTimeSlots = () => {
-    const slots = [{ value: 'ASAP', label: ui.asap }];
-    const now = new Date();
-    
-    let current = new Date(now.getTime() + 30 * 60000); 
-    current.setMinutes(Math.ceil(current.getMinutes() / 15) * 15);
-    
-    const [closeH, closeM] = todayCloseTime.split(':').map(Number);
-    const closeDate = new Date(now);
-    closeDate.setHours(closeH, closeM, 0, 0);
-    
-    if (closeH < 12 && now.getHours() >= 12) {
-      closeDate.setDate(closeDate.getDate() + 1);
-    }
-    
-    while (current <= closeDate) {
-      const timeString = current.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
-      slots.push({ value: timeString, label: timeString });
-      current = new Date(current.getTime() + 15 * 60000);
-    }
-    return slots;
-  };
-
+  // --- EFFECTS ---
   useEffect(() => {
     const fetchMenu = async () => {
       const { data } = await supabase.from('menu_items').select('*').order('sort_order', { ascending: true });
@@ -87,9 +48,6 @@ export default function OrderPage() {
       setIsLoading(false);
     };
     fetchMenu();
-
-    supabase.auth.getSession().then(({ data: { session } }) => setUser(session?.user || null));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user || null));
     
     const storedOrders = parseInt(localStorage.getItem("servato_orders") || "0");
     const lastTime = parseInt(localStorage.getItem("servato_time") || "0");
@@ -106,108 +64,34 @@ export default function OrderPage() {
       }
     };
     checkSavedOrder();
-
-    const checkStoreStatus = async () => {
-      const jsDay = new Date().getDay();
-      const dbDay = jsDay === 0 ? 7 : jsDay; 
-      
-      const { data } = await supabase.from('store_hours').select('*').eq('day_of_week', dbDay).single();
-      
-      if (data) {
-        setTodayCloseTime(data.close_time); 
-        
-        if (data.is_closed) {
-          setStoreOpen(false);
-          return;
-        }
-
-        const now = new Date();
-        const currentTimeMins = now.getHours() * 60 + now.getMinutes();
-        
-        const [openH, openM] = data.open_time.split(':').map(Number);
-        const [closeH, closeM] = data.close_time.split(':').map(Number);
-        
-        const openMins = openH * 60 + openM;
-        let closeMins = closeH * 60 + closeM;
-        
-        if (closeMins < openMins) closeMins += 24 * 60; 
-        
-        let currentAdjusted = currentTimeMins;
-        if (currentTimeMins < openMins && closeMins > 24 * 60) currentAdjusted += 24 * 60; 
-
-        if (currentAdjusted >= openMins && currentAdjusted <= closeMins) setStoreOpen(true);
-        else setStoreOpen(false);
-      }
-    };
-
-    checkStoreStatus();
-    const interval = setInterval(checkStoreStatus, 15000);
-    return () => { subscription.unsubscribe(); clearInterval(interval); };
   }, []);
 
   useEffect(() => {
     if (!placedOrder?.id) return;
-    const channel = supabase
-      .channel(`public:orders:id=eq.${placedOrder.id}`)
+    const channel = supabase.channel(`public:orders:id=eq.${placedOrder.id}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${placedOrder.id}` }, async (payload) => {
         setPlacedOrder((prev: any) => ({ ...prev, ...payload.new })); 
-      })
-      .subscribe();
+      }).subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [placedOrder?.id]);
 
-  const getTitle = (item: any) => item[`title_${lang}`] || item.title_da || item.title_el || item.name;
-  const getDesc = (item: any) => item[`desc_${lang}`] || item.desc_da;
-
-  const handleEditCartItem = (cartItem: any) => {
-    setActiveProduct({ ...cartItem.item, cartId: cartItem.cartId, quantity: cartItem.quantity });
-  };
-
-  const handleAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthError('');
-    if (authMode === 'signup') {
-      if (!regName || !regPhone) { setAuthError('Missing Name or Phone.'); return; }
-      const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: regName, phone: regPhone } } });
-      if (error) { setAuthError(error.message); } 
-      else if (data.user) {
-        setUser(data.user);
-        await supabase.from('customers_loyalty').insert({ user_id: data.user.id, full_name: regName, phone: regPhone, date_of_birth: regDob || null, wallet_balance: 0 });
-        setCustomerName(regName); setCustomerPhone(regPhone); setCheckoutStep('checkout'); 
-      }
-    } else {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) setAuthError('Wrong email or password.');
-      else { 
-        setUser(data.user); 
-        const { data: profile } = await supabase.from('customers_loyalty').select('*').eq('user_id', data.user.id).single();
-        if (profile) { setCustomerName(profile.full_name || ''); setCustomerPhone(profile.phone || ''); }
-        setCheckoutStep('checkout'); 
-      }
-    }
-  };
-
+  // --- HANDLERS ---
   const openProfile = async () => {
-    if (!user) return;
     setCheckoutStep('profile'); setIsCartOpen(true);
-    const { data } = await supabase.from('orders').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10);
-    if (data) setUserOrderHistory(data);
+    auth.fetchOrderHistory();
   };
-
-  const proceedToCheckout = () => { user ? setCheckoutStep('checkout') : setCheckoutStep('auth'); };
 
   const submitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!storeOpen) { alert(ui.closedStore); return; }
+    if (!storeOpen) return alert(ui.closedStore);
     if (isLocked) return alert("Limit reached.");
-    if (!customerName || !customerPhone) return alert('Missing details.');
+    if (!auth.customerName || !auth.customerPhone) return alert('Missing details.');
     
     setIsSubmitting(true);
     try {
-      const cleanPhone = customerPhone.replace(/\s+/g, "");
       const payload = {
-        user_id: user?.id || null, 
-        order_type: 'takeaway', customer_name: customerName, customer_phone: cleanPhone, requested_time: requestedTime, notes: orderNote, 
+        user_id: auth.user?.id || null, 
+        order_type: 'takeaway', customer_name: auth.customerName, customer_phone: auth.customerPhone.replace(/\s+/g, ""), requested_time: requestedTime, notes: orderNote, 
         items: cart.map(c => ({ id: c.item.id, title_da: c.item.title_da, title_el: c.item.title_el, quantity: c.quantity, unit_price_dkk: getItemPrice(c.item), selectedOptions: c.item.selectedOptions || [], note: c.item.note || "" })),
         subtotal_dkk: subtotal, discount_dkk: loyaltyDiscount, vat_moms_dkk: vatMoms, total_price: finalTotal, payment_method: paymentMethod === 'card' ? 'ΚΑΡΤΑ' : 'ΜΕΤΡΗΤΑ', status: 'pending'
       };
@@ -216,13 +100,13 @@ export default function OrderPage() {
       if (orderError) throw orderError;
       
       setPlacedOrder(orderData); localStorage.setItem('hellas_active_order', orderData.id);
-      await supabase.from('action_logs').insert([{ action_type: "TAKEAWAY_ORDER_CREATED", order_id: orderData.id, details: { company: "Nordic-mythos 1 ApS", user: user?.email || "Guest", total_dkk: finalTotal } }]);
+      await supabase.from('action_logs').insert([{ action_type: "TAKEAWAY_ORDER_CREATED", order_id: orderData.id, details: { company: "Nordic-mythos 1 ApS", user: auth.user?.email || "Guest", total_dkk: finalTotal } }]);
 
-      if (user?.id) {
+      if (auth.user?.id) {
         const earnedCashback = Number((finalTotal * 0.05).toFixed(2));
-        const { data: loyaltyData } = await supabase.from('customers_loyalty').select('*').eq('user_id', user.id).single();
+        const { data: loyaltyData } = await supabase.from('customers_loyalty').select('*').eq('user_id', auth.user.id).single();
         const currentBalance = loyaltyData?.wallet_balance ? Number(loyaltyData.wallet_balance) : 0;
-        await supabase.from('customers_loyalty').upsert({ user_id: user.id, wallet_balance: currentBalance - loyaltyDiscount + earnedCashback, total_orders: (loyaltyData?.total_orders || 0) + 1, total_spent_dkk: Number(loyaltyData?.total_spent_dkk || 0) + finalTotal });
+        await supabase.from('customers_loyalty').upsert({ user_id: auth.user.id, wallet_balance: currentBalance - loyaltyDiscount + earnedCashback, total_orders: (loyaltyData?.total_orders || 0) + 1, total_spent_dkk: Number(loyaltyData?.total_spent_dkk || 0) + finalTotal });
       }
 
       const newTotal = ordersPlaced + 1; setOrdersPlaced(newTotal); localStorage.setItem("servato_orders", newTotal.toString()); localStorage.setItem("servato_time", Date.now().toString());
@@ -235,9 +119,7 @@ export default function OrderPage() {
     const { error } = await supabase.from('orders').update({ is_delivered: true }).eq('id', placedOrder.id);
     if (error) alert("⚠️ Η βάση δεδομένων απέρριψε την ενημέρωση! Ζητήστε από το ταμείο να πατήσει το '✓'.");
     localStorage.removeItem('hellas_active_order'); 
-    setPlacedOrder(null); 
-    clearCart(); // <--- Εδώ χρησιμοποιούμε την καθαρή συνάρτηση από το Hook αντί για setCart([])
-    setCheckoutStep('review');
+    setPlacedOrder(null); clearCart(); setCheckoutStep('review');
   };
 
   return (
@@ -250,8 +132,8 @@ export default function OrderPage() {
           <div className="flex gap-1 md:gap-2 text-xl bg-slate-800 p-1 rounded-lg border border-white/10">
             <button onClick={() => setLang('da')} className={`p-1 rounded ${lang === 'da' ? 'bg-white/20 scale-110' : 'opacity-50 hover:opacity-100'}`}>🇩🇰</button><button onClick={() => setLang('en')} className={`p-1 rounded ${lang === 'en' ? 'bg-white/20 scale-110' : 'opacity-50 hover:opacity-100'}`}>🇬🇧</button><button onClick={() => setLang('el')} className={`p-1 rounded ${lang === 'el' ? 'bg-white/20 scale-110' : 'opacity-50 hover:opacity-100'}`}>🇬🇷</button>
           </div>
-          {user ? (
-            <div className="hidden md:flex flex-col text-right cursor-pointer hover:opacity-80" onClick={openProfile}><span className="text-xs text-gray-400 font-bold border-b border-slate-700 pb-0.5">{user.email}</span><span className="text-[10px] text-[#38BDF8] uppercase tracking-widest mt-0.5">{ui.profileTitle}</span></div>
+          {auth.user ? (
+            <div className="hidden md:flex flex-col text-right cursor-pointer hover:opacity-80" onClick={openProfile}><span className="text-xs text-gray-400 font-bold border-b border-slate-700 pb-0.5">{auth.user.email}</span><span className="text-[10px] text-[#38BDF8] uppercase tracking-widest mt-0.5">{ui.profileTitle}</span></div>
           ) : (
             <button onClick={() => { setIsCartOpen(true); setCheckoutStep('auth'); }} className="hidden md:block text-sm font-bold text-[#38BDF8] hover:text-white transition-colors">{ui.loginTitle}</button>
           )}
@@ -266,9 +148,9 @@ export default function OrderPage() {
             {menuItems.map(item => (
               <div key={item.id} className="bg-slate-800/40 p-4 rounded-2xl border border-white/5 flex gap-4 hover:border-white/10 transition-colors shadow-sm items-center">
                 {item.image_path ? (
-                  <div className="w-20 h-20 md:w-24 md:h-24 shrink-0 rounded-xl overflow-hidden bg-slate-800 border border-white/5"><img src={`${supabaseImageUrl}${item.image_path}`} alt={getTitle(item)} className="w-full h-full object-cover" /></div>
+                  <div className="w-20 h-20 md:w-24 md:h-24 shrink-0 rounded-xl overflow-hidden bg-slate-800 border border-white/5"><img src={`${supabaseImageUrl}${item.image_path}`} alt={item[`title_${lang}`] || item.name} className="w-full h-full object-cover" /></div>
                 ) : <div className="w-20 h-20 shrink-0 rounded-xl bg-slate-800/50 border border-white/5 flex items-center justify-center text-2xl">🍽️</div>}
-                <div className="flex-1"><h3 className="font-bold text-lg text-white mb-1">{getTitle(item)}</h3><p className="text-sm text-gray-400 line-clamp-2 leading-relaxed mb-2">{getDesc(item)}</p><span className="font-bold text-[#38BDF8]">{getItemPrice(item)} DKK</span></div>
+                <div className="flex-1"><h3 className="font-bold text-lg text-white mb-1">{item[`title_${lang}`] || item.name}</h3><p className="text-sm text-gray-400 line-clamp-2 leading-relaxed mb-2">{item[`desc_${lang}`] || ''}</p><span className="font-bold text-[#38BDF8]">{getItemPrice(item)} DKK</span></div>
                 <button onClick={() => setActiveProduct(item)} className="bg-white hover:bg-gray-200 text-[#0B1120] font-bold p-3 md:px-6 md:py-2.5 rounded-xl shadow-md transition-transform active:scale-95 shrink-0 flex items-center gap-2"><span className="hidden md:inline">{ui.add}</span> ➕</button>
               </div>
             ))}
@@ -289,13 +171,13 @@ export default function OrderPage() {
             <div className="flex-1 overflow-y-auto p-4 md:p-6">
               {checkoutStep === 'profile' ? (
                 <div className="flex flex-col gap-6 animate-fade-in">
-                  <div className="text-center mb-4"><div className="w-20 h-20 bg-slate-800 border-2 border-[#38BDF8] rounded-full mx-auto flex items-center justify-center text-3xl mb-3 shadow-lg">👤</div><h3 className="text-xl font-black text-white">{customerName || user?.email}</h3><p className="text-sm text-gray-400 font-bold">{customerPhone}</p></div>
-                  <LoyaltyWallet userId={user?.id} subtotal={0} lang={lang} onApplyDiscount={() => {}} />
+                  <div className="text-center mb-4"><div className="w-20 h-20 bg-slate-800 border-2 border-[#38BDF8] rounded-full mx-auto flex items-center justify-center text-3xl mb-3 shadow-lg">👤</div><h3 className="text-xl font-black text-white">{auth.customerName || auth.user?.email}</h3><p className="text-sm text-gray-400 font-bold">{auth.customerPhone}</p></div>
+                  <LoyaltyWallet userId={auth.user?.id} subtotal={0} lang={lang} onApplyDiscount={() => {}} />
                   <div className="bg-slate-900/50 rounded-2xl border border-white/5 p-5">
                     <h4 className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-4 border-b border-slate-700 pb-2">{ui.myOrders}</h4>
-                    {userOrderHistory.length === 0 ? <p className="text-sm text-gray-400">No orders yet.</p> : (
+                    {auth.userOrderHistory.length === 0 ? <p className="text-sm text-gray-400">No orders yet.</p> : (
                       <ul className="space-y-4">
-                        {userOrderHistory.map(o => (
+                        {auth.userOrderHistory.map(o => (
                           <li key={o.id} className="flex justify-between items-center border-b border-white/5 pb-3 last:border-0 last:pb-0">
                             <div><p className="font-bold text-white text-sm">#{o.order_number || o.id.toString().slice(-4)}</p><p className="text-[10px] text-gray-400">{new Date(o.created_at).toLocaleDateString()} - {o.total_price} kr.</p></div>
                             <span className={`text-[9px] px-2 py-1 rounded font-bold uppercase ${o.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-orange-500/20 text-orange-400'}`}>{o.status}</span>
@@ -304,7 +186,7 @@ export default function OrderPage() {
                       </ul>
                     )}
                   </div>
-                  <button onClick={() => { supabase.auth.signOut(); setUser(null); setIsCartOpen(false); setCheckoutStep('cart'); }} className="w-full bg-red-900/30 text-red-400 hover:bg-red-900/50 font-bold py-3 rounded-xl border border-red-900/50 uppercase transition-colors mt-4">{ui.logout}</button>
+                  <button onClick={() => auth.logout(() => { setIsCartOpen(false); setCheckoutStep('cart'); })} className="w-full bg-red-900/30 text-red-400 hover:bg-red-900/50 font-bold py-3 rounded-xl border border-red-900/50 uppercase transition-colors mt-4">{ui.logout}</button>
                 </div>
               ) : checkoutStep === 'review' ? (
                 <div className="flex flex-col items-center justify-center py-10 h-full text-center animate-fade-in">
@@ -331,45 +213,25 @@ export default function OrderPage() {
                 </div>
               ) : checkoutStep === 'auth' ? (
                 <div className="flex flex-col gap-6 animate-fade-in py-2">
-                  <div className="text-center mb-2">
-                    <h3 className="text-2xl font-black text-white uppercase tracking-widest">{ui.guestCheckout}</h3>
-                    <p className="text-gray-400 text-sm mt-2">{ui.guestDesc}</p>
-                  </div>
-                  
-                  <button onClick={() => setCheckoutStep('checkout')} className="w-full bg-white hover:bg-gray-200 text-[#0B1120] font-black py-4 rounded-2xl shadow-lg uppercase tracking-widest transition-transform active:scale-95">
-                    🚀 {ui.guestCheckout}
-                  </button>
-
-                  <div className="flex items-center gap-4 my-2 opacity-50">
-                    <hr className="flex-1 border-slate-600" />
-                    <span className="text-xs text-slate-400 font-bold uppercase">{ui.or}</span>
-                    <hr className="flex-1 border-slate-600" />
-                  </div>
-
+                  <div className="text-center mb-2"><h3 className="text-2xl font-black text-white uppercase tracking-widest">{ui.guestCheckout}</h3><p className="text-gray-400 text-sm mt-2">{ui.guestDesc}</p></div>
+                  <button onClick={() => setCheckoutStep('checkout')} className="w-full bg-white hover:bg-gray-200 text-[#0B1120] font-black py-4 rounded-2xl shadow-lg uppercase tracking-widest transition-transform active:scale-95">🚀 {ui.guestCheckout}</button>
+                  <div className="flex items-center gap-4 my-2 opacity-50"><hr className="flex-1 border-slate-600" /><span className="text-xs text-slate-400 font-bold uppercase">{ui.or}</span><hr className="flex-1 border-slate-600" /></div>
                   <div className="bg-slate-900/50 p-6 rounded-3xl border border-white/10 shadow-inner">
-                    <h3 className="text-lg font-bold text-white text-center mb-5">{authMode === 'signup' ? ui.regTitle : ui.loginTitle}</h3>
-                    <form onSubmit={handleAuth} className="flex flex-col gap-4">
-                      {authError && <div className="bg-red-500/10 border border-red-500 text-red-400 p-3 rounded-lg text-sm font-bold text-center">{authError}</div>}
-                      
-                      {authMode === 'signup' && (
+                    <h3 className="text-lg font-bold text-white text-center mb-5">{auth.authMode === 'signup' ? ui.regTitle : ui.loginTitle}</h3>
+                    <form onSubmit={(e) => auth.handleAuth(e, () => setCheckoutStep('checkout'))} className="flex flex-col gap-4">
+                      {auth.authError && <div className="bg-red-500/10 border border-red-500 text-red-400 p-3 rounded-lg text-sm font-bold text-center">{auth.authError}</div>}
+                      {auth.authMode === 'signup' && (
                         <div className="flex flex-col gap-4 animate-fade-in">
-                          <input type="text" placeholder={ui.nameLabel} value={regName} onChange={e => setRegName(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8] transition-colors" />
-                          <input type="tel" placeholder={ui.phoneLabel} value={regPhone} onChange={e => setRegPhone(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8] transition-colors" />
-                          <div><label className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1 block ml-1">{ui.dobPlh}</label><input type="date" value={regDob} onChange={e => setRegDob(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8] transition-colors" /></div>
+                          <input type="text" placeholder={ui.nameLabel} value={auth.regName} onChange={e => auth.setRegName(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8] transition-colors" />
+                          <input type="tel" placeholder={ui.phoneLabel} value={auth.regPhone} onChange={e => auth.setRegPhone(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8] transition-colors" />
+                          <div><label className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1 block ml-1">{ui.dobPlh}</label><input type="date" value={auth.regDob} onChange={e => auth.setRegDob(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8] transition-colors" /></div>
                         </div>
                       )}
-                      
-                      <input type="email" placeholder={ui.emailPlh} value={email} onChange={e => setEmail(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8] transition-colors" />
-                      <input type="password" placeholder={ui.passPlh} value={password} onChange={e => setPassword(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8] transition-colors" />
-                      
-                      <button type="submit" className="w-full bg-slate-800 hover:bg-slate-700 text-[#38BDF8] border border-[#38BDF8]/50 font-black py-4 rounded-xl shadow-lg mt-2 uppercase tracking-widest transition-transform active:scale-95">
-                        {authMode === 'signup' ? ui.regTitle : ui.loginTitle}
-                      </button>
+                      <input type="email" placeholder={ui.emailPlh} value={auth.email} onChange={e => auth.setEmail(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8] transition-colors" />
+                      <input type="password" placeholder={ui.passPlh} value={auth.password} onChange={e => auth.setPassword(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8] transition-colors" />
+                      <button type="submit" className="w-full bg-slate-800 hover:bg-slate-700 text-[#38BDF8] border border-[#38BDF8]/50 font-black py-4 rounded-xl shadow-lg mt-2 uppercase tracking-widest transition-transform active:scale-95">{auth.authMode === 'signup' ? ui.regTitle : ui.loginTitle}</button>
                     </form>
-                    
-                    <button type="button" onClick={() => { setAuthMode(authMode === 'signup' ? 'login' : 'signup'); setAuthError(''); }} className="w-full text-sm text-gray-400 hover:text-white mt-5 font-bold transition-colors">
-                      {authMode === 'signup' ? ui.hasAcc : ui.noAcc}
-                    </button>
+                    <button type="button" onClick={() => { auth.setAuthMode(auth.authMode === 'signup' ? 'login' : 'signup'); auth.setAuthError(''); }} className="w-full text-sm text-gray-400 hover:text-white mt-5 font-bold transition-colors">{auth.authMode === 'signup' ? ui.hasAcc : ui.noAcc}</button>
                   </div>
                 </div>
               ) : cart.length === 0 ? (
@@ -380,18 +242,16 @@ export default function OrderPage() {
                   {cart.map((cartItem, idx) => (
                     <div key={idx} className="flex flex-col bg-slate-800/30 p-3 rounded-xl border border-white/5">
                       <div className="flex justify-between items-center mb-2">
-                        <div className="flex-1 pr-2"><p className="font-bold text-white text-sm">{getTitle(cartItem.item)}</p><p className="text-xs text-[#38BDF8]">{getItemPrice(cartItem.item)} DKK</p></div>
+                        <div className="flex-1 pr-2"><p className="font-bold text-white text-sm">{cartItem.item[`title_${lang}`] || cartItem.item.name}</p><p className="text-xs text-[#38BDF8]">{getItemPrice(cartItem.item)} DKK</p></div>
                         <div className="flex items-center gap-3 bg-slate-900 rounded-lg p-1 border border-white/5">
                           <button onClick={() => updateQuantity(cartItem.cartId, -1)} className="w-8 h-8 flex items-center justify-center text-white bg-slate-800 hover:bg-slate-700 rounded-md font-bold text-lg">-</button>
                           <span className="font-bold text-sm w-4 text-center">{cartItem.quantity}</span>
                           <button onClick={() => updateQuantity(cartItem.cartId, 1)} className="w-8 h-8 flex items-center justify-center text-white bg-slate-800 hover:bg-slate-700 rounded-md font-bold text-lg">+</button>
                         </div>
-                        
                         <div className="flex items-center gap-1 ml-2">
-                          <button onClick={() => handleEditCartItem(cartItem)} className="text-[#38BDF8] hover:text-sky-300 text-lg bg-[#38BDF8]/10 w-10 h-10 flex items-center justify-center rounded-lg transition-colors">✏️</button>
+                          <button onClick={() => setActiveProduct({ ...cartItem.item, cartId: cartItem.cartId, quantity: cartItem.quantity })} className="text-[#38BDF8] hover:text-sky-300 text-lg bg-[#38BDF8]/10 w-10 h-10 flex items-center justify-center rounded-lg transition-colors">✏️</button>
                           <button onClick={() => removeFromCart(cartItem.cartId)} className="text-red-400 hover:text-red-300 text-lg bg-red-500/10 w-10 h-10 flex items-center justify-center rounded-lg transition-colors">🗑️</button>
                         </div>
-                        
                       </div>
                       {cartItem.item.selectedOptions?.length > 0 && <p className="text-[10px] text-gray-400 font-bold uppercase ml-1">+ {cartItem.item.selectedOptions.join(', ')}</p>}
                       {cartItem.item.note && <p className="text-[10px] text-yellow-500 font-bold italic ml-1 mt-1">📝 {cartItem.item.note}</p>}
@@ -402,9 +262,9 @@ export default function OrderPage() {
               ) : (
                 <form id="checkoutForm" onSubmit={submitOrder} className="flex flex-col gap-5">
                   <h3 className="font-bold text-lg text-white border-b border-white/10 pb-2">{ui.detailsTitle}</h3>
-                  <LoyaltyWallet userId={user?.id} subtotal={subtotal} lang={lang} onApplyDiscount={setLoyaltyDiscount} />
-                  <div><label className="text-xs text-gray-400 block mb-1">{ui.nameLabel}</label><input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" /></div>
-                  <div><label className="text-xs text-gray-400 block mb-1">{ui.phoneLabel}</label><input type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" /></div>
+                  <LoyaltyWallet userId={auth.user?.id} subtotal={subtotal} lang={lang} onApplyDiscount={setLoyaltyDiscount} />
+                  <div><label className="text-xs text-gray-400 block mb-1">{ui.nameLabel}</label><input type="text" value={auth.customerName} onChange={e => auth.setCustomerName(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" /></div>
+                  <div><label className="text-xs text-gray-400 block mb-1">{ui.phoneLabel}</label><input type="tel" value={auth.customerPhone} onChange={e => auth.setCustomerPhone(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" /></div>
                   
                   <div><label className="text-xs text-gray-400 block mb-1">{ui.timeLabel}</label><select value={requestedTime} onChange={e => setRequestedTime(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8] font-bold">{generateTimeSlots().map((slot, i) => <option key={i} value={slot.value}>{slot.label}</option>)}</select></div>
                   
@@ -423,7 +283,7 @@ export default function OrderPage() {
                 {!storeOpen ? (
                   <div className="w-full bg-red-900/50 border border-red-500 text-red-400 font-black uppercase tracking-wider py-4 rounded-xl text-center shadow-lg">{ui.closedStore}</div>
                 ) : checkoutStep === 'cart' ? (
-                  <button onClick={proceedToCheckout} className="w-full bg-[#38BDF8] text-slate-900 font-black uppercase tracking-wider py-4 rounded-xl shadow-lg hover:bg-sky-400 transition-colors">{ui.toCheckout}</button>
+                  <button onClick={() => auth.user ? setCheckoutStep('checkout') : setCheckoutStep('auth')} className="w-full bg-[#38BDF8] text-slate-900 font-black uppercase tracking-wider py-4 rounded-xl shadow-lg hover:bg-sky-400 transition-colors">{ui.toCheckout}</button>
                 ) : checkoutStep === 'auth' ? (
                   <button type="button" onClick={() => setCheckoutStep('cart')} className="w-full px-6 py-4 rounded-xl bg-slate-800 text-white font-bold border border-white/5 uppercase">{ui.backToCart}</button>
                 ) : (
