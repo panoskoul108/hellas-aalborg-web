@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabase } from '../app/supabase';
+import { supabase } from '../supabase';
 
 const defaultForm = {
   title_da: "", title_en: "", title_el: "", desc_da: "", desc_en: "", desc_el: "",
