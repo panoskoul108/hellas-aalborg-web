@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../app/supabase'; // Βεβαιώσου ότι το path για το supabase είναι σωστό βάσει του φακέλου σου
+import { supabase } from '../supabase'; // Βεβαιώσου ότι το path για το supabase είναι σωστό βάσει του φακέλου σου
 
 export function useStore(ui: any) {
   const [storeOpen, setStoreOpen] = useState(true);
