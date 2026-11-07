@@ -5,7 +5,8 @@ import { supabase } from '../supabase';
 import ProductModal from './ProductModal';
 import LoyaltyWallet from '../../components/order/LoyaltyWallet'; 
 import SmartUpsell from '../../components/order/SmartUpsell';
-import { dict } from '../../utils/dict'; // ΕΙΣΑΓΩΓΗ ΤΟΥ ΛΕΞΙΚΟΥ ΑΠΟ ΤΟ ΝΕΟ ΑΡΧΕΙΟ
+import { dict } from '../../utils/dict'; 
+import { useCart } from '../../hooks/useCart'; // <--- ΕΙΣΑΓΩΓΗ ΤΟΥ ΝΕΟΥ HOOK!
 
 const MAX_ORDERS = 50; 
 const LOCKOUT_MS = 5 * 60 * 1000;
@@ -13,7 +14,6 @@ const LOCKOUT_MS = 5 * 60 * 1000;
 export default function OrderPage() {
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [cart, setCart] = useState<{ item: any, quantity: number, cartId: string }[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [lang, setLang] = useState<'da' | 'en' | 'el'>('da');
   
@@ -39,6 +39,12 @@ export default function OrderPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loyaltyDiscount, setLoyaltyDiscount] = useState(0); 
 
+  // ΕΔΩ ΕΙΝΑΙ Η ΜΑΓΕΙΑ: Καλούμε τον εγκέφαλο του καλαθιού με 1 γραμμή κώδικα!
+  const { 
+    cart, addToCart, removeFromCart, updateQuantity, clearCart, 
+    subtotal, finalTotal, vatMoms, getItemPrice 
+  } = useCart(loyaltyDiscount);
+
   const [ordersPlaced, setOrdersPlaced] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
   
@@ -49,7 +55,6 @@ export default function OrderPage() {
   const [userOrderHistory, setUserOrderHistory] = useState<any[]>([]); 
   const supabaseImageUrl = "https://keolpijcsvwsrzkjqtkc.supabase.co/storage/v1/object/public/menu-images/";
 
-  // Χρησιμοποιούμε το UI λεξικό που κάναμε import!
   const ui = dict[lang];
 
   const generateTimeSlots = () => {
@@ -153,29 +158,10 @@ export default function OrderPage() {
 
   const getTitle = (item: any) => item[`title_${lang}`] || item.title_da || item.title_el || item.name;
   const getDesc = (item: any) => item[`desc_${lang}`] || item.desc_da;
-  const getItemPrice = (item: any) => Number(item.final_price || item.price_takeaway || item.price || 0);
-
-  const addToCart = (item: any, quantity: number = 1) => {
-    setCart(prev => {
-      if (item.cartId) {
-        return prev.map(cartItem => cartItem.cartId === item.cartId ? { item, quantity, cartId: item.cartId } : cartItem);
-      }
-      
-      const cartId = item.id + (item.selectedOptions?.join('-') || '') + (item.note || '') + Date.now().toString();
-      return [...prev, { item, quantity, cartId }];
-    });
-  };
-
-  const removeFromCart = (cartId: string) => setCart(prev => prev.filter(cartItem => cartItem.cartId !== cartId));
-  const updateQuantity = (cartId: string, delta: number) => setCart(prev => prev.map(cartItem => cartItem.cartId === cartId ? (cartItem.quantity + delta > 0 ? { ...cartItem, quantity: cartItem.quantity + delta } : cartItem) : cartItem));
 
   const handleEditCartItem = (cartItem: any) => {
     setActiveProduct({ ...cartItem.item, cartId: cartItem.cartId, quantity: cartItem.quantity });
   };
-
-  const subtotal = cart.reduce((total, cartItem) => total + (getItemPrice(cartItem.item) * cartItem.quantity), 0);
-  const finalTotal = Math.max(0, subtotal - loyaltyDiscount);
-  const vatMoms = Number((finalTotal * 0.2).toFixed(2)); 
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -248,7 +234,10 @@ export default function OrderPage() {
     if (!placedOrder) return;
     const { error } = await supabase.from('orders').update({ is_delivered: true }).eq('id', placedOrder.id);
     if (error) alert("⚠️ Η βάση δεδομένων απέρριψε την ενημέρωση! Ζητήστε από το ταμείο να πατήσει το '✓'.");
-    localStorage.removeItem('hellas_active_order'); setPlacedOrder(null); setCart([]); setCheckoutStep('review');
+    localStorage.removeItem('hellas_active_order'); 
+    setPlacedOrder(null); 
+    clearCart(); // <--- Εδώ χρησιμοποιούμε την καθαρή συνάρτηση από το Hook αντί για setCart([])
+    setCheckoutStep('review');
   };
 
   return (
