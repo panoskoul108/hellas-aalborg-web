@@ -2,206 +2,28 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from '../../supabase'; 
 import Image from 'next/image';
+import { useProducts } from '../../hooks/useProducts'; 
+import { useProductForm, parseExtrasToUI, buildExtrasForDB } from '../../hooks/useProductForm';
 
 const SUPABASE_IMAGE_URL = "https://keolpijcsvwsrzkjqtkc.supabase.co/storage/v1/object/public/menu-images/";
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState<any[]>([]);
-  const [editingId, setEditingId] = useState(null);
   const [activeCategory, setActiveCategory] = useState("ΟΛΑ"); 
   const [searchQuery, setSearchQuery] = useState("");
-
   const [showBulkActions, setShowBulkActions] = useState(false);
   const [bulkCategory, setBulkCategory] = useState("");
   const [bulkPriceChange, setBulkPriceChange] = useState(0);
 
-  // Modal State & Tabs
-  const [isAdding, setIsAdding] = useState(false);
-  const [activeEditTab, setActiveEditTab] = useState("basic");
-
-  const [editForm, setEditForm] = useState<any>({
-    title_da: "", title_en: "", title_el: "",
-    desc_da: "", desc_en: "", desc_el: "",
-    price_takeaway: 0, price_delivery: 0,
-    category: "",
-    image_path: "",
-    sort_order: 0,
-    popular: false,
-    vegetarian: false,
-    featured: false,
-    addons: [], // Το UI δουλεύει με Array για ευκολία
-  });
+  const { products, isUploading, setIsUploading, handleMoveProduct, handleBulkPriceUpdate, handleDuplicate, handleDelete } = useProducts();
   
-  const [isCustomCategory, setIsCustomCategory] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const {
+    editingId, isAdding, activeEditTab, setActiveEditTab, editForm, setEditForm,
+    isCustomCategory, setIsCustomCategory, resetForm, startEdit, closeModal, saveProduct, uploadImage,
+    addAddonGroup, removeAddonGroup, updateAddonGroup, addAddonOption, removeAddonOption, updateAddonOption
+  } = useProductForm(() => {
+    // on success (add or update)
+  }, setIsUploading);
 
-  const fetchProducts = async () => {
-    const { data } = await supabase
-      .from("menu_items")
-      .select("*")
-      .order("sort_order", { ascending: true })
-      .order("title_da", { ascending: true });
-      
-    if (data) setProducts(data);
-  };
-  
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  // --- ΜΕΤΑΤΡΟΠΕΙΣ JSON (Μετατρέπουν το Array του UI σε Object της Βάσης και αντίστροφα) ---
-  const parseExtrasToUI = (dbExtras: any) => {
-    if (!dbExtras) return [];
-    try {
-      const parsed = typeof dbExtras === 'string' ? JSON.parse(dbExtras) : dbExtras;
-      return Object.keys(parsed).map(key => {
-        const group = parsed[key];
-        return {
-          id: key,
-          name: group.title_da || key,
-          name_en: group.title_en || "",
-          name_el: group.title_el || "",
-          isRequired: group.type === 'single',
-          maxSelections: group.max || 1,
-          options: (group.options || []).map((opt: any) => ({
-            name: opt.label_da || opt.name,
-            name_en: opt.label_en || "",
-            name_el: opt.label_el || "",
-            price: opt.price || 0
-          }))
-        };
-      });
-    } catch (e) { return []; }
-  };
-
-  const buildExtrasForDB = (uiAddons: any[]) => {
-    const extrasObj: Record<string, any> = {};
-    uiAddons.forEach(group => {
-      const key = group.name || `group_${Date.now()}`;
-      extrasObj[key] = {
-        title_da: group.name,
-        title_en: group.name_en,
-        title_el: group.name_el,
-        type: group.isRequired ? 'single' : 'multiple',
-        max: group.maxSelections,
-        options: group.options.map((opt: any) => ({
-          name: opt.name.toLowerCase().replace(/\s+/g, '_'), 
-          label_da: opt.name,
-          label_en: opt.name_en,
-          label_el: opt.name_el,
-          price: opt.price || 0
-        }))
-      };
-    });
-    return extrasObj;
-  };
-
-  const handleMoveProduct = async (index: number, direction: number) => {
-    if (activeCategory === "ΟΛΑ" || activeCategory === "ΠΡΟΤΕΙΝΟΜΕΝΑ" || searchQuery) return;
-
-    const items = [...filteredProducts];
-    if (direction === -1 && index > 0) {
-      [items[index - 1], items[index]] = [items[index], items[index - 1]];
-    } else if (direction === 1 && index < items.length - 1) {
-      [items[index + 1], items[index]] = [items[index], items[index + 1]];
-    } else { return; }
-
-    const newProducts = [...products];
-    items.forEach((item, newSortOrder) => {
-      const pIndex = newProducts.findIndex(p => p.id === item.id);
-      if(pIndex !== -1) newProducts[pIndex].sort_order = newSortOrder;
-    });
-    setProducts(newProducts);
-
-    setIsUploading(true);
-    const updates = items.map((p, idx) => supabase.from("menu_items").update({ sort_order: idx }).eq("id", p.id));
-    await Promise.all(updates);
-    setIsUploading(false);
-  };
-
-  const handleBulkPriceUpdate = async () => {
-    if (!bulkCategory || bulkPriceChange === 0) return alert("Επιλέξτε κατηγορία και ποσό αλλαγής.");
-    if (window.confirm(`Είστε σίγουροι ότι θέλετε να αλλάξετε τις τιμές στην κατηγορία "${bulkCategory}" κατά ${bulkPriceChange > 0 ? '+' : ''}${bulkPriceChange}kr;`)) {
-      setIsUploading(true);
-      const productsToUpdate = products.filter(p => p.category === bulkCategory);
-      const updates = productsToUpdate.map(p => 
-        supabase.from("menu_items").update({ 
-          price_takeaway: Math.max(0, (p.price_takeaway || 0) + bulkPriceChange),
-          price_delivery: Math.max(0, (p.price_delivery || 0) + bulkPriceChange)
-        }).eq("id", p.id)
-      );
-      await Promise.all(updates);
-      alert("Οι τιμές ενημερώθηκαν επιτυχώς!");
-      setBulkPriceChange(0);
-      fetchProducts();
-      setIsUploading(false);
-    }
-  };
-
-  const handleDuplicate = async (product: any) => {
-    if (window.confirm(`Να δημιουργηθεί αντίγραφο του "${product.title_da}";`)) {
-      const { id, created_at, ...productWithoutId } = product;
-      const clonedProduct = {
-        ...productWithoutId,
-        title_da: `${product.title_da} (Kopi)`,
-        title_el: `${product.title_el} (Αντίγραφο)`,
-      };
-      await supabase.from("menu_items").insert([clonedProduct]);
-      fetchProducts();
-    }
-  };
-
- const saveEdit = async () => {
-    const safeCategory = editForm.category?.trim().toUpperCase() || "ΓΕΝΙΚΑ";
-    
-    // ΔΙΟΡΘΩΣΗ: Αφαιρούμε το 'id' (και το 'created_at') πριν την αποθήκευση!
-    const { id, created_at, addons, ...dbData } = editForm; 
-    
-    const finalData = { ...dbData, category: safeCategory, extras: buildExtrasForDB(addons) };
-
-    const { error } = await supabase.from("menu_items").update(finalData).eq("id", editingId);
-    if (error) alert("Σφάλμα Αποθήκευσης: " + error.message);
-    else { setEditingId(null); setIsCustomCategory(false); fetchProducts(); }
-  };
-  
-  const addNewProduct = async () => {
-    const safeCategory = editForm.category?.trim().toUpperCase() || "ΓΕΝΙΚΑ";
-    const { addons, ...dbData } = editForm;
-    const finalData = { ...dbData, category: safeCategory, extras: buildExtrasForDB(addons) };
-
-    const { error } = await supabase.from("menu_items").insert([finalData]);
-    if (error) alert("Σφάλμα Προσθήκης: " + error.message);
-    else { setIsAdding(false); setIsCustomCategory(false); fetchProducts(); }
-  };
-
-  const handleDelete = async (id: number) => {
-    if (window.confirm("ΠΡΟΣΟΧΗ: Θέλετε σίγουρα να διαγράψετε αυτό το προϊόν;")) {
-      await supabase.from("menu_items").delete().eq("id", id);
-      fetchProducts();
-    }
-  };
-
-  const uploadImage = async (event: any) => {
-    const file = event.target.files[0];
-    if (!file) return;
-    setIsUploading(true);
-    const fileName = `${Date.now()}.${file.name.split(".").pop()}`;
-    const { error } = await supabase.storage.from("menu-images").upload(fileName, file);
-    if (!error) {
-      setEditForm({ ...editForm, image_path: fileName });
-    } else { alert("Σφάλμα ανεβάσματος!"); }
-    setIsUploading(false);
-  };
-
-  // ADDON HELPERS
-  const addAddonGroup = () => setEditForm({ ...editForm, addons: [...(editForm.addons || []), { id: Date.now().toString(), name: "", name_en: "", name_el: "", isRequired: false, maxSelections: 1, options: [] }] });
-  const removeAddonGroup = (groupId: string) => setEditForm({ ...editForm, addons: editForm.addons.filter((g: any) => g.id !== groupId) });
-  const updateAddonGroup = (groupId: string, field: string, value: any) => setEditForm({ ...editForm, addons: editForm.addons.map((g: any) => g.id === groupId ? { ...g, [field]: value } : g) });
-  const addAddonOption = (groupId: string) => setEditForm({ ...editForm, addons: editForm.addons.map((g: any) => g.id === groupId ? { ...g, options: [...g.options, { name: "", name_en: "", name_el: "", price: 0 }] } : g) });
-  const removeAddonOption = (groupId: string, optionIndex: number) => setEditForm({ ...editForm, addons: editForm.addons.map((g: any) => { if (g.id === groupId) { const newOptions = [...g.options]; newOptions.splice(optionIndex, 1); return { ...g, options: newOptions }; } return g; }) });
-  const updateAddonOption = (groupId: string, optionIndex: number, field: string, value: any) => setEditForm({ ...editForm, addons: editForm.addons.map((g: any) => { if (g.id === groupId) { const newOptions = [...g.options]; newOptions[optionIndex][field] = value; return { ...g, options: newOptions }; } return g; }) });
-
-  // --- Κατηγορίες & Φιλτράρισμα ---
   const hasRecommended = products.some(p => p.popular);
   let displayCategories = [...new Set(products.map((p) => p.category))].filter(Boolean);
   if (hasRecommended) displayCategories = ["ΠΡΟΤΕΙΝΟΜΕΝΑ", ...displayCategories];
@@ -219,7 +41,7 @@ export default function ProductsPage() {
   return (
     <div className="min-h-screen bg-[#0B1120] text-gray-200 font-sans">
       
-      {/* HEADER (Ενσωματωμένο όπως το είχες στο wrapper) */}
+      {/* HEADER */}
       <header className="bg-[#0F172A] border-b border-white/10 p-4 sticky top-0 z-40 flex justify-between items-center shadow-md">
         <div>
           <h1 className="text-xl font-black text-white italic tracking-tight">HELLAS AALBORG</h1>
@@ -241,10 +63,7 @@ export default function ProductsPage() {
             <button onClick={() => setShowBulkActions(!showBulkActions)} className="bg-purple-600 hover:bg-purple-500 text-white px-5 py-3 rounded-2xl font-black text-xs uppercase shadow-sm transition-colors whitespace-nowrap">
               ⚡ Μαζικες
             </button>
-            <button onClick={() => {
-                setIsAdding(true); setEditingId(null); setIsCustomCategory(false); setActiveEditTab("basic");
-                setEditForm({ title_da: "", title_en: "", title_el: "", desc_da: "", desc_en: "", desc_el: "", price_takeaway: 0, price_delivery: 0, category: (activeCategory !== "ΟΛΑ" && activeCategory !== "ΠΡΟΤΕΙΝΟΜΕΝΑ") ? activeCategory : displayCategories.filter(c => c !== "ΠΡΟΤΕΙΝΟΜΕΝΑ")[0] || "", image_path: "", sort_order: 0, popular: false, vegetarian: false, featured: false, addons: [] });
-              }} className="bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] px-6 py-3 rounded-2xl font-black text-xs uppercase shadow-lg transition-transform active:scale-95 whitespace-nowrap">
+            <button onClick={() => resetForm((activeCategory !== "ΟΛΑ" && activeCategory !== "ΠΡΟΤΕΙΝΟΜΕΝΑ") ? activeCategory : displayCategories.filter(c => c !== "ΠΡΟΤΕΙΝΟΜΕΝΑ")[0] || "")} className="bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] px-6 py-3 rounded-2xl font-black text-xs uppercase shadow-lg transition-transform active:scale-95 whitespace-nowrap">
               + Νεο Προϊον
             </button>
           </div>
@@ -266,7 +85,7 @@ export default function ProductsPage() {
                 <label className="block text-[10px] font-black uppercase mb-2 text-gray-400">2. Αλλαγη Τιμων (DKK)</label>
                 <div className="flex gap-2">
                   <input type="number" step="1" placeholder="+/- 5" value={bulkPriceChange} onChange={(e) => setBulkPriceChange(parseFloat(e.target.value) || 0)} className="w-24 p-2 text-center rounded-lg font-bold border border-gray-700 bg-gray-800 text-white outline-none" />
-                  <button onClick={handleBulkPriceUpdate} disabled={isUploading} className="flex-1 bg-[#38BDF8] text-[#0B1120] rounded-lg font-black text-[10px] uppercase transition-transform active:scale-95 disabled:opacity-50">Εφαρμογη</button>
+                  <button onClick={() => handleBulkPriceUpdate(bulkCategory, bulkPriceChange, () => setBulkPriceChange(0))} disabled={isUploading} className="flex-1 bg-[#38BDF8] text-[#0B1120] rounded-lg font-black text-[10px] uppercase transition-transform active:scale-95 disabled:opacity-50">Εφαρμογη</button>
                 </div>
               </div>
             </div>
@@ -295,8 +114,8 @@ export default function ProductsPage() {
                 <div className="flex items-center gap-4 w-full sm:w-auto">
                   {activeCategory !== "ΟΛΑ" && activeCategory !== "ΠΡΟΤΕΙΝΟΜΕΝΑ" && !searchQuery && (
                     <div className="flex flex-col gap-1 mr-2 shrink-0">
-                      <button onClick={() => handleMoveProduct(index, -1)} disabled={index === 0 || isUploading} className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-800 border-gray-700 hover:bg-sky-900 text-gray-400 disabled:opacity-30">↑</button>
-                      <button onClick={() => handleMoveProduct(index, 1)} disabled={index === filteredProducts.length - 1 || isUploading} className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-800 border-gray-700 hover:bg-sky-900 text-gray-400 disabled:opacity-30">↓</button>
+                      <button onClick={() => handleMoveProduct(index, -1, filteredProducts)} disabled={index === 0 || isUploading} className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-800 border-gray-700 hover:bg-sky-900 text-gray-400 disabled:opacity-30">↑</button>
+                      <button onClick={() => handleMoveProduct(index, 1, filteredProducts)} disabled={index === filteredProducts.length - 1 || isUploading} className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-800 border-gray-700 hover:bg-sky-900 text-gray-400 disabled:opacity-30">↓</button>
                     </div>
                   )}
 
@@ -317,10 +136,7 @@ export default function ProductsPage() {
 
                 <div className="flex gap-2 w-full sm:w-auto justify-end border-t border-slate-800 sm:border-t-0 pt-3 sm:pt-0 items-center">
                   <button onClick={() => handleDuplicate(p)} className="w-12 h-12 rounded-xl flex items-center justify-center text-lg bg-purple-900/30 text-purple-400 hover:bg-purple-900/50 transition-colors">📋</button>
-                  <button onClick={() => { 
-                      setEditingId(p.id); setActiveEditTab("basic"); setIsCustomCategory(false);
-                      setEditForm({ ...p, addons: parseExtrasToUI(p.extras) }); 
-                    }} className="w-12 h-12 rounded-xl flex items-center justify-center text-lg bg-blue-900/30 text-blue-400 hover:bg-blue-900/50 transition-colors">✏️</button>
+                  <button onClick={() => startEdit(p)} className="w-12 h-12 rounded-xl flex items-center justify-center text-lg bg-blue-900/30 text-blue-400 hover:bg-blue-900/50 transition-colors">✏️</button>
                   <button onClick={() => handleDelete(p.id)} className="w-12 h-12 rounded-xl flex items-center justify-center text-lg bg-red-900/30 text-red-400 hover:bg-red-900/50 transition-colors">🗑️</button>
                 </div>
               </div>
@@ -330,13 +146,13 @@ export default function ProductsPage() {
 
         {/* --- MODAL --- */}
         {(isAdding || editingId) && (
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in" onClick={() => { setIsAdding(false); setEditingId(null); }}>
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in" onClick={closeModal}>
             <div className="relative w-full max-w-4xl max-h-[95vh] flex flex-col rounded-[2.5rem] shadow-2xl overflow-hidden bg-slate-900 border border-slate-700" onClick={(e) => e.stopPropagation()}>
               
               {/* Header */}
               <div className="shrink-0 flex justify-between items-center p-6 border-b border-slate-800 bg-[#0F172A]">
                 <h3 className="text-xl font-black uppercase italic text-white">{isAdding ? "Νεο Προϊον" : "Επεξεργασια Προϊοντος"}</h3>
-                <button onClick={() => { setIsAdding(false); setEditingId(null); }} className="w-10 h-10 rounded-full flex items-center justify-center bg-slate-800 text-gray-400 hover:text-red-500 font-black text-xl border border-slate-700 transition-colors">✕</button>
+                <button onClick={closeModal} className="w-10 h-10 rounded-full flex items-center justify-center bg-slate-800 text-gray-400 hover:text-red-500 font-black text-xl border border-slate-700 transition-colors">✕</button>
               </div>
 
               {/* Tabs */}
@@ -488,32 +304,4 @@ export default function ProductsPage() {
                       <div className="space-y-3">
                         <span className="text-[10px] font-black text-gray-500 tracking-widest uppercase flex items-center gap-2 border-b pb-2 border-gray-700">🇬🇧 Αγγλικα (English)</span>
                         <input type="text" placeholder="Product Name" className="w-full p-3 rounded-xl font-bold border text-sm outline-none bg-slate-900 border-slate-700 text-white focus:border-[#38BDF8]" value={editForm.title_en || ""} onChange={(e) => setEditForm({ ...editForm, title_en: e.target.value })} />
-                        <textarea rows={3} placeholder="Description / Ingredients" className="w-full p-3 rounded-xl font-medium border text-xs outline-none resize-none bg-slate-900 border-slate-700 text-white focus:border-[#38BDF8]" value={editForm.desc_en || ""} onChange={(e) => setEditForm({ ...editForm, desc_en: e.target.value })} />
-                      </div>
-                      <div className="space-y-3">
-                        <span className="text-[10px] font-black text-gray-500 tracking-widest uppercase flex items-center gap-2 border-b pb-2 border-gray-700">🇬🇷 Ελληνικα (Greek)</span>
-                        <input type="text" placeholder="Όνομα Προϊόντος" className="w-full p-3 rounded-xl font-bold border text-sm outline-none bg-slate-900 border-slate-700 text-white focus:border-[#38BDF8]" value={editForm.title_el || ""} onChange={(e) => setEditForm({ ...editForm, title_el: e.target.value })} />
-                        <textarea rows={3} placeholder="Συστατικά / Περιγραφή" className="w-full p-3 rounded-xl font-medium border text-xs outline-none resize-none bg-slate-900 border-slate-700 text-white focus:border-[#38BDF8]" value={editForm.desc_el || ""} onChange={(e) => setEditForm({ ...editForm, desc_el: e.target.value })} />
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Footer */}
-              <div className="shrink-0 p-4 sm:p-6 border-t flex flex-col sm:flex-row gap-3 bg-[#0F172A] border-slate-800">
-                <button onClick={isAdding ? addNewProduct : saveEdit} disabled={isUploading} className="flex-1 sm:flex-[2] bg-emerald-500 text-[#0B1120] py-4 rounded-2xl font-black text-sm uppercase tracking-widest disabled:opacity-50 transition-transform active:scale-95 shadow-lg hover:bg-emerald-400">
-                  {isAdding ? "Δημιουργια Προϊοντος" : "Αποθηκευση Αλλαγων"}
-                </button>
-                <button onClick={() => { setIsAdding(false); setEditingId(null); setIsCustomCategory(false); }} className="flex-1 py-4 rounded-2xl font-black text-sm uppercase transition-colors border bg-slate-800 text-gray-300 border-slate-700 hover:bg-slate-700">
-                  Ακυρωση
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-      </div>
-    </div>
-  );
-}
+                        <textarea rows={3} placeholder="Description / Ingredients" className="w-full p-3 rounded-xl font-
