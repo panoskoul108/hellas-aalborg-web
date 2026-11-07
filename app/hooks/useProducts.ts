@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../app/supabase'; // Βεβαιώσου ότι το path είναι σωστό!
+import { supabase } from '../supabase'; // Βεβαιώσου ότι το path είναι σωστό!
 
 export function useProducts() {
   const [products, setProducts] = useState<any[]>([]);
