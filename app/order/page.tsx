@@ -127,17 +127,51 @@ export default function OrderPage() {
       <div className="absolute inset-0 bg-[#0B1120]/85 -z-10"></div>
       
       <header className="bg-[#0F172A] border-b border-white/10 p-4 md:p-6 sticky top-0 z-40 flex justify-between items-center shadow-lg">
-        <div className="flex items-center gap-3"><a href="/" className="hover:opacity-80 transition-opacity"><Image src="/logo.png" alt="Logo" width={50} height={50} className="object-contain" /></a><div><h1 className="text-lg md:text-xl font-bold text-white leading-tight">Hellas Aalborg</h1><span className="text-[10px] md:text-xs text-[#38BDF8] uppercase tracking-wider font-bold">Takeaway</span></div></div>
+        <div className="flex items-center gap-3">
+          <a href="/" className="hover:opacity-80 transition-opacity">
+            <Image src="/logo.png" alt="Logo" width={50} height={50} className="object-contain" />
+          </a>
+          <div>
+            <h1 className="text-lg md:text-xl font-bold text-white leading-tight">Hellas Aalborg</h1>
+            <span className="text-[10px] md:text-xs text-[#38BDF8] uppercase tracking-wider font-bold">Takeaway</span>
+          </div>
+        </div>
+        
         <div className="flex items-center gap-3 md:gap-5">
           <div className="flex gap-1 md:gap-2 text-xl bg-slate-800 p-1 rounded-lg border border-white/10">
-            <button onClick={() => setLang('da')} className={`p-1 rounded ${lang === 'da' ? 'bg-white/20 scale-110' : 'opacity-50 hover:opacity-100'}`}>🇩🇰</button><button onClick={() => setLang('en')} className={`p-1 rounded ${lang === 'en' ? 'bg-white/20 scale-110' : 'opacity-50 hover:opacity-100'}`}>🇬🇧</button><button onClick={() => setLang('el')} className={`p-1 rounded ${lang === 'el' ? 'bg-white/20 scale-110' : 'opacity-50 hover:opacity-100'}`}>🇬🇷</button>
+            <button onClick={() => setLang('da')} className={`p-1 rounded ${lang === 'da' ? 'bg-white/20 scale-110' : 'opacity-50 hover:opacity-100'}`}>🇩🇰</button>
+            <button onClick={() => setLang('en')} className={`p-1 rounded ${lang === 'en' ? 'bg-white/20 scale-110' : 'opacity-50 hover:opacity-100'}`}>🇬🇧</button>
+            <button onClick={() => setLang('el')} className={`p-1 rounded ${lang === 'el' ? 'bg-white/20 scale-110' : 'opacity-50 hover:opacity-100'}`}>🇬🇷</button>
           </div>
+          
           {auth.user ? (
-            <div className="hidden md:flex flex-col text-right cursor-pointer hover:opacity-80" onClick={openProfile}><span className="text-xs text-gray-400 font-bold border-b border-slate-700 pb-0.5">{auth.user.email}</span><span className="text-[10px] text-[#38BDF8] uppercase tracking-widest mt-0.5">{ui.profileTitle}</span></div>
+            <>
+              {/* Desktop: Κείμενο με Email */}
+              <div className="hidden md:flex flex-col text-right cursor-pointer hover:opacity-80" onClick={openProfile}>
+                <span className="text-xs text-gray-400 font-bold border-b border-slate-700 pb-0.5">{auth.user.email}</span>
+                <span className="text-[10px] text-[#38BDF8] uppercase tracking-widest mt-0.5">{ui.profileTitle}</span>
+              </div>
+              {/* Mobile: Εικονίδιο Προφίλ */}
+              <button onClick={openProfile} className="md:hidden relative bg-white/10 hover:bg-white/20 w-11 h-11 rounded-full transition-colors border border-white/5 text-xl flex items-center justify-center">
+                👤
+              </button>
+            </>
           ) : (
-            <button onClick={() => { setIsCartOpen(true); setCheckoutStep('auth'); }} className="hidden md:block text-sm font-bold text-[#38BDF8] hover:text-white transition-colors">{ui.loginTitle}</button>
+            <>
+              {/* Desktop: Κείμενο Σύνδεσης */}
+              <button onClick={() => { setIsCartOpen(true); setCheckoutStep('auth'); }} className="hidden md:block text-sm font-bold text-[#38BDF8] hover:text-white transition-colors">
+                {ui.loginTitle}
+              </button>
+              {/* Mobile: Εικονίδιο Σύνδεσης */}
+              <button onClick={() => { setIsCartOpen(true); setCheckoutStep('auth'); }} className="md:hidden relative bg-white/10 hover:bg-white/20 w-11 h-11 rounded-full transition-colors border border-white/5 text-xl flex items-center justify-center">
+                👤
+              </button>
+            </>
           )}
-          <button onClick={() => setIsCartOpen(true)} className="relative bg-white/10 hover:bg-white/20 p-3 rounded-full transition-colors border border-white/5">🛒 {cart.length > 0 && <span className="absolute -top-1 -right-1 bg-[#38BDF8] text-[#0B1120] text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full shadow-lg border-2 border-[#0F172A]">{cart.reduce((sum, item) => sum + item.quantity, 0)}</span>}</button>
+          
+          <button onClick={() => setIsCartOpen(true)} className="relative bg-white/10 hover:bg-white/20 p-3 rounded-full transition-colors border border-white/5">
+            🛒 {cart.length > 0 && <span className="absolute -top-1 -right-1 bg-[#38BDF8] text-[#0B1120] text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full shadow-lg border-2 border-[#0F172A]">{cart.reduce((sum, item) => sum + item.quantity, 0)}</span>}
+          </button>
         </div>
       </header>
 
@@ -213,9 +247,32 @@ export default function OrderPage() {
                 </div>
               ) : checkoutStep === 'auth' ? (
                 <div className="flex flex-col gap-6 animate-fade-in py-2">
-                  <div className="text-center mb-2"><h3 className="text-2xl font-black text-white uppercase tracking-widest">{ui.guestCheckout}</h3><p className="text-gray-400 text-sm mt-2">{ui.guestDesc}</p></div>
+                  
+                  {/* ΜΗΝΥΜΑ ΠΡΟΣΦΟΡΑΣ (LOYALTY) */}
+                  <div className="bg-gradient-to-r from-[#38BDF8]/20 to-purple-500/20 border border-[#38BDF8]/30 rounded-2xl p-4 flex items-center gap-4 shadow-lg mb-2">
+                    <div className="w-12 h-12 rounded-full bg-[#38BDF8] flex items-center justify-center text-xl shrink-0">🎁</div>
+                    <div>
+                      <h4 className="font-black text-white text-sm uppercase tracking-wide">
+                        {lang === 'da' ? 'Opret konto & få 35 DKK!' : lang === 'en' ? 'Create an account & get 35 DKK!' : 'Φτιάξε λογαριασμό & κέρδισε 35 DKK!'}
+                      </h4>
+                      <p className="text-xs text-gray-300 font-medium">
+                        {lang === 'da' ? 'Saml point og spar på dine næste ordrer.' : lang === 'en' ? 'Collect points and save on your next orders.' : 'Μάζεψε πόντους και κέρδισε έκπτωση στις επόμενες παραγγελίες σου.'}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="text-center mb-2">
+                    <h3 className="text-2xl font-black text-white uppercase tracking-widest">{ui.guestCheckout}</h3>
+                    <p className="text-gray-400 text-sm mt-2">{ui.guestDesc}</p>
+                  </div>
                   <button onClick={() => setCheckoutStep('checkout')} className="w-full bg-white hover:bg-gray-200 text-[#0B1120] font-black py-4 rounded-2xl shadow-lg uppercase tracking-widest transition-transform active:scale-95">🚀 {ui.guestCheckout}</button>
-                  <div className="flex items-center gap-4 my-2 opacity-50"><hr className="flex-1 border-slate-600" /><span className="text-xs text-slate-400 font-bold uppercase">{ui.or}</span><hr className="flex-1 border-slate-600" /></div>
+                  
+                  <div className="flex items-center gap-4 my-2 opacity-50">
+                    <hr className="flex-1 border-slate-600" />
+                    <span className="text-xs text-slate-400 font-bold uppercase">{ui.or}</span>
+                    <hr className="flex-1 border-slate-600" />
+                  </div>
+                  
                   <div className="bg-slate-900/50 p-6 rounded-3xl border border-white/10 shadow-inner">
                     <h3 className="text-lg font-bold text-white text-center mb-5">{auth.authMode === 'signup' ? ui.regTitle : ui.loginTitle}</h3>
                     <form onSubmit={(e) => auth.handleAuth(e, () => setCheckoutStep('checkout'))} className="flex flex-col gap-4">
