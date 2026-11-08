@@ -18,6 +18,14 @@ export default function OrderPage() {
   const [lang, setLang] = useState<'da' | 'en' | 'el'>('da');
   const ui = dict[lang];
 
+  // --- LOCAL DICT ΓΙΑ ΤΑ ΝΕΑ ΣΤΟΙΧΕΙΑ WOLT STYLE ---
+  const localUi = {
+    da: { search: "Søg i Hellas Aalborg", closed: "Lukket", opensAt: "Åbner kl. 17:00", smiley: "Smiley info", details: "Restaurant detaljer", schedule: "Planlæg ordre", minOrder: "Min. ordre 75 kr.", viewOrder: "Se bestilling" },
+    en: { search: "Search in Hellas Aalborg", closed: "Closed", opensAt: "Opens at 17:00", smiley: "Smiley info", details: "Restaurant details", schedule: "Schedule order", minOrder: "Min. order 75 kr.", viewOrder: "View order" },
+    el: { search: "Αναζήτηση...", closed: "Κλειστά", opensAt: "Ανοίγει στις 17:00", smiley: "Αναφορά Smiley", details: "Πληροφορίες", schedule: "Προγραμματισμος", minOrder: "Ελάχιστη παραγγελία 75 kr.", viewOrder: "Καλαθι" }
+  };
+  const t = localUi[lang];
+
   // --- HOOKS ---
   const { storeOpen, generateTimeSlots } = useStore(ui);
   const auth = useAuth();
@@ -41,8 +49,9 @@ export default function OrderPage() {
   const [isLocked, setIsLocked] = useState(false);
   const [placedOrder, setPlacedOrder] = useState<any>(null);
 
-  // Νέο state για το αναδυόμενο μενού κατηγοριών
+  // Νέα States για UI
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // --- EFFECTS ---
   useEffect(() => {
@@ -92,7 +101,7 @@ export default function OrderPage() {
 
   const submitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!storeOpen) return alert(ui.closedStore);
+    if (!storeOpen && requestedTime === 'ASAP') return alert(ui.closedStore);
     if (isLocked) return alert("Limit reached.");
     if (!auth.customerName || !auth.customerPhone) return alert('Missing details.');
     
@@ -128,192 +137,255 @@ export default function OrderPage() {
   const handleCustomerPickup = async () => {
     if (!placedOrder) return;
     const { error } = await supabase.from('orders').update({ is_delivered: true }).eq('id', placedOrder.id);
-    if (error) alert("⚠️ Η βάση δεδομένων απέρριψε την ενημέρωση! Ζητήστε από το ταμείο να πατήσει το '✓'.");
+    if (error) alert("⚠️ Η βάση δεδομένων απέρριψε την ενημέρωση!");
     localStorage.removeItem('hellas_active_order'); 
     setPlacedOrder(null); clearCart(); setCheckoutStep('review');
   };
 
-  // --- ΚΑΤΗΓΟΡΙΕΣ ΚΑΙ ΜΕΤΑΦΡΑΣΕΙΣ ---
+  // --- ΚΑΤΗΓΟΡΙΕΣ & ΑΝΑΖΗΤΗΣΗ ---
   const hasRecommended = menuItems.some(p => p.popular);
   const uniqueCategories = [...new Set(menuItems.map(p => p.category))].filter(Boolean);
   const displayCategories = hasRecommended ? ['POPULAR', ...uniqueCategories] : uniqueCategories;
 
-  const getItemsForCategory = (cat: string) => {
-    if (cat === 'POPULAR') return menuItems.filter(i => i.popular);
-    return menuItems.filter(i => i.category === cat);
-  };
-
-  // Έξυπνος Μεταφραστής Κατηγοριών
   const translateCategory = (cat: string, currentLang: string) => {
-    if (cat === 'POPULAR') return currentLang === 'da' ? '⭐ Populært' : currentLang === 'en' ? '⭐ Popular' : '⭐ Δημοφιλή';
-    
-    // Εδώ προσθέτεις όσες κατηγορίες θέλεις! Το κλειδί είναι ακριβώς όπως το γράφεις στο Admin.
+    if (cat === 'POPULAR') return currentLang === 'da' ? '⭐ Mest bestilte' : currentLang === 'en' ? '⭐ Most ordered' : '⭐ Δημοφιλή';
     const catDict: Record<string, any> = {
-      'COMBOS': { da: 'Menuer & Tilbud', en: 'Combos & Offers', el: 'Μενού & Προσφορές' },
-      'GYROS PITA': { da: 'Gyros Pita', en: 'Gyros Pita', el: 'Γύρος Πίτα' },
-      'HALLOUMI PITA': { da: 'Halloumi Pita', en: 'Halloumi Pita', el: 'Χαλούμι Πίτα' },
+      'COMBOS': { da: 'Menuer', en: 'Combos', el: 'Μενού & Προσφορές' },
+      'GYROS PITA': { da: 'Gyros', en: 'Gyros', el: 'Γύρος Πίτα' },
+      'HALLOUMI PITA': { da: 'Halloumi', en: 'Halloumi', el: 'Χαλούμι' },
       'PITA CLUB': { da: 'Pita Club', en: 'Pita Club', el: 'Σκεπαστή' },
-      'DOBBELT INDBAGT PITA': { da: 'Indbagt Pita', en: 'Double Baked Pita', el: 'Διπλή Σκεπαστή' },
       'PORTIONER': { da: 'Portioner', en: 'Portions', el: 'Μερίδες' },
-      'RUM': { da: 'Drikkevarer', en: 'Drinks', el: 'Αναψυκτικά & Ποτά' },
+      'RUM': { da: 'Drikkevarer', en: 'Drinks', el: 'Αναψυκτικά' },
       'DIPS': { da: 'Dips & Ekstra', en: 'Dips & Extras', el: 'Dips & Έξτρα' }
     };
-    
     const normalizedCat = cat.toUpperCase().trim();
-    if (catDict[normalizedCat] && catDict[normalizedCat][currentLang]) {
-      return catDict[normalizedCat][currentLang];
-    }
-    
-    // Αν δεν βρει μετάφραση, απλά το δείχνει με όμορφα κεφαλαία αρχικά γράμματα
+    if (catDict[normalizedCat] && catDict[normalizedCat][currentLang]) return catDict[normalizedCat][currentLang];
     return cat.charAt(0).toUpperCase() + cat.slice(1).toLowerCase();
+  };
+
+  const getItemsForDisplay = () => {
+    if (!searchQuery) return menuItems;
+    const q = searchQuery.toLowerCase();
+    return menuItems.filter(item => 
+      (item.title_da && item.title_da.toLowerCase().includes(q)) || 
+      (item.title_en && item.title_en.toLowerCase().includes(q)) || 
+      (item.title_el && item.title_el.toLowerCase().includes(q)) ||
+      (item.desc_da && item.desc_da.toLowerCase().includes(q))
+    );
   };
 
   const scrollToCategory = (cat: string) => {
     const element = document.getElementById(`category-${cat}`);
     if (element) {
-      const yOffset = -150; // Κενό για να μη κρύβεται ο τίτλος κάτω από το μενού
+      const yOffset = -80; 
       const y = element.getBoundingClientRect().top + window.scrollY + yOffset;
       window.scrollTo({ top: y, behavior: 'smooth' });
     }
-    setIsCategoryMenuOpen(false); // Κλείνει το μενού αφού επιλέξεις
+    setIsCategoryMenuOpen(false); 
   };
 
+  const displayedItems = getItemsForDisplay();
+
   return (
-    <div className="min-h-screen font-sans bg-[#0B1120] text-gray-200 selection:bg-[#38BDF8] selection:text-[#0B1120] pb-24 bg-[url('/bg.jpg')] bg-cover bg-fixed bg-center relative">
-      <div className="absolute inset-0 bg-[#0B1120]/85 -z-10"></div>
+    <div className="min-h-screen font-sans bg-[#0F172A] text-gray-200 selection:bg-[#38BDF8] selection:text-[#0B1120] pb-24 md:pb-10 bg-slate-900 relative">
       
-      <header className="bg-[#0F172A] border-b border-white/10 p-4 md:p-6 sticky top-0 z-40 flex justify-between items-center shadow-lg">
+      {/* 1. ΣΤΑΘΕΡΟ HEADER */}
+      <header className="bg-[#0F172A] p-4 flex justify-between items-center z-50 relative border-b border-white/5">
         <div className="flex items-center gap-3">
-          <a href="/" className="hover:opacity-80 transition-opacity">
-            <Image src="/logo.png" alt="Logo" width={50} height={50} className="object-contain" />
-          </a>
-          <div>
-            <h1 className="text-lg md:text-xl font-bold text-white leading-tight">Hellas Aalborg</h1>
-            <span className="text-[10px] md:text-xs text-[#38BDF8] uppercase tracking-wider font-bold">Takeaway</span>
-          </div>
+          <Image src="/logo.png" alt="Logo" width={40} height={40} className="object-contain rounded-lg" />
         </div>
         
-        <div className="flex items-center gap-3 md:gap-5">
-          <div className="flex gap-1 md:gap-2 text-xl bg-slate-800 p-1 rounded-lg border border-white/10">
-            <button onClick={() => setLang('da')} className={`p-1 rounded ${lang === 'da' ? 'bg-white/20 scale-110' : 'opacity-50 hover:opacity-100'}`}>🇩🇰</button>
-            <button onClick={() => setLang('en')} className={`p-1 rounded ${lang === 'en' ? 'bg-white/20 scale-110' : 'opacity-50 hover:opacity-100'}`}>🇬🇧</button>
-            <button onClick={() => setLang('el')} className={`p-1 rounded ${lang === 'el' ? 'bg-white/20 scale-110' : 'opacity-50 hover:opacity-100'}`}>🇬🇷</button>
+        <div className="flex items-center gap-2 md:gap-4">
+          <div className="flex gap-1 text-lg bg-slate-800 p-1 rounded-full border border-white/10">
+            <button onClick={() => setLang('da')} className={`w-8 h-8 flex items-center justify-center rounded-full ${lang === 'da' ? 'bg-white/20' : 'opacity-50'}`}>🇩🇰</button>
+            <button onClick={() => setLang('en')} className={`w-8 h-8 flex items-center justify-center rounded-full ${lang === 'en' ? 'bg-white/20' : 'opacity-50'}`}>🇬🇧</button>
+            <button onClick={() => setLang('el')} className={`w-8 h-8 flex items-center justify-center rounded-full ${lang === 'el' ? 'bg-white/20' : 'opacity-50'}`}>🇬🇷</button>
           </div>
           
-          {auth.user ? (
-            <>
-              <div className="hidden md:flex flex-col text-right cursor-pointer hover:opacity-80" onClick={openProfile}>
-                <span className="text-xs text-gray-400 font-bold border-b border-slate-700 pb-0.5">{auth.user.email}</span>
-                <span className="text-[10px] text-[#38BDF8] uppercase tracking-widest mt-0.5">{ui.profileTitle}</span>
-              </div>
-              <button onClick={openProfile} className="md:hidden relative bg-white/10 hover:bg-white/20 w-11 h-11 rounded-full transition-colors border border-white/5 text-xl flex items-center justify-center">
-                👤
-              </button>
-            </>
-          ) : (
-            <>
-              <button onClick={() => { setIsCartOpen(true); setCheckoutStep('auth'); }} className="hidden md:block text-sm font-bold text-[#38BDF8] hover:text-white transition-colors">
-                {ui.loginTitle}
-              </button>
-              <button onClick={() => { setIsCartOpen(true); setCheckoutStep('auth'); }} className="md:hidden relative bg-white/10 hover:bg-white/20 w-11 h-11 rounded-full transition-colors border border-white/5 text-xl flex items-center justify-center">
-                👤
-              </button>
-            </>
-          )}
+          <button onClick={() => { auth.user ? openProfile() : setCheckoutStep('auth'); setIsCartOpen(true); }} className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center text-lg text-[#38BDF8] border border-white/10">
+            👤
+          </button>
           
-          <button onClick={() => setIsCartOpen(true)} className="relative bg-white/10 hover:bg-white/20 p-3 rounded-full transition-colors border border-white/5">
-            🛒 {cart.length > 0 && <span className="absolute -top-1 -right-1 bg-[#38BDF8] text-[#0B1120] text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full shadow-lg border-2 border-[#0F172A]">{cart.reduce((sum, item) => sum + item.quantity, 0)}</span>}
+          <button onClick={() => setIsCartOpen(true)} className="hidden md:flex relative bg-[#38BDF8] text-[#0B1120] px-5 py-2 rounded-full font-black items-center gap-2 transition-transform active:scale-95">
+            🛒 <span>{cart.reduce((sum, item) => sum + item.quantity, 0)}</span>
           </button>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto p-4 md:p-6 pt-4">
+      {/* 2. ΕΞΩΦΥΛΛΟ (HERO IMAGE) */}
+      <div className="w-full h-48 md:h-64 bg-[url('/bg.jpg')] bg-cover bg-center relative">
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A] to-transparent opacity-80"></div>
+      </div>
+
+      <main className="max-w-4xl mx-auto md:px-6 relative -mt-16 md:-mt-24 z-10">
         
-        {/* ΝΕΟ: ΕΞΥΠΝΟ DROPDOWN ΚΑΤΗΓΟΡΙΩΝ (Αντικατέστησε το Scroll) */}
-        {!isLoading && displayCategories.length > 0 && (
-          <div className="sticky top-[72px] md:top-[88px] z-30 bg-[#0B1120]/95 backdrop-blur-md py-3 -mx-4 px-4 md:mx-0 md:px-0 mb-8 border-b border-white/5 shadow-sm">
-            
+        {/* 3. ΠΛΗΡΟΦΟΡΙΕΣ ΚΑΤΑΣΤΗΜΑΤΟΣ & SCHEDULE ORDER */}
+        <div className="bg-slate-900 mx-0 md:mx-0 p-5 md:p-8 rounded-t-3xl md:rounded-3xl shadow-2xl border-b md:border border-white/5 mb-6">
+          <h1 className="text-3xl font-black text-white mb-3">Hellas Food</h1>
+          
+          <div className="flex flex-wrap items-center gap-2 text-sm font-medium text-gray-300 mb-4">
+            <span className="text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded flex items-center gap-1 font-bold">🙂 8.2</span>
+            <span className="text-gray-600">•</span>
+            {!storeOpen ? <span className="text-gray-400 font-bold">{t.closed}</span> : <span className="text-emerald-400 font-bold">Open</span>}
+            <span className="text-gray-600">•</span>
+            {!storeOpen && <span className="text-gray-400">{t.opensAt}</span>}
+            {!storeOpen && <span className="text-gray-600">•</span>}
+            <span className="text-gray-400">{t.minOrder}</span>
+          </div>
+
+          <div className="flex items-center gap-4 text-xs font-bold text-[#38BDF8] mb-6">
+            <a href="https://www.findsmiley.dk/app/1579068" target="_blank" rel="noreferrer" className="hover:underline flex items-center gap-1">
+              🔍 {t.smiley}
+            </a>
+            <span className="text-gray-600">•</span>
+            <button onClick={() => alert('Ved Stranden 21, 9000 Aalborg')} className="hover:underline">
+              ℹ️ {t.details}
+            </button>
+          </div>
+          
+          <button onClick={() => { setIsCartOpen(true); setCheckoutStep('cart'); }} className="w-full bg-[#38BDF8] text-[#0B1120] py-4 rounded-xl font-black text-sm uppercase flex justify-center items-center gap-2 transition-transform active:scale-95 shadow-md">
+            🕒 {t.schedule}
+          </button>
+        </div>
+
+        {/* 4. ΜΠΑΡΑ ΑΝΑΖΗΤΗΣΗΣ */}
+        <div className="px-4 md:px-0 mb-6 sticky top-[72px] z-20 bg-[#0F172A] py-2">
+          <div className="relative">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg text-gray-500">🔍</span>
+            <input 
+              type="text" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={t.search}
+              className="w-full bg-slate-800 border border-slate-700 text-white rounded-full py-3.5 pl-12 pr-4 font-bold text-sm outline-none focus:border-[#38BDF8] transition-colors placeholder:text-gray-500 shadow-inner"
+            />
+          </div>
+        </div>
+
+        {/* 5. ΚΑΤΗΓΟΡΙΕΣ (ΑΝ ΔΕΝ ΥΠΑΡΧΕΙ ΑΝΑΖΗΤΗΣΗ) */}
+        {!searchQuery && !isLoading && (
+          <div className="px-4 md:px-0 mb-2 flex items-center gap-3 overflow-x-auto no-scrollbar pb-4 border-b border-white/5">
             <button 
               onClick={() => setIsCategoryMenuOpen(!isCategoryMenuOpen)}
-              className="w-full flex items-center justify-between bg-slate-800/80 border border-[#38BDF8]/30 hover:border-[#38BDF8]/60 text-white font-black p-4 rounded-2xl shadow-lg transition-colors"
+              className="shrink-0 bg-[#38BDF8]/10 text-[#38BDF8] border border-[#38BDF8]/30 px-5 py-2 rounded-full font-black text-xs uppercase tracking-widest flex items-center gap-2 transition-colors"
             >
-              <div className="flex items-center gap-3">
-                <span className="text-xl">📑</span> 
-                <span className="uppercase tracking-widest text-sm">
-                  {lang === 'da' ? 'Menu / Vælg Kategori' : lang === 'en' ? 'Menu / Select Category' : 'Μενού / Κατηγορίες'}
-                </span>
-              </div>
-              <div className={`w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center transition-transform duration-300 ${isCategoryMenuOpen ? 'rotate-180 text-[#38BDF8]' : 'text-gray-400'}`}>
-                ▼
-              </div>
+              📑 Menu ▼
             </button>
-
-            {/* ΑΝΑΔΥΟΜΕΝΗ ΛΙΣΤΑ */}
-            {isCategoryMenuOpen && (
-              <div className="absolute left-4 right-4 md:left-0 md:right-0 mt-2 bg-slate-900 border border-[#38BDF8]/20 rounded-2xl shadow-2xl overflow-hidden animate-fade-in-up z-50">
-                <div className="grid grid-cols-1 sm:grid-cols-2 p-2 gap-1 max-h-[60vh] overflow-y-auto custom-scrollbar">
-                  {displayCategories.map(cat => (
-                    <button 
-                      key={cat} 
-                      onClick={() => scrollToCategory(cat)}
-                      className="text-left px-5 py-4 hover:bg-[#38BDF8]/10 text-gray-200 hover:text-[#38BDF8] font-black text-xs md:text-sm uppercase tracking-widest rounded-xl transition-colors border border-transparent hover:border-[#38BDF8]/30"
-                    >
-                      {translateCategory(cat, lang)}
-                    </button>
-                  ))}
-                </div>
-                <div className="bg-slate-800 p-3 text-center border-t border-white/5">
-                  <button onClick={() => setIsCategoryMenuOpen(false)} className="text-xs text-gray-400 font-bold uppercase tracking-widest">
-                    {lang === 'da' ? 'Luk' : lang === 'en' ? 'Close' : 'Κλείσιμο'} ▲
-                  </button>
-                </div>
-              </div>
-            )}
+            {displayCategories.map(cat => (
+              <button 
+                key={cat} 
+                onClick={() => scrollToCategory(cat)}
+                className="shrink-0 text-gray-400 hover:text-white px-3 py-2 font-bold text-sm transition-colors whitespace-nowrap"
+              >
+                {translateCategory(cat, lang).replace('⭐', '').trim()}
+              </button>
+            ))}
           </div>
         )}
 
-        {isLoading ? <p className="text-center text-[#38BDF8] animate-pulse">Loading...</p> : (
-          <div className="flex flex-col gap-10">
-            {displayCategories.map(cat => {
-              const items = getItemsForCategory(cat);
-              if (items.length === 0) return null;
-              
-              return (
-                <div key={cat} id={`category-${cat}`} className="scroll-mt-32">
-                  <h3 className="text-xl md:text-2xl font-black text-white uppercase tracking-widest mb-4 border-b border-white/10 pb-2 flex items-center gap-2">
-                    {translateCategory(cat, lang)}
-                  </h3>
-                  
-                  <div className="flex flex-col gap-4">
-                    {items.map(item => (
-                      <div key={item.id} className="bg-slate-800/40 p-4 rounded-2xl border border-white/5 flex gap-4 hover:border-white/10 transition-colors shadow-sm items-center">
-                        {item.image_path ? (
-                          <div className="w-20 h-20 md:w-24 md:h-24 shrink-0 rounded-xl overflow-hidden bg-slate-800 border border-white/5">
-                            <img src={`${supabaseImageUrl}${item.image_path}`} alt={item[`title_${lang}`] || item.name} className="w-full h-full object-cover" />
-                          </div>
-                        ) : (
-                          <div className="w-20 h-20 shrink-0 rounded-xl bg-slate-800/50 border border-white/5 flex items-center justify-center text-2xl">🍽️</div>
-                        )}
-                        
-                        <div className="flex-1">
-                          <h3 className="font-bold text-lg text-white mb-1">{item[`title_${lang}`] || item.name}</h3>
-                          <p className="text-sm text-gray-400 line-clamp-2 leading-relaxed mb-2">{item[`desc_${lang}`] || ''}</p>
-                          <span className="font-bold text-[#38BDF8]">{getItemPrice(item)} DKK</span>
-                        </div>
-                        
-                        <button onClick={() => setActiveProduct(item)} className="bg-white hover:bg-gray-200 text-[#0B1120] font-bold p-3 md:px-6 md:py-2.5 rounded-xl shadow-md transition-transform active:scale-95 shrink-0 flex items-center gap-2">
-                          <span className="hidden md:inline">{ui.add}</span> ➕
-                        </button>
-                      </div>
-                    ))}
+        {/* DROPDOWN ΚΑΤΗΓΟΡΙΩΝ */}
+        {isCategoryMenuOpen && !searchQuery && (
+          <div className="mx-4 md:mx-0 mb-6 bg-slate-800 border border-slate-700 rounded-2xl shadow-xl overflow-hidden animate-fade-in-up">
+            <div className="grid grid-cols-1 sm:grid-cols-2 p-2">
+              {displayCategories.map(cat => (
+                <button 
+                  key={cat} 
+                  onClick={() => scrollToCategory(cat)}
+                  className="text-left px-5 py-4 hover:bg-slate-700 text-gray-200 font-black text-sm uppercase rounded-xl transition-colors border border-transparent"
+                >
+                  {translateCategory(cat, lang)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 6. ΛΙΣΤΑ ΠΡΟΪΟΝΤΩΝ (WOLT STYLE) */}
+        <div className="px-4 md:px-0">
+          {isLoading ? (
+            <p className="text-center text-[#38BDF8] animate-pulse my-10">Loading menu...</p>
+          ) : searchQuery ? (
+            <div className="flex flex-col gap-4">
+              <h3 className="font-black text-xl text-white mb-2">Search Results</h3>
+              {displayedItems.length === 0 ? <p className="text-gray-500">No items found.</p> : null}
+              {displayedItems.map(item => (
+                <div key={item.id} onClick={() => setActiveProduct(item)} className="bg-slate-800/50 p-4 md:p-5 rounded-2xl flex justify-between gap-4 border border-white/5 cursor-pointer hover:border-white/10 transition-colors shadow-sm">
+                  <div className="flex-1 flex flex-col justify-center">
+                    <h3 className="font-bold text-base text-white mb-1.5 leading-tight pr-2">{item[`title_${lang}`] || item.name}</h3>
+                    <p className="text-[13px] text-gray-400 line-clamp-2 mb-3 leading-snug pr-2">{item[`desc_${lang}`] || ''}</p>
+                    <span className="font-bold text-[#38BDF8] text-[15px]">{getItemPrice(item)} DKK</span>
+                  </div>
+                  <div className="relative w-28 h-28 md:w-32 md:h-32 shrink-0 rounded-xl bg-slate-700 shadow-inner">
+                    {item.image_path ? (
+                      <img src={`${supabaseImageUrl}${item.image_path}`} alt="Food" className="w-full h-full object-cover rounded-xl" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-3xl opacity-50">🍽️</div>
+                    )}
+                    <button onClick={(e) => { e.stopPropagation(); setActiveProduct(item); }} className="absolute -bottom-2 -right-2 w-10 h-10 bg-[#38BDF8] text-[#0B1120] rounded-full flex items-center justify-center font-black text-xl shadow-lg border-[3px] border-[#0F172A] active:scale-95 transition-transform">
+                      +
+                    </button>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-8">
+              {displayCategories.map(cat => {
+                const items = getItemsForCategory(cat);
+                if (items.length === 0) return null;
+                return (
+                  <div key={cat} id={`category-${cat}`} className="scroll-mt-32">
+                    <h3 className="text-xl font-black text-white mb-4 flex items-center gap-2">
+                      {translateCategory(cat, lang)}
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {items.map(item => (
+                        <div key={item.id} onClick={() => setActiveProduct(item)} className="bg-slate-800/50 p-4 rounded-2xl flex justify-between gap-4 border border-white/5 cursor-pointer hover:border-white/10 transition-colors shadow-sm">
+                          
+                          {/* ΚΕΙΜΕΝΟ ΑΡΙΣΤΕΡΑ */}
+                          <div className="flex-1 flex flex-col justify-center">
+                            <h3 className="font-bold text-base text-white mb-1.5 leading-tight pr-2">{item[`title_${lang}`] || item.name}</h3>
+                            <p className="text-[13px] text-gray-400 line-clamp-2 mb-3 leading-snug pr-2">{item[`desc_${lang}`] || ''}</p>
+                            <span className="font-bold text-[#38BDF8] text-[15px]">{getItemPrice(item)} DKK</span>
+                          </div>
+                          
+                          {/* ΕΙΚΟΝΑ ΔΕΞΙΑ ΜΕ ΤΟ + */}
+                          <div className="relative w-28 h-28 md:w-32 md:h-32 shrink-0 rounded-xl bg-slate-700 shadow-inner">
+                            {item.image_path ? (
+                              <img src={`${supabaseImageUrl}${item.image_path}`} alt="Food" className="w-full h-full object-cover rounded-xl" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-3xl opacity-50">🍽️</div>
+                            )}
+                            <button onClick={(e) => { e.stopPropagation(); setActiveProduct(item); }} className="absolute -bottom-2 -right-2 w-10 h-10 bg-[#38BDF8] text-[#0B1120] rounded-full flex items-center justify-center font-black text-xl shadow-lg border-[3px] border-slate-800 active:scale-95 transition-transform">
+                              +
+                            </button>
+                          </div>
+                          
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </main>
 
+      {/* 7. FLOATING ΚΟΥΜΠΙ ΚΑΛΑΘΙΟΥ ΓΙΑ ΚΙΝΗΤΑ */}
+      {cart.length > 0 && !isCartOpen && (
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-[#0B1120] via-[#0B1120] to-transparent z-40 md:hidden animate-fade-in-up pb-6">
+          <button onClick={() => setIsCartOpen(true)} className="w-full bg-[#38BDF8] text-[#0B1120] py-4 rounded-xl font-black uppercase tracking-widest shadow-2xl flex justify-between items-center px-5 transition-transform active:scale-95">
+            <span className="bg-[#0B1120] text-[#38BDF8] w-7 h-7 rounded-full flex items-center justify-center text-xs shadow-inner">
+              {cart.reduce((sum, item) => sum + item.quantity, 0)}
+            </span>
+            <span>{t.viewOrder}</span>
+            <span>{finalTotal.toFixed(2)} kr.</span>
+          </button>
+        </div>
+      )}
+
+      {/* MODALS & CART (ΑΜΕΤΑΒΛΗΤΑ) */}
       {activeProduct && <ProductModal activeProduct={activeProduct} lang={lang} closeModal={() => setActiveProduct(null)} addToCart={addToCart} supabaseImageUrl={supabaseImageUrl} />}
 
       {isCartOpen && (
@@ -324,7 +396,7 @@ export default function OrderPage() {
               {checkoutStep !== 'success' && <button onClick={() => { setIsCartOpen(false); if(checkoutStep === 'review' || checkoutStep === 'profile') setCheckoutStep('cart'); }} className="text-gray-400 hover:text-white text-3xl md:text-2xl font-light">&times;</button>}
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 md:p-6">
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20">
               {checkoutStep === 'profile' ? (
                 <div className="flex flex-col gap-6 animate-fade-in">
                   <div className="text-center mb-4"><div className="w-20 h-20 bg-slate-800 border-2 border-[#38BDF8] rounded-full mx-auto flex items-center justify-center text-3xl mb-3 shadow-lg">👤</div><h3 className="text-xl font-black text-white">{auth.customerName || auth.user?.email}</h3><p className="text-sm text-gray-400 font-bold">{auth.customerPhone}</p></div>
@@ -369,8 +441,6 @@ export default function OrderPage() {
                 </div>
               ) : checkoutStep === 'auth' ? (
                 <div className="flex flex-col gap-6 animate-fade-in py-2">
-                  
-                  {/* ΜΗΝΥΜΑ ΠΡΟΣΦΟΡΑΣ (LOYALTY) */}
                   <div className="bg-gradient-to-r from-[#38BDF8]/20 to-purple-500/20 border border-[#38BDF8]/30 rounded-2xl p-4 flex items-center gap-4 shadow-lg mb-2">
                     <div className="w-12 h-12 rounded-full bg-[#38BDF8] flex items-center justify-center text-xl shrink-0">🎁</div>
                     <div>
@@ -382,19 +452,16 @@ export default function OrderPage() {
                       </p>
                     </div>
                   </div>
-                  
                   <div className="text-center mb-2">
                     <h3 className="text-2xl font-black text-white uppercase tracking-widest">{ui.guestCheckout}</h3>
                     <p className="text-gray-400 text-sm mt-2">{ui.guestDesc}</p>
                   </div>
                   <button onClick={() => setCheckoutStep('checkout')} className="w-full bg-white hover:bg-gray-200 text-[#0B1120] font-black py-4 rounded-2xl shadow-lg uppercase tracking-widest transition-transform active:scale-95">🚀 {ui.guestCheckout}</button>
-                  
                   <div className="flex items-center gap-4 my-2 opacity-50">
                     <hr className="flex-1 border-slate-600" />
                     <span className="text-xs text-slate-400 font-bold uppercase">{ui.or}</span>
                     <hr className="flex-1 border-slate-600" />
                   </div>
-                  
                   <div className="bg-slate-900/50 p-6 rounded-3xl border border-white/10 shadow-inner">
                     <h3 className="text-lg font-bold text-white text-center mb-5">{auth.authMode === 'signup' ? ui.regTitle : ui.loginTitle}</h3>
                     <form onSubmit={(e) => auth.handleAuth(e, () => setCheckoutStep('checkout'))} className="flex flex-col gap-4">
@@ -459,8 +526,10 @@ export default function OrderPage() {
                 {loyaltyDiscount > 0 && <div className="flex justify-between items-center mb-1 text-[#38BDF8]"><span className="text-xs">{ui.loyaltyDiscount}</span><span className="font-bold">-{loyaltyDiscount.toFixed(2)} kr.</span></div>}
                 <div className="flex justify-between items-center mt-4 mb-6 border-t border-white/10 pt-4"><span className="text-gray-200 font-bold">{ui.totalPay}</span><span className="text-2xl font-black text-[#38BDF8]">{finalTotal.toFixed(2)} kr.</span></div>
                 
-                {!storeOpen ? (
-                  <div className="w-full bg-red-900/50 border border-red-500 text-red-400 font-black uppercase tracking-wider py-4 rounded-xl text-center shadow-lg">{ui.closedStore}</div>
+                {!storeOpen && checkoutStep === 'cart' && requestedTime === 'ASAP' ? (
+                  <button onClick={() => setCheckoutStep('checkout')} className="w-full bg-orange-500 hover:bg-orange-400 text-white font-black uppercase tracking-wider py-4 rounded-xl text-center shadow-lg transition-colors">
+                    {t.schedule}
+                  </button>
                 ) : checkoutStep === 'cart' ? (
                   <button onClick={() => auth.user ? setCheckoutStep('checkout') : setCheckoutStep('auth')} className="w-full bg-[#38BDF8] text-slate-900 font-black uppercase tracking-wider py-4 rounded-xl shadow-lg hover:bg-sky-400 transition-colors">{ui.toCheckout}</button>
                 ) : checkoutStep === 'auth' ? (
