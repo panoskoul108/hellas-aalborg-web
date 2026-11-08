@@ -20,9 +20,9 @@ export default function OrderPage() {
 
   // --- LOCAL DICT ΓΙΑ ΤΑ ΝΕΑ ΣΤΟΙΧΕΙΑ WOLT STYLE ---
   const localUi = {
-    da: { search: "Søg i Hellas Aalborg", closed: "Lukket", opensAt: "Åbner kl. 17:00", smiley: "Smiley info", details: "Restaurant detaljer", schedule: "Planlæg ordre", viewOrder: "Se bestilling", legalName: "Juridisk navn", cvr: "Registreret nummer", address: "Registreret adresse", maps: "Se på kort", hours: "Åbningstider" },
-    en: { search: "Search in Hellas Aalborg", closed: "Closed", opensAt: "Opens at 17:00", smiley: "Smiley info", details: "Restaurant details", schedule: "Schedule order", viewOrder: "View order", legalName: "Legal Name", cvr: "Registered number", address: "Registered address", maps: "View on Maps", hours: "Opening hours" },
-    el: { search: "Αναζήτηση...", closed: "Κλειστά", opensAt: "Ανοίγει στις 17:00", smiley: "Αναφορά Smiley", details: "Πληροφορίες", schedule: "Προγραμματισμος", viewOrder: "Καλαθι", legalName: "Νομική Επωνυμία", cvr: "Αριθμός Μητρώου (CVR)", address: "Διεύθυνση", maps: "Προβολή στους Χάρτες", hours: "Ωράριο Λειτουργίας" }
+    da: { search: "Søg i Hellas Aalborg", closed: "Lukket", opensAt: "Åbner kl. 17:00", smiley: "Smiley info", details: "Restaurant detaljer", schedule: "Planlæg ordre", viewOrder: "Se bestilling", legalName: "Juridisk navn", cvr: "Registreret nummer", address: "Registreret adresse", maps: "Se på kort", hours: "Åbningstider", promoBadge: "Få 35 kr. rabat" },
+    en: { search: "Search in Hellas Aalborg", closed: "Closed", opensAt: "Opens at 17:00", smiley: "Smiley info", details: "Restaurant details", schedule: "Schedule order", viewOrder: "View order", legalName: "Legal Name", cvr: "Registered number", address: "Registered address", maps: "View on Maps", hours: "Opening hours", promoBadge: "Get 35 kr. off" },
+    el: { search: "Αναζήτηση...", closed: "Κλειστά", opensAt: "Ανοίγει στις 17:00", smiley: "Αναφορά Smiley", details: "Πληροφορίες", schedule: "Προγραμματισμος", viewOrder: "Καλαθι", legalName: "Νομική Επωνυμία", cvr: "Αριθμός Μητρώου (CVR)", address: "Διεύθυνση", maps: "Προβολή στους Χάρτες", hours: "Ωράριο Λειτουργίας", promoBadge: "35 kr. Δώρο Εγγραφής" }
   };
   const t = localUi[lang];
 
@@ -220,7 +220,7 @@ export default function OrderPage() {
     <div className="min-h-screen font-sans bg-[#0F172A] text-gray-200 selection:bg-[#38BDF8] selection:text-[#0B1120] pb-24 md:pb-10 bg-slate-900 relative">
       
       {/* 1. ΣΤΑΘΕΡΟ HEADER */}
-      <header className="bg-[#0F172A] p-4 flex justify-between items-center z-50 relative border-b border-white/5">
+      <header className="bg-[#0F172A] p-4 flex justify-between items-center z-50 relative border-b border-white/5 shadow-md">
         <div className="flex items-center gap-3">
           <Image src="/logo.png" alt="Logo" width={40} height={40} className="object-contain rounded-lg" />
         </div>
@@ -242,15 +242,10 @@ export default function OrderPage() {
         </div>
       </header>
 
-      {/* 2. ΕΞΩΦΥΛΛΟ (HERO IMAGE) */}
-      <div className="w-full h-48 md:h-64 bg-[url('/bg.jpg')] bg-cover bg-center relative">
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A] to-transparent opacity-80"></div>
-      </div>
-
-      <main className="max-w-4xl mx-auto md:px-6 relative -mt-16 md:-mt-24 z-10">
+      <main className="max-w-4xl mx-auto px-4 md:px-6 pt-6 relative z-10">
         
-        {/* 3. ΠΛΗΡΟΦΟΡΙΕΣ ΚΑΤΑΣΤΗΜΑΤΟΣ & SCHEDULE ORDER */}
-        <div className="bg-slate-900 mx-0 md:mx-0 p-5 md:p-8 rounded-t-3xl md:rounded-3xl shadow-2xl border-b md:border border-white/5 mb-6">
+        {/* 2. ΠΛΗΡΟΦΟΡΙΕΣ ΚΑΤΑΣΤΗΜΑΤΟΣ (ΧΩΡΙΣ ΚΕΝΟ) & SCHEDULE ORDER */}
+        <div className="mb-6">
           <h1 className="text-3xl font-black text-white mb-3">Hellas Aalborg</h1>
           
           <div className="flex flex-wrap items-center gap-2 text-sm font-medium text-gray-300 mb-4">
@@ -259,14 +254,23 @@ export default function OrderPage() {
             {!storeOpen && <span className="text-gray-400">{t.opensAt}</span>}
           </div>
 
-          <div className="flex items-center gap-4 text-xs font-bold text-[#38BDF8] mb-6">
+          <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-[#38BDF8] mb-6">
             <a href="https://www.findsmiley.dk/app/1579068" target="_blank" rel="noreferrer" className="hover:underline flex items-center gap-1">
               🔍 {t.smiley}
             </a>
             <span className="text-gray-600">•</span>
-            <button onClick={() => setIsDetailsModalOpen(true)} className="hover:underline">
+            <button onClick={() => setIsDetailsModalOpen(true)} className="hover:underline flex items-center gap-1">
               ℹ️ {t.details}
             </button>
+            
+            {!auth.user && (
+              <>
+                <span className="text-gray-600">•</span>
+                <button onClick={() => { setIsCartOpen(true); setCheckoutStep('auth'); }} className="text-purple-400 bg-purple-500/10 px-2.5 py-1 rounded flex items-center gap-1 font-black hover:bg-purple-500/20 transition-colors border border-purple-500/20">
+                  🎁 {t.promoBadge}
+                </button>
+              </>
+            )}
           </div>
           
           <button onClick={() => { setIsCartOpen(true); setCheckoutStep('cart'); }} className="w-full bg-[#38BDF8] text-[#0B1120] py-4 rounded-xl font-black text-sm uppercase flex justify-center items-center gap-2 transition-transform active:scale-95 shadow-md">
@@ -274,8 +278,8 @@ export default function OrderPage() {
           </button>
         </div>
 
-        {/* 4. ΜΠΑΡΑ ΑΝΑΖΗΤΗΣΗΣ */}
-        <div className="px-4 md:px-0 mb-6 sticky top-[72px] z-20 bg-[#0F172A] py-2">
+        {/* 3. ΜΠΑΡΑ ΑΝΑΖΗΤΗΣΗΣ */}
+        <div className="mb-6 sticky top-[72px] z-20 bg-[#0F172A] py-2 -mx-4 px-4 md:mx-0 md:px-0">
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg text-gray-500">🔍</span>
             <input 
@@ -288,9 +292,9 @@ export default function OrderPage() {
           </div>
         </div>
 
-        {/* 5. ΚΑΤΗΓΟΡΙΕΣ (ΑΝ ΔΕΝ ΥΠΑΡΧΕΙ ΑΝΑΖΗΤΗΣΗ) */}
+        {/* 4. ΚΑΤΗΓΟΡΙΕΣ (ΑΝ ΔΕΝ ΥΠΑΡΧΕΙ ΑΝΑΖΗΤΗΣΗ) */}
         {!searchQuery && !isLoading && (
-          <div className="px-4 md:px-0 mb-2 flex items-center gap-3 overflow-x-auto no-scrollbar pb-4 border-b border-white/5">
+          <div className="mb-2 flex items-center gap-3 overflow-x-auto no-scrollbar pb-4 border-b border-white/5 -mx-4 px-4 md:mx-0 md:px-0">
             <button 
               onClick={() => setIsCategoryMenuOpen(!isCategoryMenuOpen)}
               className="shrink-0 bg-[#38BDF8]/10 text-[#38BDF8] border border-[#38BDF8]/30 px-5 py-2 rounded-full font-black text-xs uppercase tracking-widest flex items-center gap-2 transition-colors"
@@ -311,7 +315,7 @@ export default function OrderPage() {
 
         {/* DROPDOWN ΚΑΤΗΓΟΡΙΩΝ */}
         {isCategoryMenuOpen && !searchQuery && (
-          <div className="mx-4 md:mx-0 mb-6 bg-slate-800 border border-slate-700 rounded-2xl shadow-xl overflow-hidden animate-fade-in-up">
+          <div className="mb-6 bg-slate-800 border border-slate-700 rounded-2xl shadow-xl overflow-hidden animate-fade-in-up">
             <div className="grid grid-cols-1 sm:grid-cols-2 p-2">
               {displayCategories.map(cat => (
                 <button 
@@ -326,8 +330,8 @@ export default function OrderPage() {
           </div>
         )}
 
-        {/* 6. ΛΙΣΤΑ ΠΡΟΪΟΝΤΩΝ (WOLT STYLE) */}
-        <div className="px-4 md:px-0">
+        {/* 5. ΛΙΣΤΑ ΠΡΟΪΟΝΤΩΝ (WOLT STYLE) */}
+        <div>
           {isLoading ? (
             <p className="text-center text-[#38BDF8] animate-pulse my-10">Loading menu...</p>
           ) : searchQuery ? (
@@ -398,7 +402,7 @@ export default function OrderPage() {
         </div>
       </main>
 
-      {/* 7. FLOATING ΚΟΥΜΠΙ ΚΑΛΑΘΙΟΥ ΓΙΑ ΚΙΝΗΤΑ */}
+      {/* 6. FLOATING ΚΟΥΜΠΙ ΚΑΛΑΘΙΟΥ ΓΙΑ ΚΙΝΗΤΑ */}
       {cart.length > 0 && !isCartOpen && (
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-[#0B1120] via-[#0B1120] to-transparent z-40 md:hidden animate-fade-in-up pb-6">
           <button onClick={() => setIsCartOpen(true)} className="w-full bg-[#38BDF8] text-[#0B1120] py-4 rounded-xl font-black uppercase tracking-widest shadow-2xl flex justify-between items-center px-5 transition-transform active:scale-95">
