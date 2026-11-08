@@ -12,25 +12,35 @@ interface LoyaltyWalletProps {
 export default function LoyaltyWallet({ userId, subtotal, lang, onApplyDiscount }: LoyaltyWalletProps) {
   const [balance, setBalance] = useState(0);
   const [useWallet, setUseWallet] = useState(false);
+  
+  // Δυναμικά ποσοστά από τη βάση (με default τιμές αν καθυστερήσει να φορτώσει)
+  const [maxPct, setMaxPct] = useState(50); 
+  const [earnPct, setEarnPct] = useState(5);
 
   const dict = {
-    da: { walletTitle: "Dit Digitale Pung", balanceMsg: "Din saldo:", useBtn: "Brug saldo", earnMsg: "Du tjener", limitMsg: "Du kan betale op til 50% af din ordre med point." },
-    en: { walletTitle: "Your Digital Wallet", balanceMsg: "Your balance:", useBtn: "Use balance", earnMsg: "You will earn", limitMsg: "You can pay up to 50% of your order with points." },
-    el: { walletTitle: "Το Ψηφιακό σας Πορτοφόλι", balanceMsg: "Το υπόλοιπό σας:", useBtn: "Χρήση υπολοίπου", earnMsg: "Θα κερδίσετε", limitMsg: "Μπορείτε να καλύψετε έως το 50% της παραγγελίας με πόντους." }
+    da: { walletTitle: "Dit Digitale Pung", balanceMsg: "Din saldo:", useBtn: "Brug saldo", earnMsg: "Du tjener", limitMsg: "Du kan betale op til {X}% af din ordre med point." },
+    en: { walletTitle: "Your Digital Wallet", balanceMsg: "Your balance:", useBtn: "Use balance", earnMsg: "You will earn", limitMsg: "You can pay up to {X}% of your order with points." },
+    el: { walletTitle: "Το Ψηφιακό σας Πορτοφόλι", balanceMsg: "Το υπόλοιπό σας:", useBtn: "Χρήση υπολοίπου", earnMsg: "Θα κερδίσετε", limitMsg: "Μπορείτε να καλύψετε έως το {X}% της παραγγελίας με πόντους." }
   };
   const ui = dict[lang];
 
   useEffect(() => {
-    if (!userId) return;
-    const fetchBalance = async () => {
-      const { data } = await supabase.from('customers_loyalty').select('wallet_balance').eq('user_id', userId).single();
-      if (data) setBalance(Number(data.wallet_balance) || 0);
+    const fetchSettingsAndBalance = async () => {
+      const { data: settings } = await supabase.from('store_settings').select('*').eq('id', 1).single();
+      if (settings) {
+        setMaxPct(settings.loyalty_max_percentage || 50);
+        setEarnPct(settings.loyalty_earn_percentage || 5);
+      }
+
+      if (userId) {
+        const { data: wallet } = await supabase.from('customers_loyalty').select('wallet_balance').eq('user_id', userId).single();
+        if (wallet) setBalance(Number(wallet.wallet_balance) || 0);
+      }
     };
-    fetchBalance();
+    fetchSettingsAndBalance();
   }, [userId]);
 
-  // Υπολογισμός μέγιστης επιτρεπόμενης έκπτωσης (50% του subtotal)
-  const maxUsable = subtotal * 0.5;
+  const maxUsable = subtotal * (maxPct / 100);
   const potentialDiscount = Math.min(balance, maxUsable);
 
   useEffect(() => {
@@ -41,15 +51,14 @@ export default function LoyaltyWallet({ userId, subtotal, lang, onApplyDiscount 
     }
   }, [useWallet, balance, potentialDiscount, onApplyDiscount]);
 
-  if (!userId) return null; // Αν δεν έχει κάνει login, το Component κρύβεται εντελώς!
+  if (!userId) return null;
 
   const appliedDiscount = useWallet ? potentialDiscount : 0;
   const finalPay = Math.max(0, subtotal - appliedDiscount);
-  const willEarn = (finalPay * 0.05).toFixed(2); // 5% επιστροφή επί του τελικού ποσού
+  const willEarn = (finalPay * (earnPct / 100)).toFixed(2);
 
   return (
     <div className="bg-gradient-to-br from-slate-900 to-[#0F172A] border border-[#38BDF8]/30 rounded-2xl p-4 shadow-lg mb-6 relative overflow-hidden">
-      {/* Διακοσμητικό Glow */}
       <div className="absolute -top-10 -right-10 w-24 h-24 bg-[#38BDF8]/20 blur-2xl rounded-full pointer-events-none"></div>
 
       <div className="flex justify-between items-center mb-3">
@@ -73,7 +82,9 @@ export default function LoyaltyWallet({ userId, subtotal, lang, onApplyDiscount 
               <div className={`w-4 h-4 bg-white rounded-full shadow-md absolute transition-transform ${useWallet ? 'translate-x-7' : 'translate-x-1'}`}></div>
             </button>
           </div>
-          <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wide">{ui.limitMsg}</p>
+          <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wide">
+            {ui.limitMsg.replace('{X}', maxPct.toString())}
+          </p>
         </div>
       )}
 
