@@ -18,14 +18,6 @@ export default function OrderPage() {
   const [lang, setLang] = useState<'da' | 'en' | 'el'>('da');
   const ui = dict[lang];
 
-  // --- LOCAL DICT ΓΙΑ ΤΑ ΝΕΑ ΣΤΟΙΧΕΙΑ WOLT STYLE ---
-  const localUi = {
-    da: { search: "Søg i Hellas Aalborg", closed: "Lukket", opensAt: "Åbner kl. 17:00", smiley: "Smiley info", details: "Restaurant detaljer", schedule: "Planlæg ordre", viewOrder: "Se bestilling", legalName: "Juridisk navn", cvr: "Registreret nummer", address: "Registreret adresse", maps: "Se på kort", hours: "Åbningstider", promoBadge: "Få 35 kr. rabat", repeatOrder: "Gentag" },
-    en: { search: "Search in Hellas Aalborg", closed: "Closed", opensAt: "Opens at 17:00", smiley: "Smiley info", details: "Restaurant details", schedule: "Schedule order", viewOrder: "View order", legalName: "Legal Name", cvr: "Registered number", address: "Registered address", maps: "View on Maps", hours: "Opening hours", promoBadge: "Get 35 kr. off", repeatOrder: "Repeat" },
-    el: { search: "Αναζήτηση...", closed: "Κλειστά", opensAt: "Ανοίγει στις 17:00", smiley: "Αναφορά Smiley", details: "Πληροφορίες", schedule: "Προγραμματισμος", viewOrder: "Καλαθι", legalName: "Νομική Επωνυμία", cvr: "Αριθμός Μητρώου (CVR)", address: "Διεύθυνση", maps: "Προβολή στους Χάρτες", hours: "Ωράριο Λειτουργίας", promoBadge: "35 kr. Δώρο Εγγραφής", repeatOrder: "Επαναληψη" }
-  };
-  const t = localUi[lang];
-
   // --- HOOKS ---
   const { storeOpen, generateTimeSlots } = useStore(ui);
   const auth = useAuth();
@@ -55,6 +47,7 @@ export default function OrderPage() {
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [nextOpenTimeStr, setNextOpenTimeStr] = useState<string>("17:00"); // Αρχική τιμή
 
   // --- EFFECTS ---
   useEffect(() => {
@@ -67,7 +60,46 @@ export default function OrderPage() {
       
       if (menuRes.data) setMenuItems(menuRes.data);
       if (settingsRes.data) setStoreSettings(settingsRes.data);
-      if (hoursRes.data) setStoreSchedule(hoursRes.data);
+      if (hoursRes.data && hoursRes.data.length > 0) {
+        setStoreSchedule(hoursRes.data);
+        
+        // --- Υπολογισμός Επόμενης Ώρας Ανοίγματος ---
+        const mapDayOfWeek = (jsDay: number) => jsDay === 0 ? 7 : jsDay; 
+        const now = new Date();
+        const currentJS = now.getDay();
+        const currentDBDay = mapDayOfWeek(currentJS);
+        
+        const todaySchedule = hoursRes.data.find((d: any) => d.day_of_week === currentDBDay);
+        
+        if (todaySchedule && !todaySchedule.is_closed) {
+             const [openH, openM] = todaySchedule.open_time.split(':').map(Number);
+             const openDate = new Date();
+             openDate.setHours(openH, openM, 0, 0);
+             if (now < openDate) {
+                 setNextOpenTimeStr(todaySchedule.open_time.slice(0, 5));
+             } else {
+                  // Αν έχει περάσει η ώρα ανοίγματος σήμερα αλλά είναι κλειστό (π.χ. έκτακτο κλείσιμο ή κλείσιμο βράδυ), βρίσκουμε την επόμενη μέρα
+                  let nextDay = currentDBDay + 1 > 7 ? 1 : currentDBDay + 1;
+                  const tomorrowSchedule = hoursRes.data.find((d: any) => d.day_of_week === nextDay);
+                  if (tomorrowSchedule && !tomorrowSchedule.is_closed) {
+                       setNextOpenTimeStr(tomorrowSchedule.open_time.slice(0, 5));
+                  }
+             }
+        } else {
+             // Αν σήμερα είναι κλειστά όλη μέρα
+             let nextDay = currentDBDay + 1 > 7 ? 1 : currentDBDay + 1;
+             let nextDaySchedule = hoursRes.data.find((d: any) => d.day_of_week === nextDay);
+             let counter = 0;
+             while (nextDaySchedule && nextDaySchedule.is_closed && counter < 7) {
+                 nextDay = nextDay + 1 > 7 ? 1 : nextDay + 1;
+                 nextDaySchedule = hoursRes.data.find((d: any) => d.day_of_week === nextDay);
+                 counter++;
+             }
+             if (nextDaySchedule && !nextDaySchedule.is_closed) {
+                 setNextOpenTimeStr(nextDaySchedule.open_time.slice(0, 5));
+             }
+        }
+      }
       setIsLoading(false);
     };
     fetchData();
@@ -98,13 +130,20 @@ export default function OrderPage() {
     return () => { supabase.removeChannel(channel); };
   }, [placedOrder?.id]);
 
+  // --- LOCAL DICT ΓΙΑ ΤΑ ΝΕΑ ΣΤΟΙΧΕΙΑ WOLT STYLE (μετά το useEffect για να πάρει το state) ---
+  const localUi = {
+    da: { search: "Søg i Hellas Aalborg", closed: "Lukket", opensAt: `Åbner kl. ${nextOpenTimeStr}`, smiley: "Smiley info", details: "Restaurant detaljer", schedule: "Planlæg ordre", viewOrder: "Se bestilling", legalName: "Juridisk navn", cvr: "Registreret nummer", address: "Registreret adresse", maps: "Se på kort", hours: "Åbningstider", promoBadge: "Få 35 kr. rabat", repeatOrder: "Gentag" },
+    en: { search: "Search in Hellas Aalborg", closed: "Closed", opensAt: `Opens at ${nextOpenTimeStr}`, smiley: "Smiley info", details: "Restaurant details", schedule: "Schedule order", viewOrder: "View order", legalName: "Legal Name", cvr: "Registered number", address: "Registered address", maps: "View on Maps", hours: "Opening hours", promoBadge: "Get 35 kr. off", repeatOrder: "Repeat" },
+    el: { search: "Αναζήτηση...", closed: "Κλειστά", opensAt: `Ανοίγει στις ${nextOpenTimeStr}`, smiley: "Αναφορά Smiley", details: "Πληροφορίες", schedule: "Προγραμματισμος", viewOrder: "Καλαθι", legalName: "Νομική Επωνυμία", cvr: "Αριθμός Μητρώου (CVR)", address: "Διεύθυνση", maps: "Προβολή στους Χάρτες", hours: "Ωράριο Λειτουργίας", promoBadge: "35 kr. Δώρο Εγγραφής", repeatOrder: "Επαναληψη" }
+  };
+  const t = localUi[lang];
+
   // --- HANDLERS ---
   const openProfile = async () => {
     setCheckoutStep('profile'); setIsCartOpen(true);
     auth.fetchOrderHistory();
   };
 
-  // ΕΠΑΝΑΛΗΨΗ ΠΑΡΑΓΓΕΛΙΑΣ
   const handleRepeatOrder = (pastOrder: any) => {
     if (!pastOrder.items || pastOrder.items.length === 0) return;
     
@@ -180,7 +219,6 @@ export default function OrderPage() {
     setPlacedOrder(null); clearCart(); setCheckoutStep('review');
   };
 
-  // Μετάφραση Ημερών (Με αφαίρεση τόνων)
   const translateDay = (dayName: string, currentLang: string) => {
     const dict: Record<string, any> = {
       'ΔΕΥΤΕΡΑ': { da: 'Mandag', en: 'Monday', el: 'Δευτέρα' },
