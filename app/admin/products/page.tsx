@@ -105,10 +105,10 @@ export default function ProductsPage() {
           ))}
         </div>
 
-        {/* Ενημερωτικό Μήνυμα για Αλλαγή Σειράς */}
-        {(activeCategory === "ΟΛΑ" || activeCategory === "ΠΡΟΤΕΙΝΟΜΕΝΑ" || searchQuery !== "") && (
+       {/* Ενημερωτικό Μήνυμα για Αλλαγή Σειράς */}
+        {(activeCategory === "ΠΡΟΤΕΙΝΟΜΕΝΑ" || searchQuery !== "") && (
           <p className="text-xs text-yellow-500 font-bold mb-4 bg-yellow-900/20 p-3 rounded-xl border border-yellow-900/50">
-            💡 Για να αλλάξετε τη σειρά των προϊόντων (↑↓), επιλέξτε μια συγκεκριμένη κατηγορία από το μενού παραπάνω.
+            💡 Τα βελάκια αλλαγής σειράς (↑↓) απενεργοποιούνται στην Αναζήτηση και στα Προτεινόμενα.
           </p>
         )}
 
@@ -121,8 +121,8 @@ export default function ProductsPage() {
               <div key={p.id} className="border border-slate-800 bg-slate-900/50 p-4 rounded-[2rem] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm hover:border-slate-700 transition-colors">
                 <div className="flex items-center gap-4 w-full sm:w-auto">
                   
-                  {/* ΚΟΥΜΠΙΑ ΑΛΛΑΓΗΣ ΣΕΙΡΑΣ (Εμφανίζονται μόνο όταν είμαστε σε συγκεκριμένη κατηγορία) */}
-                  {activeCategory !== "ΟΛΑ" && activeCategory !== "ΠΡΟΤΕΙΝΟΜΕΝΑ" && !searchQuery && (
+                 {/* ΚΟΥΜΠΙΑ ΑΛΛΑΓΗΣ ΣΕΙΡΑΣ */}
+                  {activeCategory !== "ΠΡΟΤΕΙΝΟΜΕΝΑ" && !searchQuery && (
                     <div className="flex flex-col gap-1 mr-2 shrink-0">
                       <button 
                         onClick={() => handleMoveProduct(index, -1, filteredProducts)} 
