@@ -147,7 +147,7 @@ export default function OrderPage() {
     setPlacedOrder(null); clearCart(); setCheckoutStep('review');
   };
 
-  // Μετάφραση Ημερών
+// Μετάφραση Ημερών (Με αυτόματη αφαίρεση τόνων)
   const translateDay = (dayName: string, currentLang: string) => {
     const dict: Record<string, any> = {
       'ΔΕΥΤΕΡΑ': { da: 'Mandag', en: 'Monday', el: 'Δευτέρα' },
@@ -156,19 +156,14 @@ export default function OrderPage() {
       'ΠΕΜΠΤΗ': { da: 'Torsdag', en: 'Thursday', el: 'Πέμπτη' },
       'ΠΑΡΑΣΚΕΥΗ': { da: 'Fredag', en: 'Friday', el: 'Παρασκευή' },
       'ΣΑΒΒΑΤΟ': { da: 'Lørdag', en: 'Saturday', el: 'Σάββατο' },
-      'ΚΥΡΙΑΚΗ': { da: 'Søndag', en: 'Sunday', el: 'Κυριακή' },
-      'MONDAY': { da: 'Mandag', en: 'Monday', el: 'Δευτέρα' },
-      'TUESDAY': { da: 'Tirsdag', en: 'Tuesday', el: 'Τρίτη' },
-      'WEDNESDAY': { da: 'Onsdag', en: 'Wednesday', el: 'Τετάρτη' },
-      'THURSDAY': { da: 'Torsdag', en: 'Thursday', el: 'Πέμπτη' },
-      'FRIDAY': { da: 'Fredag', en: 'Friday', el: 'Παρασκευή' },
-      'SATURDAY': { da: 'Lørdag', en: 'Saturday', el: 'Σάββατο' },
-      'SUNDAY': { da: 'Søndag', en: 'Sunday', el: 'Κυριακή' }
+      'ΚΥΡΙΑΚΗ': { da: 'Søndag', en: 'Sunday', el: 'Κυριακή' }
     };
-    const key = dayName.toUpperCase().trim();
+    
+    // Αφαιρεί τους τόνους και τα κάνει όλα κεφαλαία για να ταιριάζουν πάντα!
+    const key = dayName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
     return dict[key] ? dict[key][currentLang] : dayName;
   };
-
+  
   const getItemsForCategory = (cat: string) => {
     if (cat === 'POPULAR') return menuItems.filter(i => i.popular);
     return menuItems.filter(i => i.category === cat);
