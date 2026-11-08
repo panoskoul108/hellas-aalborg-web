@@ -105,6 +105,13 @@ export default function ProductsPage() {
           ))}
         </div>
 
+        {/* Ενημερωτικό Μήνυμα για Αλλαγή Σειράς */}
+        {(activeCategory === "ΟΛΑ" || activeCategory === "ΠΡΟΤΕΙΝΟΜΕΝΑ" || searchQuery !== "") && (
+          <p className="text-xs text-yellow-500 font-bold mb-4 bg-yellow-900/20 p-3 rounded-xl border border-yellow-900/50">
+            💡 Για να αλλάξετε τη σειρά των προϊόντων (↑↓), επιλέξτε μια συγκεκριμένη κατηγορία από το μενού παραπάνω.
+          </p>
+        )}
+
         {/* Product List */}
         <div className="space-y-4">
           {filteredProducts.length === 0 ? (
@@ -113,10 +120,26 @@ export default function ProductsPage() {
             filteredProducts.map((p, index) => (
               <div key={p.id} className="border border-slate-800 bg-slate-900/50 p-4 rounded-[2rem] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm hover:border-slate-700 transition-colors">
                 <div className="flex items-center gap-4 w-full sm:w-auto">
+                  
+                  {/* ΚΟΥΜΠΙΑ ΑΛΛΑΓΗΣ ΣΕΙΡΑΣ (Εμφανίζονται μόνο όταν είμαστε σε συγκεκριμένη κατηγορία) */}
                   {activeCategory !== "ΟΛΑ" && activeCategory !== "ΠΡΟΤΕΙΝΟΜΕΝΑ" && !searchQuery && (
                     <div className="flex flex-col gap-1 mr-2 shrink-0">
-                      <button onClick={() => handleMoveProduct(index, -1, filteredProducts)} disabled={index === 0 || isUploading} className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-800 border-gray-700 hover:bg-sky-900 text-gray-400 disabled:opacity-30">↑</button>
-                      <button onClick={() => handleMoveProduct(index, 1, filteredProducts)} disabled={index === filteredProducts.length - 1 || isUploading} className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-800 border-gray-700 hover:bg-sky-900 text-gray-400 disabled:opacity-30">↓</button>
+                      <button 
+                        onClick={() => handleMoveProduct(index, -1, filteredProducts)} 
+                        disabled={index === 0 || isUploading} 
+                        className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-800 border border-gray-700 hover:bg-[#38BDF8]/20 hover:text-[#38BDF8] hover:border-[#38BDF8]/50 text-gray-400 font-black disabled:opacity-30 transition-colors"
+                        title="Μετακίνηση Πάνω"
+                      >
+                        ↑
+                      </button>
+                      <button 
+                        onClick={() => handleMoveProduct(index, 1, filteredProducts)} 
+                        disabled={index === filteredProducts.length - 1 || isUploading} 
+                        className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-800 border border-gray-700 hover:bg-[#38BDF8]/20 hover:text-[#38BDF8] hover:border-[#38BDF8]/50 text-gray-400 font-black disabled:opacity-30 transition-colors"
+                        title="Μετακίνηση Κάτω"
+                      >
+                        ↓
+                      </button>
                     </div>
                   )}
 
