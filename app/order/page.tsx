@@ -25,6 +25,7 @@ export default function OrderPage() {
   const { cart, addToCart, removeFromCart, updateQuantity, clearCart, subtotal, finalTotal, vatMoms, getItemPrice } = useCart(loyaltyDiscount);
 
   // --- LOCAL STATE ---
+  const [storeSettings, setStoreSettings] = useState({ loyalty_max_percentage: 50, loyalty_earn_percentage: 5 });
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -42,12 +43,17 @@ export default function OrderPage() {
 
   // --- EFFECTS ---
   useEffect(() => {
-    const fetchMenu = async () => {
-      const { data } = await supabase.from('menu_items').select('*').order('sort_order', { ascending: true });
-      if (data) setMenuItems(data);
+    const fetchMenuAndSettings = async () => {
+      const [menuRes, settingsRes] = await Promise.all([
+        supabase.from('menu_items').select('*').order('sort_order', { ascending: true }),
+        supabase.from('store_settings').select('*').eq('id', 1).single()
+      ]);
+      
+      if (menuRes.data) setMenuItems(menuRes.data);
+      if (settingsRes.data) setStoreSettings(settingsRes.data);
       setIsLoading(false);
     };
-    fetchMenu();
+    fetchMenuAndSettings();
     
     const storedOrders = parseInt(localStorage.getItem("servato_orders") || "0");
     const lastTime = parseInt(localStorage.getItem("servato_time") || "0");
@@ -102,7 +108,7 @@ export default function OrderPage() {
       setPlacedOrder(orderData); localStorage.setItem('hellas_active_order', orderData.id);
       await supabase.from('action_logs').insert([{ action_type: "TAKEAWAY_ORDER_CREATED", order_id: orderData.id, details: { company: "Nordic-mythos 1 ApS", user: auth.user?.email || "Guest", total_dkk: finalTotal } }]);
 
-   if (auth.user?.id) {
+      if (auth.user?.id) {
         const { data: settings } = await supabase.from('store_settings').select('loyalty_earn_percentage').eq('id', 1).single();
         const earnPct = settings ? settings.loyalty_earn_percentage : 5;
         const earnedCashback = Number((finalTotal * (earnPct / 100)).toFixed(2));
@@ -208,7 +214,7 @@ export default function OrderPage() {
               {checkoutStep === 'profile' ? (
                 <div className="flex flex-col gap-6 animate-fade-in">
                   <div className="text-center mb-4"><div className="w-20 h-20 bg-slate-800 border-2 border-[#38BDF8] rounded-full mx-auto flex items-center justify-center text-3xl mb-3 shadow-lg">👤</div><h3 className="text-xl font-black text-white">{auth.customerName || auth.user?.email}</h3><p className="text-sm text-gray-400 font-bold">{auth.customerPhone}</p></div>
-                  <LoyaltyWallet userId={auth.user?.id} subtotal={0} lang={lang} onApplyDiscount={() => {}} />
+                  <LoyaltyWallet userId={auth.user?.id} subtotal={0} lang={lang} onApplyDiscount={() => {}} settings={storeSettings} />
                   <div className="bg-slate-900/50 rounded-2xl border border-white/5 p-5">
                     <h4 className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-4 border-b border-slate-700 pb-2">{ui.myOrders}</h4>
                     {auth.userOrderHistory.length === 0 ? <p className="text-sm text-gray-400">No orders yet.</p> : (
@@ -321,7 +327,7 @@ export default function OrderPage() {
               ) : (
                 <form id="checkoutForm" onSubmit={submitOrder} className="flex flex-col gap-5">
                   <h3 className="font-bold text-lg text-white border-b border-white/10 pb-2">{ui.detailsTitle}</h3>
-                  <LoyaltyWallet userId={auth.user?.id} subtotal={subtotal} lang={lang} onApplyDiscount={setLoyaltyDiscount} />
+                  <LoyaltyWallet userId={auth.user?.id} subtotal={subtotal} lang={lang} onApplyDiscount={setLoyaltyDiscount} settings={storeSettings} />
                   <div><label className="text-xs text-gray-400 block mb-1">{ui.nameLabel}</label><input type="text" value={auth.customerName} onChange={e => auth.setCustomerName(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" /></div>
                   <div><label className="text-xs text-gray-400 block mb-1">{ui.phoneLabel}</label><input type="tel" value={auth.customerPhone} onChange={e => auth.setCustomerPhone(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" /></div>
                   
