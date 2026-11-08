@@ -41,6 +41,9 @@ export default function OrderPage() {
   const [isLocked, setIsLocked] = useState(false);
   const [placedOrder, setPlacedOrder] = useState<any>(null);
 
+  // Νέο state για το αναδυόμενο μενού κατηγοριών
+  const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
+
   // --- EFFECTS ---
   useEffect(() => {
     const fetchMenuAndSettings = async () => {
@@ -130,7 +133,7 @@ export default function OrderPage() {
     setPlacedOrder(null); clearCart(); setCheckoutStep('review');
   };
 
-  // --- ΚΑΤΗΓΟΡΙΕΣ ΚΑΙ SCROLLING ---
+  // --- ΚΑΤΗΓΟΡΙΕΣ ΚΑΙ ΜΕΤΑΦΡΑΣΕΙΣ ---
   const hasRecommended = menuItems.some(p => p.popular);
   const uniqueCategories = [...new Set(menuItems.map(p => p.category))].filter(Boolean);
   const displayCategories = hasRecommended ? ['POPULAR', ...uniqueCategories] : uniqueCategories;
@@ -140,27 +143,45 @@ export default function OrderPage() {
     return menuItems.filter(i => i.category === cat);
   };
 
-  const getCategoryName = (cat: string) => {
-    if (cat === 'POPULAR') {
-      return lang === 'da' ? '⭐ Populært' : lang === 'en' ? '⭐ Popular' : '⭐ Δημοφιλή';
+  // Έξυπνος Μεταφραστής Κατηγοριών
+  const translateCategory = (cat: string, currentLang: string) => {
+    if (cat === 'POPULAR') return currentLang === 'da' ? '⭐ Populært' : currentLang === 'en' ? '⭐ Popular' : '⭐ Δημοφιλή';
+    
+    // Εδώ προσθέτεις όσες κατηγορίες θέλεις! Το κλειδί είναι ακριβώς όπως το γράφεις στο Admin.
+    const catDict: Record<string, any> = {
+      'COMBOS': { da: 'Menuer & Tilbud', en: 'Combos & Offers', el: 'Μενού & Προσφορές' },
+      'GYROS PITA': { da: 'Gyros Pita', en: 'Gyros Pita', el: 'Γύρος Πίτα' },
+      'HALLOUMI PITA': { da: 'Halloumi Pita', en: 'Halloumi Pita', el: 'Χαλούμι Πίτα' },
+      'PITA CLUB': { da: 'Pita Club', en: 'Pita Club', el: 'Σκεπαστή' },
+      'DOBBELT INDBAGT PITA': { da: 'Indbagt Pita', en: 'Double Baked Pita', el: 'Διπλή Σκεπαστή' },
+      'PORTIONER': { da: 'Portioner', en: 'Portions', el: 'Μερίδες' },
+      'RUM': { da: 'Drikkevarer', en: 'Drinks', el: 'Αναψυκτικά & Ποτά' },
+      'DIPS': { da: 'Dips & Ekstra', en: 'Dips & Extras', el: 'Dips & Έξτρα' }
+    };
+    
+    const normalizedCat = cat.toUpperCase().trim();
+    if (catDict[normalizedCat] && catDict[normalizedCat][currentLang]) {
+      return catDict[normalizedCat][currentLang];
     }
-    return cat;
+    
+    // Αν δεν βρει μετάφραση, απλά το δείχνει με όμορφα κεφαλαία αρχικά γράμματα
+    return cat.charAt(0).toUpperCase() + cat.slice(1).toLowerCase();
   };
 
   const scrollToCategory = (cat: string) => {
     const element = document.getElementById(`category-${cat}`);
     if (element) {
-      const yOffset = -130; // Υπολογισμός ύψους για το header και τη μπάρα κατηγοριών ώστε να μη κρύβεται ο τίτλος
+      const yOffset = -150; // Κενό για να μη κρύβεται ο τίτλος κάτω από το μενού
       const y = element.getBoundingClientRect().top + window.scrollY + yOffset;
       window.scrollTo({ top: y, behavior: 'smooth' });
     }
+    setIsCategoryMenuOpen(false); // Κλείνει το μενού αφού επιλέξεις
   };
 
   return (
     <div className="min-h-screen font-sans bg-[#0B1120] text-gray-200 selection:bg-[#38BDF8] selection:text-[#0B1120] pb-24 bg-[url('/bg.jpg')] bg-cover bg-fixed bg-center relative">
       <div className="absolute inset-0 bg-[#0B1120]/85 -z-10"></div>
       
-      {/* HEADER */}
       <header className="bg-[#0F172A] border-b border-white/10 p-4 md:p-6 sticky top-0 z-40 flex justify-between items-center shadow-lg">
         <div className="flex items-center gap-3">
           <a href="/" className="hover:opacity-80 transition-opacity">
@@ -181,23 +202,19 @@ export default function OrderPage() {
           
           {auth.user ? (
             <>
-              {/* Desktop: Κείμενο με Email */}
               <div className="hidden md:flex flex-col text-right cursor-pointer hover:opacity-80" onClick={openProfile}>
                 <span className="text-xs text-gray-400 font-bold border-b border-slate-700 pb-0.5">{auth.user.email}</span>
                 <span className="text-[10px] text-[#38BDF8] uppercase tracking-widest mt-0.5">{ui.profileTitle}</span>
               </div>
-              {/* Mobile: Εικονίδιο Προφίλ */}
               <button onClick={openProfile} className="md:hidden relative bg-white/10 hover:bg-white/20 w-11 h-11 rounded-full transition-colors border border-white/5 text-xl flex items-center justify-center">
                 👤
               </button>
             </>
           ) : (
             <>
-              {/* Desktop: Κείμενο Σύνδεσης */}
               <button onClick={() => { setIsCartOpen(true); setCheckoutStep('auth'); }} className="hidden md:block text-sm font-bold text-[#38BDF8] hover:text-white transition-colors">
                 {ui.loginTitle}
               </button>
-              {/* Mobile: Εικονίδιο Σύνδεσης */}
               <button onClick={() => { setIsCartOpen(true); setCheckoutStep('auth'); }} className="md:hidden relative bg-white/10 hover:bg-white/20 w-11 h-11 rounded-full transition-colors border border-white/5 text-xl flex items-center justify-center">
                 👤
               </button>
@@ -212,18 +229,46 @@ export default function OrderPage() {
 
       <main className="max-w-4xl mx-auto p-4 md:p-6 pt-4">
         
-        {/* ΜΠΑΡΑ ΚΑΤΗΓΟΡΙΩΝ (Sticky Navigation) */}
-        {!isLoading && (
-          <div className="sticky top-[72px] md:top-[88px] z-30 bg-[#0B1120]/95 backdrop-blur-md py-3 -mx-4 px-4 md:mx-0 md:px-0 mb-8 flex gap-3 overflow-x-auto no-scrollbar border-b border-white/5 shadow-sm">
-            {displayCategories.map(cat => (
-              <button 
-                key={cat} 
-                onClick={() => scrollToCategory(cat)}
-                className="shrink-0 px-5 py-2.5 rounded-full bg-slate-800 text-gray-300 font-black text-[10px] md:text-xs uppercase tracking-widest border border-white/5 hover:bg-[#38BDF8]/20 hover:text-[#38BDF8] hover:border-[#38BDF8]/50 transition-colors shadow-sm"
-              >
-                {getCategoryName(cat)}
-              </button>
-            ))}
+        {/* ΝΕΟ: ΕΞΥΠΝΟ DROPDOWN ΚΑΤΗΓΟΡΙΩΝ (Αντικατέστησε το Scroll) */}
+        {!isLoading && displayCategories.length > 0 && (
+          <div className="sticky top-[72px] md:top-[88px] z-30 bg-[#0B1120]/95 backdrop-blur-md py-3 -mx-4 px-4 md:mx-0 md:px-0 mb-8 border-b border-white/5 shadow-sm">
+            
+            <button 
+              onClick={() => setIsCategoryMenuOpen(!isCategoryMenuOpen)}
+              className="w-full flex items-center justify-between bg-slate-800/80 border border-[#38BDF8]/30 hover:border-[#38BDF8]/60 text-white font-black p-4 rounded-2xl shadow-lg transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-xl">📑</span> 
+                <span className="uppercase tracking-widest text-sm">
+                  {lang === 'da' ? 'Menu / Vælg Kategori' : lang === 'en' ? 'Menu / Select Category' : 'Μενού / Κατηγορίες'}
+                </span>
+              </div>
+              <div className={`w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center transition-transform duration-300 ${isCategoryMenuOpen ? 'rotate-180 text-[#38BDF8]' : 'text-gray-400'}`}>
+                ▼
+              </div>
+            </button>
+
+            {/* ΑΝΑΔΥΟΜΕΝΗ ΛΙΣΤΑ */}
+            {isCategoryMenuOpen && (
+              <div className="absolute left-4 right-4 md:left-0 md:right-0 mt-2 bg-slate-900 border border-[#38BDF8]/20 rounded-2xl shadow-2xl overflow-hidden animate-fade-in-up z-50">
+                <div className="grid grid-cols-1 sm:grid-cols-2 p-2 gap-1 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                  {displayCategories.map(cat => (
+                    <button 
+                      key={cat} 
+                      onClick={() => scrollToCategory(cat)}
+                      className="text-left px-5 py-4 hover:bg-[#38BDF8]/10 text-gray-200 hover:text-[#38BDF8] font-black text-xs md:text-sm uppercase tracking-widest rounded-xl transition-colors border border-transparent hover:border-[#38BDF8]/30"
+                    >
+                      {translateCategory(cat, lang)}
+                    </button>
+                  ))}
+                </div>
+                <div className="bg-slate-800 p-3 text-center border-t border-white/5">
+                  <button onClick={() => setIsCategoryMenuOpen(false)} className="text-xs text-gray-400 font-bold uppercase tracking-widest">
+                    {lang === 'da' ? 'Luk' : lang === 'en' ? 'Close' : 'Κλείσιμο'} ▲
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -235,8 +280,8 @@ export default function OrderPage() {
               
               return (
                 <div key={cat} id={`category-${cat}`} className="scroll-mt-32">
-                  <h3 className="text-xl md:text-2xl font-black text-white uppercase tracking-widest mb-4 border-b border-white/10 pb-2">
-                    {getCategoryName(cat)}
+                  <h3 className="text-xl md:text-2xl font-black text-white uppercase tracking-widest mb-4 border-b border-white/10 pb-2 flex items-center gap-2">
+                    {translateCategory(cat, lang)}
                   </h3>
                   
                   <div className="flex flex-col gap-4">
@@ -269,7 +314,6 @@ export default function OrderPage() {
         )}
       </main>
 
-      {/* MODALS ΚΑΙ ΚΑΛΑΘΙ (Χωρίς αλλαγή) */}
       {activeProduct && <ProductModal activeProduct={activeProduct} lang={lang} closeModal={() => setActiveProduct(null)} addToCart={addToCart} supabaseImageUrl={supabaseImageUrl} />}
 
       {isCartOpen && (
