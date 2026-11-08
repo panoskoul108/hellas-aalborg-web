@@ -130,10 +130,37 @@ export default function OrderPage() {
     setPlacedOrder(null); clearCart(); setCheckoutStep('review');
   };
 
+  // --- ΚΑΤΗΓΟΡΙΕΣ ΚΑΙ SCROLLING ---
+  const hasRecommended = menuItems.some(p => p.popular);
+  const uniqueCategories = [...new Set(menuItems.map(p => p.category))].filter(Boolean);
+  const displayCategories = hasRecommended ? ['POPULAR', ...uniqueCategories] : uniqueCategories;
+
+  const getItemsForCategory = (cat: string) => {
+    if (cat === 'POPULAR') return menuItems.filter(i => i.popular);
+    return menuItems.filter(i => i.category === cat);
+  };
+
+  const getCategoryName = (cat: string) => {
+    if (cat === 'POPULAR') {
+      return lang === 'da' ? '⭐ Populært' : lang === 'en' ? '⭐ Popular' : '⭐ Δημοφιλή';
+    }
+    return cat;
+  };
+
+  const scrollToCategory = (cat: string) => {
+    const element = document.getElementById(`category-${cat}`);
+    if (element) {
+      const yOffset = -130; // Υπολογισμός ύψους για το header και τη μπάρα κατηγοριών ώστε να μη κρύβεται ο τίτλος
+      const y = element.getBoundingClientRect().top + window.scrollY + yOffset;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    }
+  };
+
   return (
     <div className="min-h-screen font-sans bg-[#0B1120] text-gray-200 selection:bg-[#38BDF8] selection:text-[#0B1120] pb-24 bg-[url('/bg.jpg')] bg-cover bg-fixed bg-center relative">
       <div className="absolute inset-0 bg-[#0B1120]/85 -z-10"></div>
       
+      {/* HEADER */}
       <header className="bg-[#0F172A] border-b border-white/10 p-4 md:p-6 sticky top-0 z-40 flex justify-between items-center shadow-lg">
         <div className="flex items-center gap-3">
           <a href="/" className="hover:opacity-80 transition-opacity">
@@ -183,23 +210,66 @@ export default function OrderPage() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto p-4 md:p-6 pt-8">
-        <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-6">{ui.menuTitle}</h2>
-        {isLoading ? <p className="text-center text-[#38BDF8] animate-pulse">Loading...</p> : (
-          <div className="flex flex-col gap-4">
-            {menuItems.map(item => (
-              <div key={item.id} className="bg-slate-800/40 p-4 rounded-2xl border border-white/5 flex gap-4 hover:border-white/10 transition-colors shadow-sm items-center">
-                {item.image_path ? (
-                  <div className="w-20 h-20 md:w-24 md:h-24 shrink-0 rounded-xl overflow-hidden bg-slate-800 border border-white/5"><img src={`${supabaseImageUrl}${item.image_path}`} alt={item[`title_${lang}`] || item.name} className="w-full h-full object-cover" /></div>
-                ) : <div className="w-20 h-20 shrink-0 rounded-xl bg-slate-800/50 border border-white/5 flex items-center justify-center text-2xl">🍽️</div>}
-                <div className="flex-1"><h3 className="font-bold text-lg text-white mb-1">{item[`title_${lang}`] || item.name}</h3><p className="text-sm text-gray-400 line-clamp-2 leading-relaxed mb-2">{item[`desc_${lang}`] || ''}</p><span className="font-bold text-[#38BDF8]">{getItemPrice(item)} DKK</span></div>
-                <button onClick={() => setActiveProduct(item)} className="bg-white hover:bg-gray-200 text-[#0B1120] font-bold p-3 md:px-6 md:py-2.5 rounded-xl shadow-md transition-transform active:scale-95 shrink-0 flex items-center gap-2"><span className="hidden md:inline">{ui.add}</span> ➕</button>
-              </div>
+      <main className="max-w-4xl mx-auto p-4 md:p-6 pt-4">
+        
+        {/* ΜΠΑΡΑ ΚΑΤΗΓΟΡΙΩΝ (Sticky Navigation) */}
+        {!isLoading && (
+          <div className="sticky top-[72px] md:top-[88px] z-30 bg-[#0B1120]/95 backdrop-blur-md py-3 -mx-4 px-4 md:mx-0 md:px-0 mb-8 flex gap-3 overflow-x-auto no-scrollbar border-b border-white/5 shadow-sm">
+            {displayCategories.map(cat => (
+              <button 
+                key={cat} 
+                onClick={() => scrollToCategory(cat)}
+                className="shrink-0 px-5 py-2.5 rounded-full bg-slate-800 text-gray-300 font-black text-[10px] md:text-xs uppercase tracking-widest border border-white/5 hover:bg-[#38BDF8]/20 hover:text-[#38BDF8] hover:border-[#38BDF8]/50 transition-colors shadow-sm"
+              >
+                {getCategoryName(cat)}
+              </button>
             ))}
+          </div>
+        )}
+
+        {isLoading ? <p className="text-center text-[#38BDF8] animate-pulse">Loading...</p> : (
+          <div className="flex flex-col gap-10">
+            {displayCategories.map(cat => {
+              const items = getItemsForCategory(cat);
+              if (items.length === 0) return null;
+              
+              return (
+                <div key={cat} id={`category-${cat}`} className="scroll-mt-32">
+                  <h3 className="text-xl md:text-2xl font-black text-white uppercase tracking-widest mb-4 border-b border-white/10 pb-2">
+                    {getCategoryName(cat)}
+                  </h3>
+                  
+                  <div className="flex flex-col gap-4">
+                    {items.map(item => (
+                      <div key={item.id} className="bg-slate-800/40 p-4 rounded-2xl border border-white/5 flex gap-4 hover:border-white/10 transition-colors shadow-sm items-center">
+                        {item.image_path ? (
+                          <div className="w-20 h-20 md:w-24 md:h-24 shrink-0 rounded-xl overflow-hidden bg-slate-800 border border-white/5">
+                            <img src={`${supabaseImageUrl}${item.image_path}`} alt={item[`title_${lang}`] || item.name} className="w-full h-full object-cover" />
+                          </div>
+                        ) : (
+                          <div className="w-20 h-20 shrink-0 rounded-xl bg-slate-800/50 border border-white/5 flex items-center justify-center text-2xl">🍽️</div>
+                        )}
+                        
+                        <div className="flex-1">
+                          <h3 className="font-bold text-lg text-white mb-1">{item[`title_${lang}`] || item.name}</h3>
+                          <p className="text-sm text-gray-400 line-clamp-2 leading-relaxed mb-2">{item[`desc_${lang}`] || ''}</p>
+                          <span className="font-bold text-[#38BDF8]">{getItemPrice(item)} DKK</span>
+                        </div>
+                        
+                        <button onClick={() => setActiveProduct(item)} className="bg-white hover:bg-gray-200 text-[#0B1120] font-bold p-3 md:px-6 md:py-2.5 rounded-xl shadow-md transition-transform active:scale-95 shrink-0 flex items-center gap-2">
+                          <span className="hidden md:inline">{ui.add}</span> ➕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </main>
 
+      {/* MODALS ΚΑΙ ΚΑΛΑΘΙ (Χωρίς αλλαγή) */}
       {activeProduct && <ProductModal activeProduct={activeProduct} lang={lang} closeModal={() => setActiveProduct(null)} addToCart={addToCart} supabaseImageUrl={supabaseImageUrl} />}
 
       {isCartOpen && (
