@@ -102,8 +102,10 @@ export default function OrderPage() {
       setPlacedOrder(orderData); localStorage.setItem('hellas_active_order', orderData.id);
       await supabase.from('action_logs').insert([{ action_type: "TAKEAWAY_ORDER_CREATED", order_id: orderData.id, details: { company: "Nordic-mythos 1 ApS", user: auth.user?.email || "Guest", total_dkk: finalTotal } }]);
 
-      if (auth.user?.id) {
-        const earnedCashback = Number((finalTotal * 0.05).toFixed(2));
+   if (auth.user?.id) {
+        const { data: settings } = await supabase.from('store_settings').select('loyalty_earn_percentage').eq('id', 1).single();
+        const earnPct = settings ? settings.loyalty_earn_percentage : 5;
+        const earnedCashback = Number((finalTotal * (earnPct / 100)).toFixed(2));
         const { data: loyaltyData } = await supabase.from('customers_loyalty').select('*').eq('user_id', auth.user.id).single();
         const currentBalance = loyaltyData?.wallet_balance ? Number(loyaltyData.wallet_balance) : 0;
         await supabase.from('customers_loyalty').upsert({ user_id: auth.user.id, wallet_balance: currentBalance - loyaltyDiscount + earnedCashback, total_orders: (loyaltyData?.total_orders || 0) + 1, total_spent_dkk: Number(loyaltyData?.total_spent_dkk || 0) + finalTotal });
