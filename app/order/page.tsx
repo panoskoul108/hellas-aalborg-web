@@ -20,9 +20,9 @@ export default function OrderPage() {
 
   // --- LOCAL DICT ΓΙΑ ΤΑ ΝΕΑ ΣΤΟΙΧΕΙΑ WOLT STYLE ---
   const localUi = {
-    da: { search: "Søg i Hellas Aalborg", closed: "Lukket", opensAt: "Åbner kl. 17:00", smiley: "Smiley info", details: "Restaurant detaljer", schedule: "Planlæg ordre", viewOrder: "Se bestilling", legalName: "Juridisk navn", cvr: "Registreret nummer", address: "Registreret adresse", maps: "Se på kort", hours: "Åbningstider", promoBadge: "Få 35 kr. rabat" },
-    en: { search: "Search in Hellas Aalborg", closed: "Closed", opensAt: "Opens at 17:00", smiley: "Smiley info", details: "Restaurant details", schedule: "Schedule order", viewOrder: "View order", legalName: "Legal Name", cvr: "Registered number", address: "Registered address", maps: "View on Maps", hours: "Opening hours", promoBadge: "Get 35 kr. off" },
-    el: { search: "Αναζήτηση...", closed: "Κλειστά", opensAt: "Ανοίγει στις 17:00", smiley: "Αναφορά Smiley", details: "Πληροφορίες", schedule: "Προγραμματισμος", viewOrder: "Καλαθι", legalName: "Νομική Επωνυμία", cvr: "Αριθμός Μητρώου (CVR)", address: "Διεύθυνση", maps: "Προβολή στους Χάρτες", hours: "Ωράριο Λειτουργίας", promoBadge: "35 kr. Δώρο Εγγραφής" }
+    da: { search: "Søg i Hellas Aalborg", closed: "Lukket", opensAt: "Åbner kl. 17:00", smiley: "Smiley info", details: "Restaurant detaljer", schedule: "Planlæg ordre", viewOrder: "Se bestilling", legalName: "Juridisk navn", cvr: "Registreret nummer", address: "Registreret adresse", maps: "Se på kort", hours: "Åbningstider", promoBadge: "Få 35 kr. rabat", repeatOrder: "Gentag" },
+    en: { search: "Search in Hellas Aalborg", closed: "Closed", opensAt: "Opens at 17:00", smiley: "Smiley info", details: "Restaurant details", schedule: "Schedule order", viewOrder: "View order", legalName: "Legal Name", cvr: "Registered number", address: "Registered address", maps: "View on Maps", hours: "Opening hours", promoBadge: "Get 35 kr. off", repeatOrder: "Repeat" },
+    el: { search: "Αναζήτηση...", closed: "Κλειστά", opensAt: "Ανοίγει στις 17:00", smiley: "Αναφορά Smiley", details: "Πληροφορίες", schedule: "Προγραμματισμος", viewOrder: "Καλαθι", legalName: "Νομική Επωνυμία", cvr: "Αριθμός Μητρώου (CVR)", address: "Διεύθυνση", maps: "Προβολή στους Χάρτες", hours: "Ωράριο Λειτουργίας", promoBadge: "35 kr. Δώρο Εγγραφής", repeatOrder: "Επαναληψη" }
   };
   const t = localUi[lang];
 
@@ -104,6 +104,39 @@ export default function OrderPage() {
     auth.fetchOrderHistory();
   };
 
+  // ΕΠΑΝΑΛΗΨΗ ΠΑΡΑΓΓΕΛΙΑΣ
+  const handleRepeatOrder = (pastOrder: any) => {
+    if (!pastOrder.items || pastOrder.items.length === 0) return;
+    
+    if (cart.length > 0) {
+      const confirmClear = window.confirm(
+        lang === 'da' ? 'Vil du rydde din nuværende kurv for at gentage denne ordre?' : 
+        lang === 'en' ? 'Clear your current cart to repeat this order?' : 
+        'Θέλετε να αδειάσετε το τωρινό καλάθι για να επαναλάβετε την παραγγελία;'
+      );
+      if (!confirmClear) return;
+      clearCart();
+    }
+
+    pastOrder.items.forEach((pastItem: any) => {
+      const originalProduct = menuItems.find(m => m.id === pastItem.id) || {};
+      const itemToReAdd = {
+        ...originalProduct,
+        id: pastItem.id,
+        title_da: pastItem.title_da || originalProduct.title_da,
+        title_en: pastItem.title_en || originalProduct.title_en,
+        title_el: pastItem.title_el || originalProduct.title_el,
+        final_price: pastItem.unit_price_dkk, 
+        price_takeaway: pastItem.unit_price_dkk,
+        selectedOptions: pastItem.selectedOptions || [],
+        note: pastItem.note || ""
+      };
+      addToCart(itemToReAdd, pastItem.quantity);
+    });
+
+    setCheckoutStep('cart');
+  };
+
   const submitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!storeOpen && requestedTime === 'ASAP') return alert(ui.closedStore);
@@ -147,7 +180,7 @@ export default function OrderPage() {
     setPlacedOrder(null); clearCart(); setCheckoutStep('review');
   };
 
-// Μετάφραση Ημερών (Με αυτόματη αφαίρεση τόνων)
+  // Μετάφραση Ημερών (Με αφαίρεση τόνων)
   const translateDay = (dayName: string, currentLang: string) => {
     const dict: Record<string, any> = {
       'ΔΕΥΤΕΡΑ': { da: 'Mandag', en: 'Monday', el: 'Δευτέρα' },
@@ -156,14 +189,19 @@ export default function OrderPage() {
       'ΠΕΜΠΤΗ': { da: 'Torsdag', en: 'Thursday', el: 'Πέμπτη' },
       'ΠΑΡΑΣΚΕΥΗ': { da: 'Fredag', en: 'Friday', el: 'Παρασκευή' },
       'ΣΑΒΒΑΤΟ': { da: 'Lørdag', en: 'Saturday', el: 'Σάββατο' },
-      'ΚΥΡΙΑΚΗ': { da: 'Søndag', en: 'Sunday', el: 'Κυριακή' }
+      'ΚΥΡΙΑΚΗ': { da: 'Søndag', en: 'Sunday', el: 'Κυριακή' },
+      'MONDAY': { da: 'Mandag', en: 'Monday', el: 'Δευτέρα' },
+      'TUESDAY': { da: 'Tirsdag', en: 'Tuesday', el: 'Τρίτη' },
+      'WEDNESDAY': { da: 'Onsdag', en: 'Wednesday', el: 'Τετάρτη' },
+      'THURSDAY': { da: 'Torsdag', en: 'Thursday', el: 'Πέμπτη' },
+      'FRIDAY': { da: 'Fredag', en: 'Friday', el: 'Παρασκευή' },
+      'SATURDAY': { da: 'Lørdag', en: 'Saturday', el: 'Σάββατο' },
+      'SUNDAY': { da: 'Søndag', en: 'Sunday', el: 'Κυριακή' }
     };
-    
-    // Αφαιρεί τους τόνους και τα κάνει όλα κεφαλαία για να ταιριάζουν πάντα!
     const key = dayName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
     return dict[key] ? dict[key][currentLang] : dayName;
   };
-  
+
   const getItemsForCategory = (cat: string) => {
     if (cat === 'POPULAR') return menuItems.filter(i => i.popular);
     return menuItems.filter(i => i.category === cat);
@@ -457,7 +495,7 @@ export default function OrderPage() {
         </div>
       )}
 
-      {/* MODALS & CART (ΑΜΕΤΑΒΛΗΤΑ) */}
+      {/* MODALS & CART */}
       {activeProduct && <ProductModal activeProduct={activeProduct} lang={lang} closeModal={() => setActiveProduct(null)} addToCart={addToCart} supabaseImageUrl={supabaseImageUrl} />}
 
       {isCartOpen && (
@@ -478,9 +516,20 @@ export default function OrderPage() {
                     {auth.userOrderHistory.length === 0 ? <p className="text-sm text-gray-400">No orders yet.</p> : (
                       <ul className="space-y-4">
                         {auth.userOrderHistory.map(o => (
-                          <li key={o.id} className="flex justify-between items-center border-b border-white/5 pb-3 last:border-0 last:pb-0">
-                            <div><p className="font-bold text-white text-sm">#{o.order_number || o.id.toString().slice(-4)}</p><p className="text-[10px] text-gray-400">{new Date(o.created_at).toLocaleDateString()} - {o.total_price} kr.</p></div>
-                            <span className={`text-[9px] px-2 py-1 rounded font-bold uppercase ${o.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-orange-500/20 text-orange-400'}`}>{o.status}</span>
+                          <li key={o.id} className="flex flex-col gap-3 border-b border-white/5 pb-4 last:border-0 last:pb-0">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-bold text-white text-sm">#{o.order_number || o.id.toString().slice(-4)}</p>
+                                <p className="text-[10px] text-gray-400">{new Date(o.created_at).toLocaleDateString()} - {o.total_price} kr.</p>
+                                <p className="text-[10px] text-gray-500 mt-1.5 leading-snug line-clamp-1">{o.items?.map((i:any) => `${i.quantity}x ${i[`title_${lang}`] || i.title_en || i.title_da || 'Item'}`).join(', ')}</p>
+                              </div>
+                              <div className="flex flex-col items-end gap-2.5">
+                                <span className={`text-[9px] px-2 py-1 rounded font-bold uppercase ${o.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-orange-500/20 text-orange-400'}`}>{o.status}</span>
+                                <button onClick={() => handleRepeatOrder(o)} className="bg-[#38BDF8]/10 hover:bg-[#38BDF8]/20 text-[#38BDF8] border border-[#38BDF8]/30 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-colors flex items-center gap-1 active:scale-95">
+                                  <span className="text-sm">🔁</span> {t.repeatOrder}
+                                </button>
+                              </div>
+                            </div>
                           </li>
                         ))}
                       </ul>
