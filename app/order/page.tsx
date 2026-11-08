@@ -147,6 +147,28 @@ export default function OrderPage() {
     setPlacedOrder(null); clearCart(); setCheckoutStep('review');
   };
 
+  // Μετάφραση Ημερών
+  const translateDay = (dayName: string, currentLang: string) => {
+    const dict: Record<string, any> = {
+      'ΔΕΥΤΕΡΑ': { da: 'Mandag', en: 'Monday', el: 'Δευτέρα' },
+      'ΤΡΙΤΗ': { da: 'Tirsdag', en: 'Tuesday', el: 'Τρίτη' },
+      'ΤΕΤΑΡΤΗ': { da: 'Onsdag', en: 'Wednesday', el: 'Τετάρτη' },
+      'ΠΕΜΠΤΗ': { da: 'Torsdag', en: 'Thursday', el: 'Πέμπτη' },
+      'ΠΑΡΑΣΚΕΥΗ': { da: 'Fredag', en: 'Friday', el: 'Παρασκευή' },
+      'ΣΑΒΒΑΤΟ': { da: 'Lørdag', en: 'Saturday', el: 'Σάββατο' },
+      'ΚΥΡΙΑΚΗ': { da: 'Søndag', en: 'Sunday', el: 'Κυριακή' },
+      'MONDAY': { da: 'Mandag', en: 'Monday', el: 'Δευτέρα' },
+      'TUESDAY': { da: 'Tirsdag', en: 'Tuesday', el: 'Τρίτη' },
+      'WEDNESDAY': { da: 'Onsdag', en: 'Wednesday', el: 'Τετάρτη' },
+      'THURSDAY': { da: 'Torsdag', en: 'Thursday', el: 'Πέμπτη' },
+      'FRIDAY': { da: 'Fredag', en: 'Friday', el: 'Παρασκευή' },
+      'SATURDAY': { da: 'Lørdag', en: 'Saturday', el: 'Σάββατο' },
+      'SUNDAY': { da: 'Søndag', en: 'Sunday', el: 'Κυριακή' }
+    };
+    const key = dayName.toUpperCase().trim();
+    return dict[key] ? dict[key][currentLang] : dayName;
+  };
+
   const getItemsForCategory = (cat: string) => {
     if (cat === 'POPULAR') return menuItems.filter(i => i.popular);
     return menuItems.filter(i => i.category === cat);
@@ -422,7 +444,7 @@ export default function OrderPage() {
                 <ul className="flex flex-col gap-3">
                   {storeSchedule.map(day => (
                     <li key={day.day_of_week} className="flex justify-between items-center text-xs border-b border-slate-800/50 pb-2 last:border-0">
-                      <span className="text-gray-300 font-bold uppercase">{day.day_name}</span>
+                      <span className="text-gray-300 font-bold uppercase">{translateDay(day.day_name, lang)}</span>
                       <span className={day.is_closed ? 'text-red-400 font-black' : 'text-emerald-400 font-bold'}>
                         {day.is_closed ? t.closed : `${day.open_time.slice(0,5)} - ${day.close_time.slice(0,5)}`}
                       </span>
