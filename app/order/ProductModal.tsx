@@ -106,7 +106,7 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
       <div className="bg-[#0F172A] w-full h-[95vh] md:h-auto md:max-w-xl rounded-t-3xl md:rounded-3xl overflow-hidden flex flex-col shadow-2xl md:max-h-[90vh] md:border border-white/10" onClick={e => e.stopPropagation()}>
         
         <div className="relative h-48 sm:h-56 shrink-0 bg-slate-800">
-<button onClick={closeModal} className="absolute top-8 right-4 md:top-4 md:right-4 w-10 h-10 bg-black/50 text-white rounded-full flex items-center justify-center ...">          {activeProduct?.image_path ? (
+          <button onClick={closeModal} className="absolute top-8 right-4 md:top-4 md:right-4 w-10 h-10 bg-black/50 text-white rounded-full flex items-center justify-center font-black text-xl hover:bg-black/70 transition-colors shadow-md z-10">✕</button>          {activeProduct?.image_path ? (
             <img src={`${supabaseImageUrl}${activeProduct.image_path}`} alt={title} className="w-full h-full object-cover" />
           ) : <div className="w-full h-full flex items-center justify-center text-5xl">🍽️</div>}
           <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A] to-transparent"></div>
