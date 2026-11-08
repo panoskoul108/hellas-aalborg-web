@@ -7,15 +7,15 @@ interface LoyaltyWalletProps {
   subtotal: number;
   lang: 'da' | 'en' | 'el';
   onApplyDiscount: (discountAmount: number) => void;
+  settings: { loyalty_max_percentage: number, loyalty_earn_percentage: number };
 }
 
-export default function LoyaltyWallet({ userId, subtotal, lang, onApplyDiscount }: LoyaltyWalletProps) {
+export default function LoyaltyWallet({ userId, subtotal, lang, onApplyDiscount, settings }: LoyaltyWalletProps) {
   const [balance, setBalance] = useState(0);
   const [useWallet, setUseWallet] = useState(false);
   
-  // Δυναμικά ποσοστά από τη βάση (με default τιμές αν καθυστερήσει να φορτώσει)
-  const [maxPct, setMaxPct] = useState(50); 
-  const [earnPct, setEarnPct] = useState(5);
+  const maxPct = settings?.loyalty_max_percentage || 50; 
+  const earnPct = settings?.loyalty_earn_percentage || 5;
 
   const dict = {
     da: { walletTitle: "Dit Digitale Pung", balanceMsg: "Din saldo:", useBtn: "Brug saldo", earnMsg: "Du tjener", limitMsg: "Du kan betale op til {X}% af din ordre med point." },
@@ -25,19 +25,12 @@ export default function LoyaltyWallet({ userId, subtotal, lang, onApplyDiscount 
   const ui = dict[lang];
 
   useEffect(() => {
-    const fetchSettingsAndBalance = async () => {
-      const { data: settings } = await supabase.from('store_settings').select('*').eq('id', 1).single();
-      if (settings) {
-        setMaxPct(settings.loyalty_max_percentage || 50);
-        setEarnPct(settings.loyalty_earn_percentage || 5);
-      }
-
-      if (userId) {
-        const { data: wallet } = await supabase.from('customers_loyalty').select('wallet_balance').eq('user_id', userId).single();
-        if (wallet) setBalance(Number(wallet.wallet_balance) || 0);
-      }
+    if (!userId) return;
+    const fetchBalance = async () => {
+      const { data } = await supabase.from('customers_loyalty').select('wallet_balance').eq('user_id', userId).single();
+      if (data) setBalance(Number(data.wallet_balance) || 0);
     };
-    fetchSettingsAndBalance();
+    fetchBalance();
   }, [userId]);
 
   const maxUsable = subtotal * (maxPct / 100);
