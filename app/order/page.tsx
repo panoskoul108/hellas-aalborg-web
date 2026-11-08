@@ -142,10 +142,10 @@ export default function OrderPage() {
     setPlacedOrder(null); clearCart(); setCheckoutStep('review');
   };
 
-  // --- ΚΑΤΗΓΟΡΙΕΣ & ΑΝΑΖΗΤΗΣΗ ---
-  const hasRecommended = menuItems.some(p => p.popular);
-  const uniqueCategories = [...new Set(menuItems.map(p => p.category))].filter(Boolean);
-  const displayCategories = hasRecommended ? ['POPULAR', ...uniqueCategories] : uniqueCategories;
+ const getItemsForCategory = (cat: string) => {
+    if (cat === 'POPULAR') return menuItems.filter(i => i.popular);
+    return menuItems.filter(i => i.category === cat);
+  };
 
   const translateCategory = (cat: string, currentLang: string) => {
     if (cat === 'POPULAR') return currentLang === 'da' ? '⭐ Mest bestilte' : currentLang === 'en' ? '⭐ Most ordered' : '⭐ Δημοφιλή';
