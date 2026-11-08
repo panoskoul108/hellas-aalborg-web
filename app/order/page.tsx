@@ -20,9 +20,9 @@ export default function OrderPage() {
 
   // --- LOCAL DICT ΓΙΑ ΤΑ ΝΕΑ ΣΤΟΙΧΕΙΑ WOLT STYLE ---
   const localUi = {
-    da: { search: "Søg i Hellas Aalborg", closed: "Lukket", opensAt: "Åbner kl. 17:00", smiley: "Smiley info", details: "Restaurant detaljer", schedule: "Planlæg ordre", minOrder: "Min. ordre 75 kr.", viewOrder: "Se bestilling" },
-    en: { search: "Search in Hellas Aalborg", closed: "Closed", opensAt: "Opens at 17:00", smiley: "Smiley info", details: "Restaurant details", schedule: "Schedule order", minOrder: "Min. order 75 kr.", viewOrder: "View order" },
-    el: { search: "Αναζήτηση...", closed: "Κλειστά", opensAt: "Ανοίγει στις 17:00", smiley: "Αναφορά Smiley", details: "Πληροφορίες", schedule: "Προγραμματισμος", minOrder: "Ελάχιστη παραγγελία 75 kr.", viewOrder: "Καλαθι" }
+    da: { search: "Søg i Hellas Aalborg", closed: "Lukket", opensAt: "Åbner kl. 17:00", smiley: "Smiley info", details: "Restaurant detaljer", schedule: "Planlæg ordre", viewOrder: "Se bestilling", legalName: "Juridisk navn", cvr: "Registreret nummer", address: "Registreret adresse", maps: "Se på kort", hours: "Åbningstider" },
+    en: { search: "Search in Hellas Aalborg", closed: "Closed", opensAt: "Opens at 17:00", smiley: "Smiley info", details: "Restaurant details", schedule: "Schedule order", viewOrder: "View order", legalName: "Legal Name", cvr: "Registered number", address: "Registered address", maps: "View on Maps", hours: "Opening hours" },
+    el: { search: "Αναζήτηση...", closed: "Κλειστά", opensAt: "Ανοίγει στις 17:00", smiley: "Αναφορά Smiley", details: "Πληροφορίες", schedule: "Προγραμματισμος", viewOrder: "Καλαθι", legalName: "Νομική Επωνυμία", cvr: "Αριθμός Μητρώου (CVR)", address: "Διεύθυνση", maps: "Προβολή στους Χάρτες", hours: "Ωράριο Λειτουργίας" }
   };
   const t = localUi[lang];
 
@@ -34,8 +34,10 @@ export default function OrderPage() {
 
   // --- LOCAL STATE ---
   const [storeSettings, setStoreSettings] = useState({ loyalty_max_percentage: 50, loyalty_earn_percentage: 5 });
+  const [storeSchedule, setStoreSchedule] = useState<any[]>([]);
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [activeProduct, setActiveProduct] = useState<any>(null);
   const [checkoutStep, setCheckoutStep] = useState<'cart' | 'auth' | 'checkout' | 'success' | 'review' | 'profile'>('cart');
@@ -51,21 +53,24 @@ export default function OrderPage() {
 
   // Νέα States για UI
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   // --- EFFECTS ---
   useEffect(() => {
-    const fetchMenuAndSettings = async () => {
-      const [menuRes, settingsRes] = await Promise.all([
+    const fetchData = async () => {
+      const [menuRes, settingsRes, hoursRes] = await Promise.all([
         supabase.from('menu_items').select('*').order('sort_order', { ascending: true }),
-        supabase.from('store_settings').select('*').eq('id', 1).single()
+        supabase.from('store_settings').select('*').eq('id', 1).single(),
+        supabase.from('store_hours').select('*').order('day_of_week', { ascending: true })
       ]);
       
       if (menuRes.data) setMenuItems(menuRes.data);
       if (settingsRes.data) setStoreSettings(settingsRes.data);
+      if (hoursRes.data) setStoreSchedule(hoursRes.data);
       setIsLoading(false);
     };
-    fetchMenuAndSettings();
+    fetchData();
     
     const storedOrders = parseInt(localStorage.getItem("servato_orders") || "0");
     const lastTime = parseInt(localStorage.getItem("servato_time") || "0");
@@ -187,7 +192,6 @@ export default function OrderPage() {
   const hasRecommended = menuItems.some(p => p.popular);
   const uniqueCategories = [...new Set(menuItems.map(p => p.category))].filter(Boolean);
   const displayCategories = hasRecommended ? ['POPULAR', ...uniqueCategories] : uniqueCategories;
-
   const displayedItems = getItemsForDisplay();
 
   return (
@@ -225,16 +229,12 @@ export default function OrderPage() {
         
         {/* 3. ΠΛΗΡΟΦΟΡΙΕΣ ΚΑΤΑΣΤΗΜΑΤΟΣ & SCHEDULE ORDER */}
         <div className="bg-slate-900 mx-0 md:mx-0 p-5 md:p-8 rounded-t-3xl md:rounded-3xl shadow-2xl border-b md:border border-white/5 mb-6">
-          <h1 className="text-3xl font-black text-white mb-3">Hellas Food</h1>
+          <h1 className="text-3xl font-black text-white mb-3">Hellas Aalborg</h1>
           
           <div className="flex flex-wrap items-center gap-2 text-sm font-medium text-gray-300 mb-4">
-            <span className="text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded flex items-center gap-1 font-bold">🙂 8.2</span>
-            <span className="text-gray-600">•</span>
             {!storeOpen ? <span className="text-gray-400 font-bold">{t.closed}</span> : <span className="text-emerald-400 font-bold">Open</span>}
-            <span className="text-gray-600">•</span>
-            {!storeOpen && <span className="text-gray-400">{t.opensAt}</span>}
             {!storeOpen && <span className="text-gray-600">•</span>}
-            <span className="text-gray-400">{t.minOrder}</span>
+            {!storeOpen && <span className="text-gray-400">{t.opensAt}</span>}
           </div>
 
           <div className="flex items-center gap-4 text-xs font-bold text-[#38BDF8] mb-6">
@@ -242,7 +242,7 @@ export default function OrderPage() {
               🔍 {t.smiley}
             </a>
             <span className="text-gray-600">•</span>
-            <button onClick={() => alert('Ved Stranden 21, 9000 Aalborg')} className="hover:underline">
+            <button onClick={() => setIsDetailsModalOpen(true)} className="hover:underline">
               ℹ️ {t.details}
             </button>
           </div>
@@ -386,6 +386,53 @@ export default function OrderPage() {
             <span>{t.viewOrder}</span>
             <span>{finalTotal.toFixed(2)} kr.</span>
           </button>
+        </div>
+      )}
+
+      {/* --- MODAL ΠΛΗΡΟΦΟΡΙΩΝ ΕΣΤΙΑΤΟΡΙΟΥ --- */}
+      {isDetailsModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex justify-center items-center p-4">
+          <div className="bg-[#0F172A] w-full max-w-md rounded-3xl shadow-2xl border border-white/10 overflow-hidden animate-fade-in-up">
+            <div className="flex justify-between items-center p-5 border-b border-white/10 bg-slate-900">
+              <h2 className="text-lg font-black text-white uppercase tracking-widest">{t.details}</h2>
+              <button onClick={() => setIsDetailsModalOpen(false)} className="w-8 h-8 flex items-center justify-center bg-slate-800 rounded-full text-gray-400 hover:text-white transition-colors">✕</button>
+            </div>
+            <div className="p-6 flex flex-col gap-6">
+              
+              <div>
+                <h3 className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">{t.legalName}</h3>
+                <p className="text-white font-bold text-sm">Nordic-mythos 1 ApS</p>
+              </div>
+              
+              <div>
+                <h3 className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">{t.cvr}</h3>
+                <p className="text-white font-bold text-sm">46414373</p>
+              </div>
+              
+              <div>
+                <h3 className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">{t.address}</h3>
+                <p className="text-white font-bold text-sm">Ved Stranden 21, 9000, Aalborg, Danmark</p>
+                <a href="https://maps.app.goo.gl/EQMBBoujJMQBvYLy5" target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-2 bg-[#38BDF8]/10 hover:bg-[#38BDF8]/20 border border-[#38BDF8]/50 text-[#38BDF8] text-xs font-black uppercase tracking-widest px-5 py-3 rounded-xl transition-colors">
+                  📍 {t.maps}
+                </a>
+              </div>
+              
+              <div className="pt-4 border-t border-white/10">
+                <h3 className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-3">{t.hours}</h3>
+                <ul className="flex flex-col gap-3">
+                  {storeSchedule.map(day => (
+                    <li key={day.day_of_week} className="flex justify-between items-center text-xs border-b border-slate-800/50 pb-2 last:border-0">
+                      <span className="text-gray-300 font-bold uppercase">{day.day_name}</span>
+                      <span className={day.is_closed ? 'text-red-400 font-black' : 'text-emerald-400 font-bold'}>
+                        {day.is_closed ? t.closed : `${day.open_time.slice(0,5)} - ${day.close_time.slice(0,5)}`}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              
+            </div>
+          </div>
         </div>
       )}
 
