@@ -129,9 +129,9 @@ export default function OrderPage() {
 
   // --- LOCAL DICT ---
   const localUi = {
-    da: { search: "Søg i Hellas Aalborg", closed: "Lukket", opensAt: `Åbner kl. ${nextOpenTimeStr}`, smiley: "Smiley info", details: "Restaurant detaljer", schedule: "Planlæg ordre", viewOrder: "Se bestilling", legalName: "Juridisk navn", cvr: "Registreret nummer", address: "Registreret adresse", maps: "Se på kort", hours: "Åbningstider", promoBadge: "Få 35 kr. rabat", repeatOrder: "Gentag" },
-    en: { search: "Search in Hellas Aalborg", closed: "Closed", opensAt: `Opens at ${nextOpenTimeStr}`, smiley: "Smiley info", details: "Restaurant details", schedule: "Schedule order", viewOrder: "View order", legalName: "Legal Name", cvr: "Registered number", address: "Registered address", maps: "View on Maps", hours: "Opening hours", promoBadge: "Get 35 kr. off", repeatOrder: "Repeat" },
-    el: { search: "Αναζήτηση...", closed: "Κλειστά", opensAt: `Ανοίγει στις ${nextOpenTimeStr}`, smiley: "Αναφορά Smiley", details: "Πληροφορίες", schedule: "Προγραμματισμος", viewOrder: "Καλαθι", legalName: "Νομική Επωνυμία", cvr: "Αριθμός Μητρώου (CVR)", address: "Διεύθυνση", maps: "Προβολή στους Χάρτες", hours: "Ωράριο Λειτουργίας", promoBadge: "35 kr. Δώρο Εγγραφής", repeatOrder: "Επαναληψη" }
+    da: { search: "Søg i menuen...", closed: "Lukket", opensAt: `Åbner kl. ${nextOpenTimeStr}`, smiley: "Smiley info", details: "Restaurant detaljer", schedule: "Planlæg ordre", viewOrder: "Se bestilling", legalName: "Juridisk navn", cvr: "Registreret nummer", address: "Registreret adresse", maps: "Se på kort", hours: "Åbningstider", promoBadge: "Få 35 kr. rabat", repeatOrder: "Gentag" },
+    en: { search: "Search menu...", closed: "Closed", opensAt: `Opens at ${nextOpenTimeStr}`, smiley: "Smiley info", details: "Restaurant details", schedule: "Schedule order", viewOrder: "View order", legalName: "Legal Name", cvr: "Registered number", address: "Registered address", maps: "View on Maps", hours: "Opening hours", promoBadge: "Get 35 kr. off", repeatOrder: "Repeat" },
+    el: { search: "Αναζήτηση μενού...", closed: "Κλειστά", opensAt: `Ανοίγει στις ${nextOpenTimeStr}`, smiley: "Αναφορά Smiley", details: "Πληροφορίες", schedule: "Προγραμματισμος", viewOrder: "Καλαθι", legalName: "Νομική Επωνυμία", cvr: "Αριθμός Μητρώου (CVR)", address: "Διεύθυνση", maps: "Προβολή στους Χάρτες", hours: "Ωράριο Λειτουργίας", promoBadge: "35 kr. Δώρο Εγγραφής", repeatOrder: "Επαναληψη" }
   };
   const t = localUi[lang];
 
@@ -143,7 +143,6 @@ export default function OrderPage() {
 
   const handleRepeatOrder = (pastOrder: any) => {
     if (!pastOrder.items || pastOrder.items.length === 0) return;
-    
     if (cart.length > 0) {
       const confirmClear = window.confirm(
         lang === 'da' ? 'Vil du rydde din nuværende kurv for at gentage denne ordre?' : 
@@ -153,7 +152,6 @@ export default function OrderPage() {
       if (!confirmClear) return;
       clearCart();
     }
-
     pastOrder.items.forEach((pastItem: any) => {
       const originalProduct = menuItems.find(m => m.id === pastItem.id) || {};
       const itemToReAdd = {
@@ -169,7 +167,6 @@ export default function OrderPage() {
       };
       addToCart(itemToReAdd, pastItem.quantity);
     });
-
     setCheckoutStep('cart');
   };
 
@@ -272,7 +269,7 @@ export default function OrderPage() {
   const scrollToCategory = (cat: string) => {
     const element = document.getElementById(`category-${cat}`);
     if (element) {
-      const yOffset = -80; 
+      const yOffset = -90; 
       const y = element.getBoundingClientRect().top + window.scrollY + yOffset;
       window.scrollTo({ top: y, behavior: 'smooth' });
     }
@@ -285,98 +282,99 @@ export default function OrderPage() {
   const displayedItems = getItemsForDisplay();
 
   return (
-    <div className="min-h-screen font-sans bg-[#0B1120] text-gray-200 selection:bg-[#38BDF8] selection:text-[#0B1120] pb-24 md:pb-10 relative overflow-hidden">
+    <div className="min-h-screen font-sans bg-[#0B1120] text-gray-200 selection:bg-[#38BDF8] selection:text-[#0B1120] pb-28 md:pb-12 relative overflow-hidden">
       
-      {/* --- MESH GRADIENT GLOWS ΓΙΑ ΜΟΝΤΕΡΝΟ BACKGROUND --- */}
-      <div className="fixed top-[-10%] left-[-10%] w-[40rem] h-[40rem] bg-[#38BDF8]/10 rounded-full mix-blend-screen filter blur-[120px] opacity-60 pointer-events-none z-0"></div>
-      <div className="fixed bottom-[-10%] right-[-10%] w-[35rem] h-[35rem] bg-purple-600/10 rounded-full mix-blend-screen filter blur-[120px] opacity-60 pointer-events-none z-0"></div>
+      {/* --- MESH GRADIENTS ΓΙΑ ΥΠΕΡΣΥΓΧΡΟΝΟ ΒΑΘΟΣ --- */}
+      <div className="fixed top-[-15%] left-[-10%] w-[50rem] h-[50rem] bg-sky-500/10 rounded-full mix-blend-screen filter blur-[140px] opacity-70 pointer-events-none z-0"></div>
+      <div className="fixed bottom-[-10%] right-[-10%] w-[40rem] h-[40rem] bg-indigo-600/10 rounded-full mix-blend-screen filter blur-[140px] opacity-60 pointer-events-none z-0"></div>
       
-      {/* 1. ΣΤΑΘΕΡΟ HEADER (Glassmorphism) */}
-      <header className="bg-[#0B1120]/80 backdrop-blur-xl p-4 flex justify-between items-center z-50 sticky top-0 border-b border-white/5 shadow-md">
+      {/* 1. ΣΤΑΘΕΡΟ HEADER (Premium Glassmorphism) */}
+      <header className="bg-[#0B1120]/70 backdrop-blur-2xl p-4 flex justify-between items-center z-50 sticky top-0 border-b border-white/5 shadow-sm transition-all duration-300">
         <div className="flex items-center gap-3">
-          <Image src="/logo.png" alt="Logo" width={40} height={40} className="object-contain rounded-lg" />
+          <Image src="/logo.png" alt="Logo" width={42} height={42} className="object-contain rounded-[14px] shadow-lg shadow-black/50" />
         </div>
         
-        <div className="flex items-center gap-2 md:gap-4">
-          <div className="flex gap-1 text-lg bg-slate-800/80 p-1 rounded-full border border-white/10 shadow-inner">
-            <button onClick={() => setLang('da')} className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${lang === 'da' ? 'bg-white/20' : 'opacity-50 hover:opacity-80'}`}>🇩🇰</button>
-            <button onClick={() => setLang('en')} className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${lang === 'en' ? 'bg-white/20' : 'opacity-50 hover:opacity-80'}`}>🇬🇧</button>
-            <button onClick={() => setLang('el')} className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${lang === 'el' ? 'bg-white/20' : 'opacity-50 hover:opacity-80'}`}>🇬🇷</button>
+        <div className="flex items-center gap-3 md:gap-5">
+          <div className="flex gap-1 text-base bg-[#0F172A]/80 p-1.5 rounded-full border border-white/5 shadow-inner">
+            <button onClick={() => setLang('da')} className={`w-8 h-8 flex items-center justify-center rounded-full transition-all duration-300 ${lang === 'da' ? 'bg-gradient-to-tr from-sky-500 to-blue-500 shadow-md text-white' : 'opacity-50 hover:opacity-100 hover:bg-white/10'}`}>🇩🇰</button>
+            <button onClick={() => setLang('en')} className={`w-8 h-8 flex items-center justify-center rounded-full transition-all duration-300 ${lang === 'en' ? 'bg-gradient-to-tr from-sky-500 to-blue-500 shadow-md text-white' : 'opacity-50 hover:opacity-100 hover:bg-white/10'}`}>🇬🇧</button>
+            <button onClick={() => setLang('el')} className={`w-8 h-8 flex items-center justify-center rounded-full transition-all duration-300 ${lang === 'el' ? 'bg-gradient-to-tr from-sky-500 to-blue-500 shadow-md text-white' : 'opacity-50 hover:opacity-100 hover:bg-white/10'}`}>🇬🇷</button>
           </div>
           
-          <button onClick={() => { auth.user ? openProfile() : setCheckoutStep('auth'); setIsCartOpen(true); }} className="w-10 h-10 bg-slate-800/80 rounded-full flex items-center justify-center text-lg text-[#38BDF8] border border-white/10 shadow-inner hover:bg-slate-700 transition-colors">
+          <button onClick={() => { auth.user ? openProfile() : setCheckoutStep('auth'); setIsCartOpen(true); }} className="w-11 h-11 bg-[#0F172A]/80 rounded-full flex items-center justify-center text-lg text-sky-400 border border-white/5 shadow-inner hover:bg-slate-800 transition-all duration-300 hover:scale-105">
             👤
           </button>
           
-          <button onClick={() => setIsCartOpen(true)} className="hidden md:flex relative bg-[#38BDF8] text-[#0B1120] px-5 py-2 rounded-full font-black items-center gap-2 transition-transform active:scale-95 shadow-lg shadow-[#38BDF8]/20">
-            🛒 <span>{cart.reduce((sum, item) => sum + item.quantity, 0)}</span>
+          <button onClick={() => setIsCartOpen(true)} className="hidden md:flex relative bg-gradient-to-r from-sky-400 to-blue-500 text-[#0B1120] px-6 py-2.5 rounded-full font-black items-center gap-2 transition-all duration-300 hover:scale-105 hover:shadow-[0_0_20px_rgba(56,189,248,0.4)] active:scale-95">
+            🛒 <span className="text-white bg-black/20 px-2 py-0.5 rounded-full">{cart.reduce((sum, item) => sum + item.quantity, 0)}</span>
           </button>
         </div>
       </header>
 
-      {/* ΗΕRO IMAGE ΑΦΑΙΡΕΘΗΚΕ - ΜΟΝΟ ΚΑΘΑΡΟ ΜΕΣΗ GRADIENT BG ΠΛΕΟΝ */}
-
-      <main className="max-w-4xl mx-auto px-4 md:px-6 pt-6 relative z-10">
+      <main className="max-w-4xl mx-auto px-4 md:px-6 pt-8 relative z-10">
         
-        {/* 2. ΠΛΗΡΟΦΟΡΙΕΣ ΚΑΤΑΣΤΗΜΑΤΟΣ (Glassmorphism Card) & SCHEDULE ORDER */}
-        <div className="bg-[#0F172A]/80 backdrop-blur-xl mx-0 md:mx-0 p-5 md:p-8 rounded-3xl shadow-2xl border border-white/10 mb-6">
-          <h1 className="text-3xl font-black text-white mb-3 tracking-tight">Hellas Aalborg</h1>
+        {/* 2. ΠΛΗΡΟΦΟΡΙΕΣ ΚΑΤΑΣΤΗΜΑΤΟΣ */}
+        <div className="mb-8 animate-fade-in-up">
+          <h1 className="text-4xl md:text-5xl font-black mb-4 bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-100 to-gray-400 tracking-tighter">
+            Hellas Aalborg
+          </h1>
           
-          <div className="flex flex-wrap items-center gap-2 text-sm font-medium text-gray-300 mb-4">
-            {!storeOpen ? <span className="text-red-400 font-bold">{t.closed}</span> : <span className="text-emerald-400 font-bold">Open</span>}
-            {!storeOpen && <span className="text-gray-600">•</span>}
-            {!storeOpen && <span className="text-gray-400">{t.opensAt}</span>}
+          <div className="flex flex-wrap items-center gap-3 text-xs md:text-sm font-bold text-gray-300 mb-6">
+            <span className={`px-3 py-1.5 rounded-full border shadow-sm ${storeOpen ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+              {storeOpen ? 'Open' : t.closed}
+            </span>
+            {!storeOpen && <span className="px-3 py-1.5 rounded-full bg-slate-800/80 border border-white/5 shadow-sm text-gray-300">{t.opensAt}</span>}
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-[#38BDF8] mb-6">
-            <a href="https://www.findsmiley.dk/app/1579343" target="_blank" rel="noreferrer" className="hover:text-white transition-colors flex items-center gap-1 bg-[#38BDF8]/10 px-3 py-1.5 rounded-lg border border-[#38BDF8]/20">
-              🔍 {t.smiley}
+          <div className="flex flex-wrap items-center gap-3 text-xs font-black tracking-wide text-sky-400 mb-8">
+            <a href="https://www.findsmiley.dk/app/1579343" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 bg-sky-500/10 px-4 py-2.5 rounded-xl border border-sky-500/20 hover:bg-sky-500/20 hover:shadow-[0_0_15px_rgba(56,189,248,0.15)] transition-all duration-300">
+              <span className="text-base">🔍</span> {t.smiley}
             </a>
             
-            <button onClick={() => setIsDetailsModalOpen(true)} className="hover:text-white transition-colors flex items-center gap-1 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-white/10">
-              ℹ️ {t.details}
+            <button onClick={() => setIsDetailsModalOpen(true)} className="flex items-center gap-1.5 bg-slate-800/60 px-4 py-2.5 rounded-xl border border-white/10 hover:bg-slate-700/80 transition-all duration-300 hover:text-white shadow-sm">
+              <span className="text-base">ℹ️</span> {t.details}
             </button>
             
             {!auth.user && (
-              <button onClick={() => { setIsCartOpen(true); setCheckoutStep('auth'); }} className="text-purple-400 bg-purple-500/10 px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-black hover:bg-purple-500/20 transition-colors border border-purple-500/20 shadow-sm animate-pulse-slow">
-                🎁 {t.promoBadge}
+              <button onClick={() => { setIsCartOpen(true); setCheckoutStep('auth'); }} className="flex items-center gap-2 bg-gradient-to-r from-purple-600/20 to-pink-500/20 text-purple-300 px-4 py-2.5 rounded-xl border border-purple-500/30 hover:shadow-[0_0_20px_rgba(168,85,247,0.3)] transition-all duration-300 animate-pulse-slow">
+                <span className="text-base">🎁</span> {t.promoBadge}
               </button>
             )}
           </div>
           
-          <button onClick={() => { setIsCartOpen(true); setCheckoutStep('cart'); }} className="w-full bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] py-4 rounded-xl font-black text-sm uppercase flex justify-center items-center gap-2 transition-transform active:scale-95 shadow-lg shadow-[#38BDF8]/20">
+          <button onClick={() => { setIsCartOpen(true); setCheckoutStep('cart'); }} className="w-full bg-gradient-to-r from-slate-800 to-slate-700 hover:from-slate-700 hover:to-slate-600 text-white py-4.5 rounded-[1.25rem] font-black text-sm uppercase tracking-widest flex justify-center items-center gap-2 transition-all duration-300 active:scale-95 border border-white/5 shadow-xl">
             🕒 {t.schedule}
           </button>
         </div>
 
-        {/* 3. ΜΠΑΡΑ ΑΝΑΖΗΤΗΣΗΣ (Sticky Glassmorphism) */}
-        <div className="mb-6 sticky top-[72px] z-40 bg-[#0B1120]/90 backdrop-blur-xl py-3 -mx-4 px-4 md:mx-0 md:px-0 border-b border-white/5">
-          <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg text-gray-500">🔍</span>
+        {/* 3. ΜΠΑΡΑ ΑΝΑΖΗΤΗΣΗΣ (Ultra Smooth Glass) */}
+        <div className="mb-8 sticky top-[72px] md:top-[88px] z-40 bg-[#0B1120]/70 backdrop-blur-2xl py-3 -mx-4 px-4 md:mx-0 md:px-0 border-b border-white/5 transition-all duration-300">
+          <div className="relative group">
+            <span className="absolute left-5 top-1/2 -translate-y-1/2 text-xl text-gray-500 group-focus-within:text-sky-400 transition-colors">🔍</span>
             <input 
               type="text" 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t.search}
-              className="w-full bg-slate-800/80 border border-white/10 text-white rounded-full py-3.5 pl-12 pr-4 font-bold text-sm outline-none focus:border-[#38BDF8] transition-colors placeholder:text-gray-500 shadow-inner"
+              className="w-full bg-[#0F172A]/80 border border-white/10 text-white rounded-full py-4 pl-14 pr-6 font-bold text-sm outline-none focus:border-sky-400/50 focus:bg-[#0F172A] transition-all duration-300 placeholder:text-gray-500 shadow-inner"
             />
           </div>
         </div>
 
-        {/* 4. ΚΑΤΗΓΟΡΙΕΣ (ΑΝ ΔΕΝ ΥΠΑΡΧΕΙ ΑΝΑΖΗΤΗΣΗ) */}
+        {/* 4. ΚΑΤΗΓΟΡΙΕΣ (Pill Tabs) */}
         {!searchQuery && !isLoading && (
-          <div className="mb-4 flex items-center gap-3 overflow-x-auto no-scrollbar pb-2 -mx-4 px-4 md:mx-0 md:px-0">
+          <div className="mb-6 flex items-center gap-3 overflow-x-auto no-scrollbar pb-3 -mx-4 px-4 md:mx-0 md:px-0">
             <button 
               onClick={() => setIsCategoryMenuOpen(!isCategoryMenuOpen)}
-              className="shrink-0 bg-[#38BDF8]/10 text-[#38BDF8] border border-[#38BDF8]/30 px-5 py-2.5 rounded-full font-black text-xs uppercase tracking-widest flex items-center gap-2 transition-colors shadow-sm"
+              className="shrink-0 bg-sky-500/10 text-sky-400 border border-sky-500/20 px-6 py-3 rounded-full font-black text-xs uppercase tracking-widest flex items-center gap-2 transition-all hover:bg-sky-500/20 shadow-sm"
             >
-              📑 Menu ▼
+              📑 Menu <span className={`transition-transform duration-300 ${isCategoryMenuOpen ? 'rotate-180' : ''}`}>▼</span>
             </button>
             {displayCategories.map(cat => (
               <button 
                 key={cat} 
                 onClick={() => scrollToCategory(cat)}
-                className="shrink-0 text-gray-400 hover:text-white bg-slate-800/50 border border-white/5 px-4 py-2 rounded-full font-bold text-sm transition-colors whitespace-nowrap shadow-sm"
+                className="shrink-0 text-gray-300 hover:text-white bg-slate-800/60 border border-white/5 px-5 py-2.5 rounded-full font-bold text-sm transition-all hover:bg-slate-700/80 hover:scale-105 shadow-sm"
               >
                 {translateCategory(cat, lang).replace('⭐', '').trim()}
               </button>
@@ -386,13 +384,13 @@ export default function OrderPage() {
 
         {/* DROPDOWN ΚΑΤΗΓΟΡΙΩΝ */}
         {isCategoryMenuOpen && !searchQuery && (
-          <div className="mb-8 bg-[#0F172A]/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-fade-in-up">
-            <div className="grid grid-cols-1 sm:grid-cols-2 p-2">
+          <div className="mb-10 bg-[#0F172A]/80 backdrop-blur-2xl border border-white/10 rounded-[2rem] shadow-2xl overflow-hidden animate-fade-in-up">
+            <div className="grid grid-cols-1 sm:grid-cols-2 p-3 gap-2">
               {displayCategories.map(cat => (
                 <button 
                   key={cat} 
                   onClick={() => scrollToCategory(cat)}
-                  className="text-left px-5 py-4 hover:bg-[#38BDF8]/10 text-gray-200 hover:text-[#38BDF8] font-black text-sm uppercase rounded-xl transition-colors border border-transparent"
+                  className="text-left px-6 py-4 hover:bg-sky-500/10 text-gray-300 hover:text-sky-400 font-black text-sm uppercase tracking-wider rounded-2xl transition-all border border-transparent hover:border-sky-500/20"
                 >
                   {translateCategory(cat, lang)}
                 </button>
@@ -401,31 +399,31 @@ export default function OrderPage() {
           </div>
         )}
 
-        {/* 5. ΛΙΣΤΑ ΠΡΟΪΟΝΤΩΝ (Glass Cards) */}
+        {/* 5. ΛΙΣΤΑ ΠΡΟΪΟΝΤΩΝ (Sleek 3D Cards) */}
         <div>
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center my-20 opacity-50">
-              <div className="w-12 h-12 border-4 border-[#38BDF8] border-t-transparent rounded-full animate-spin mb-4"></div>
-              <p className="font-bold text-[#38BDF8] tracking-widest uppercase text-sm">Loading Menu...</p>
+            <div className="flex flex-col items-center justify-center my-24 opacity-60">
+              <div className="w-14 h-14 border-4 border-sky-400 border-t-transparent rounded-full animate-spin mb-5 shadow-[0_0_15px_rgba(56,189,248,0.5)]"></div>
+              <p className="font-black text-sky-400 tracking-widest uppercase text-sm">Loading Menu...</p>
             </div>
           ) : searchQuery ? (
-            <div className="flex flex-col gap-4">
-              <h3 className="font-black text-xl text-white mb-2">Search Results</h3>
-              {displayedItems.length === 0 ? <p className="text-gray-500">No items found.</p> : null}
+            <div className="flex flex-col gap-5">
+              <h3 className="font-black text-xl text-white mb-3 tracking-wide">Search Results</h3>
+              {displayedItems.length === 0 ? <p className="text-gray-500 font-medium">No items found.</p> : null}
               {displayedItems.map(item => (
-                <div key={item.id} onClick={() => setActiveProduct(item)} className="bg-slate-900/60 backdrop-blur-md p-4 md:p-5 rounded-3xl flex justify-between gap-4 border border-white/5 cursor-pointer hover:border-[#38BDF8]/30 transition-colors shadow-lg">
-                  <div className="flex-1 flex flex-col justify-center">
-                    <h3 className="font-bold text-base text-white mb-1.5 leading-tight pr-2">{item[`title_${lang}`] || item.name}</h3>
-                    <p className="text-[13px] text-gray-400 line-clamp-2 mb-3 leading-snug pr-2">{item[`desc_${lang}`] || ''}</p>
-                    <span className="font-black text-[#38BDF8] text-[15px]">{getItemPrice(item)} DKK</span>
+                <div key={item.id} onClick={() => setActiveProduct(item)} className="group bg-[#0F172A]/60 backdrop-blur-xl p-4 md:p-5 rounded-[2rem] flex justify-between gap-5 border border-white/5 cursor-pointer hover:border-sky-500/30 hover:-translate-y-1 transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-sky-500/10">
+                  <div className="flex-1 flex flex-col justify-center py-2">
+                    <h3 className="font-black text-lg text-white mb-2 leading-tight pr-2 group-hover:text-sky-400 transition-colors">{item[`title_${lang}`] || item.name}</h3>
+                    <p className="text-sm text-gray-400 line-clamp-2 mb-4 leading-relaxed pr-2 font-medium">{item[`desc_${lang}`] || ''}</p>
+                    <span className="font-black text-sky-400 text-base bg-sky-500/10 inline-block px-3 py-1 rounded-lg border border-sky-500/20 self-start">{getItemPrice(item)} DKK</span>
                   </div>
-                  <div className="relative w-28 h-28 md:w-32 md:h-32 shrink-0 rounded-2xl bg-slate-800 shadow-inner">
+                  <div className="relative w-32 h-32 md:w-36 md:h-36 shrink-0 rounded-3xl bg-slate-800 shadow-inner">
                     {item.image_path ? (
-                      <img src={`${supabaseImageUrl}${item.image_path}`} alt="Food" className="w-full h-full object-cover rounded-2xl" />
+                      <img src={`${supabaseImageUrl}${item.image_path}`} alt="Food" className="w-full h-full object-cover rounded-3xl" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-3xl opacity-50">🍽️</div>
+                      <div className="w-full h-full flex items-center justify-center text-4xl opacity-40">🍽️</div>
                     )}
-                    <button onClick={(e) => { e.stopPropagation(); setActiveProduct(item); }} className="absolute -bottom-2 -right-2 w-10 h-10 bg-[#38BDF8] text-[#0B1120] rounded-full flex items-center justify-center font-black text-xl shadow-lg border-4 border-[#0F172A] active:scale-95 transition-transform hover:bg-sky-400">
+                    <button onClick={(e) => { e.stopPropagation(); setActiveProduct(item); }} className="absolute -bottom-3 -right-3 w-12 h-12 bg-gradient-to-tr from-sky-400 to-blue-500 text-white rounded-full flex items-center justify-center font-black text-2xl shadow-[0_0_20px_rgba(56,189,248,0.4)] border-4 border-[#0B1120] active:scale-95 transition-all duration-300 group-hover:scale-110">
                       +
                     </button>
                   </div>
@@ -433,34 +431,32 @@ export default function OrderPage() {
               ))}
             </div>
           ) : (
-            <div className="flex flex-col gap-10">
+            <div className="flex flex-col gap-12">
               {displayCategories.map(cat => {
                 const items = getItemsForCategory(cat);
                 if (items.length === 0) return null;
                 return (
-                  <div key={cat} id={`category-${cat}`} className="scroll-mt-32">
-                    <h3 className="text-2xl font-black text-white mb-5 flex items-center gap-2 tracking-tight">
+                  <div key={cat} id={`category-${cat}`} className="scroll-mt-40">
+                    <h3 className="text-2xl md:text-3xl font-black text-white mb-6 flex items-center gap-3 tracking-tighter">
                       {translateCategory(cat, lang)}
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       {items.map(item => (
-                        <div key={item.id} onClick={() => setActiveProduct(item)} className="bg-slate-900/60 backdrop-blur-md p-4 rounded-3xl flex justify-between gap-4 border border-white/5 cursor-pointer hover:border-[#38BDF8]/30 transition-colors shadow-lg group">
+                        <div key={item.id} onClick={() => setActiveProduct(item)} className="group bg-[#0F172A]/60 backdrop-blur-xl p-4 md:p-5 rounded-[2rem] flex justify-between gap-5 border border-white/5 cursor-pointer hover:border-sky-500/30 hover:-translate-y-1 transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-sky-500/10">
                           
-                          {/* ΚΕΙΜΕΝΟ ΑΡΙΣΤΕΡΑ */}
-                          <div className="flex-1 flex flex-col justify-center">
-                            <h3 className="font-bold text-base text-white mb-1.5 leading-tight pr-2 group-hover:text-[#38BDF8] transition-colors">{item[`title_${lang}`] || item.name}</h3>
-                            <p className="text-[13px] text-gray-400 line-clamp-2 mb-3 leading-snug pr-2">{item[`desc_${lang}`] || ''}</p>
-                            <span className="font-black text-[#38BDF8] text-[15px]">{getItemPrice(item)} DKK</span>
+                          <div className="flex-1 flex flex-col justify-center py-2">
+                            <h3 className="font-black text-lg text-white mb-2 leading-tight pr-2 group-hover:text-sky-400 transition-colors">{item[`title_${lang}`] || item.name}</h3>
+                            <p className="text-sm text-gray-400 line-clamp-2 mb-4 leading-relaxed pr-2 font-medium">{item[`desc_${lang}`] || ''}</p>
+                            <span className="font-black text-sky-400 text-base bg-sky-500/10 inline-block px-3 py-1 rounded-lg border border-sky-500/20 self-start">{getItemPrice(item)} DKK</span>
                           </div>
                           
-                          {/* ΕΙΚΟΝΑ ΔΕΞΙΑ ΜΕ ΤΟ + */}
-                          <div className="relative w-28 h-28 md:w-32 md:h-32 shrink-0 rounded-2xl bg-slate-800 shadow-inner">
+                          <div className="relative w-32 h-32 md:w-36 md:h-36 shrink-0 rounded-3xl bg-slate-800 shadow-inner">
                             {item.image_path ? (
-                              <img src={`${supabaseImageUrl}${item.image_path}`} alt="Food" className="w-full h-full object-cover rounded-2xl" />
+                              <img src={`${supabaseImageUrl}${item.image_path}`} alt="Food" className="w-full h-full object-cover rounded-3xl" />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center text-3xl opacity-50">🍽️</div>
+                              <div className="w-full h-full flex items-center justify-center text-4xl opacity-40">🍽️</div>
                             )}
-                            <button onClick={(e) => { e.stopPropagation(); setActiveProduct(item); }} className="absolute -bottom-2 -right-2 w-10 h-10 bg-[#38BDF8] text-[#0B1120] rounded-full flex items-center justify-center font-black text-xl shadow-lg border-4 border-[#0F172A] active:scale-95 transition-transform group-hover:bg-sky-400">
+                            <button onClick={(e) => { e.stopPropagation(); setActiveProduct(item); }} className="absolute -bottom-3 -right-3 w-12 h-12 bg-gradient-to-tr from-sky-400 to-blue-500 text-white rounded-full flex items-center justify-center font-black text-2xl shadow-[0_0_20px_rgba(56,189,248,0.4)] border-4 border-[#0B1120] active:scale-95 transition-all duration-300 group-hover:scale-110">
                               +
                             </button>
                           </div>
@@ -476,54 +472,54 @@ export default function OrderPage() {
         </div>
       </main>
 
-      {/* 6. FLOATING ΚΟΥΜΠΙ ΚΑΛΑΘΙΟΥ ΓΙΑ ΚΙΝΗΤΑ (Glassmorphism) */}
+      {/* 6. FLOATING PILL CART (ΚΙΝΗΤΑ) - Premium iOS Look */}
       {cart.length > 0 && !isCartOpen && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-[#0B1120] via-[#0B1120]/90 to-transparent z-40 md:hidden animate-fade-in-up pb-6">
-          <button onClick={() => setIsCartOpen(true)} className="w-full bg-[#38BDF8] text-[#0B1120] py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-[#38BDF8]/20 flex justify-between items-center px-5 transition-transform active:scale-95">
-            <span className="bg-[#0B1120] text-[#38BDF8] w-7 h-7 rounded-full flex items-center justify-center text-xs shadow-inner">
+        <div className="fixed bottom-6 left-4 right-4 z-40 md:hidden animate-fade-in-up">
+          <button onClick={() => setIsCartOpen(true)} className="w-full bg-gradient-to-r from-sky-400 to-blue-500 text-white py-4.5 rounded-3xl font-black uppercase tracking-widest shadow-[0_10px_40px_rgba(56,189,248,0.4)] flex justify-between items-center px-6 transition-all duration-300 active:scale-95 border border-sky-300/30">
+            <span className="bg-white/20 backdrop-blur-md text-white w-8 h-8 rounded-full flex items-center justify-center text-sm shadow-inner border border-white/20">
               {cart.reduce((sum, item) => sum + item.quantity, 0)}
             </span>
-            <span>{t.viewOrder}</span>
-            <span>{finalTotal.toFixed(2)} kr.</span>
+            <span className="text-sm shadow-black/10 drop-shadow-md">{t.viewOrder}</span>
+            <span className="text-sm shadow-black/10 drop-shadow-md">{finalTotal.toFixed(2)} kr.</span>
           </button>
         </div>
       )}
 
-      {/* --- MODAL ΠΛΗΡΟΦΟΡΙΩΝ ΕΣΤΙΑΤΟΡΙΟΥ --- */}
+      {/* --- MODAL ΠΛΗΡΟΦΟΡΙΩΝ ΕΣΤΙΑΤΟΡΙΟΥ (Premium UI) --- */}
       {isDetailsModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex justify-center items-center p-4">
-          <div className="bg-[#0F172A] w-full max-w-md rounded-3xl shadow-2xl border border-white/10 overflow-hidden animate-fade-in-up">
-            <div className="flex justify-between items-center p-5 border-b border-white/10 bg-slate-900/50">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xl z-[100] flex justify-center items-center p-4">
+          <div className="bg-[#0B1120]/90 w-full max-w-md rounded-[2.5rem] shadow-2xl border border-white/10 overflow-hidden animate-fade-in-up">
+            <div className="flex justify-between items-center p-6 border-b border-white/5 bg-slate-900/30">
               <h2 className="text-lg font-black text-white uppercase tracking-widest">{t.details}</h2>
-              <button onClick={() => setIsDetailsModalOpen(false)} className="w-8 h-8 flex items-center justify-center bg-slate-800 rounded-full text-gray-400 hover:text-white transition-colors hover:bg-slate-700">✕</button>
+              <button onClick={() => setIsDetailsModalOpen(false)} className="w-10 h-10 flex items-center justify-center bg-slate-800/80 rounded-full text-gray-400 hover:text-white transition-all hover:bg-slate-700 hover:scale-105 border border-white/5">✕</button>
             </div>
-            <div className="p-6 flex flex-col gap-6">
+            <div className="p-8 flex flex-col gap-7">
               
               <div>
-                <h3 className="text-[10px] text-[#38BDF8] font-black uppercase tracking-widest mb-1">{t.legalName}</h3>
-                <p className="text-white font-bold text-sm">Nordic-mythos 1 ApS</p>
+                <h3 className="text-[10px] text-sky-400 font-black uppercase tracking-widest mb-1.5">{t.legalName}</h3>
+                <p className="text-white font-bold text-base tracking-wide">Nordic-mythos 1 ApS</p>
               </div>
               
               <div>
-                <h3 className="text-[10px] text-[#38BDF8] font-black uppercase tracking-widest mb-1">{t.cvr}</h3>
-                <p className="text-white font-bold text-sm">46414373</p>
+                <h3 className="text-[10px] text-sky-400 font-black uppercase tracking-widest mb-1.5">{t.cvr}</h3>
+                <p className="text-white font-bold text-base tracking-wide">46414373</p>
               </div>
               
               <div>
-                <h3 className="text-[10px] text-[#38BDF8] font-black uppercase tracking-widest mb-1">{t.address}</h3>
-                <p className="text-gray-300 font-bold text-sm leading-relaxed">Ved Stranden 21, 9000<br/>Aalborg, Danmark</p>
-                <a href="https://maps.app.goo.gl/EQMBBoujJMQBvYLy5" target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 bg-[#38BDF8]/10 hover:bg-[#38BDF8]/20 border border-[#38BDF8]/30 text-[#38BDF8] text-xs font-black uppercase tracking-widest px-5 py-3 rounded-xl transition-colors">
+                <h3 className="text-[10px] text-sky-400 font-black uppercase tracking-widest mb-1.5">{t.address}</h3>
+                <p className="text-gray-300 font-bold text-sm leading-relaxed tracking-wide">Ved Stranden 21, 9000<br/>Aalborg, Danmark</p>
+                <a href="https://maps.app.goo.gl/EQMBBoujJMQBvYLy5" target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-400 text-xs font-black uppercase tracking-widest px-6 py-3.5 rounded-xl transition-all shadow-sm">
                   📍 {t.maps}
                 </a>
               </div>
               
-              <div className="pt-5 border-t border-white/10">
-                <h3 className="text-[10px] text-[#38BDF8] font-black uppercase tracking-widest mb-4">{t.hours}</h3>
-                <ul className="flex flex-col gap-3">
+              <div className="pt-6 border-t border-white/5">
+                <h3 className="text-[10px] text-sky-400 font-black uppercase tracking-widest mb-5">{t.hours}</h3>
+                <ul className="flex flex-col gap-4">
                   {storeSchedule.map(day => (
-                    <li key={day.day_of_week} className="flex justify-between items-center text-xs border-b border-slate-800/50 pb-2 last:border-0">
-                      <span className="text-gray-400 font-bold uppercase tracking-wide">{translateDay(day.day_name, lang)}</span>
-                      <span className={day.is_closed ? 'text-red-400 font-black tracking-wider' : 'text-white font-bold tracking-wider'}>
+                    <li key={day.day_of_week} className="flex justify-between items-center text-sm border-b border-slate-800/50 pb-3 last:border-0">
+                      <span className="text-gray-400 font-black uppercase tracking-widest">{translateDay(day.day_name, lang)}</span>
+                      <span className={day.is_closed ? 'text-red-400 font-black tracking-widest bg-red-500/10 px-3 py-1 rounded-md' : 'text-white font-bold tracking-widest'}>
                         {day.is_closed ? t.closed : `${day.open_time.slice(0,5)} - ${day.close_time.slice(0,5)}`}
                       </span>
                     </li>
@@ -536,7 +532,7 @@ export default function OrderPage() {
         </div>
       )}
 
-      {/* MODALS & CART */}
+      {/* MODALS & CART (ΑΜΕΤΑΒΛΗΤΑ) */}
       {activeProduct && <ProductModal activeProduct={activeProduct} lang={lang} closeModal={() => setActiveProduct(null)} addToCart={addToCart} supabaseImageUrl={supabaseImageUrl} />}
 
       {isCartOpen && (
@@ -581,8 +577,8 @@ export default function OrderPage() {
               ) : checkoutStep === 'review' ? (
                 <div className="flex flex-col items-center justify-center py-10 h-full text-center animate-fade-in">
                   <span className="text-7xl mb-6">🙏</span><h2 className="text-2xl md:text-3xl font-black text-white mb-4 uppercase italic tracking-wider">{ui.thankYou}</h2><p className="text-gray-400 font-bold mb-10 px-2 leading-relaxed">{ui.reviewPrompt}</p>
-                  <a href="https://reviewshellas.dk" target="_blank" rel="noopener noreferrer" className="w-full max-w-xs bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-black uppercase tracking-widest py-4 rounded-xl shadow-lg shadow-[#38BDF8]/20 transition-transform active:scale-95 mb-4 block">{ui.leaveReview}</a>
-                  <button onClick={() => { setCheckoutStep('cart'); setIsCartOpen(false); }} className="w-full max-w-xs bg-slate-800 text-gray-300 font-bold uppercase tracking-widest py-4 rounded-xl border border-slate-700 hover:bg-slate-700 transition-colors">{ui.close}</button>
+                  <a href="https://reviewshellas.dk" target="_blank" rel="noopener noreferrer" className="w-full max-w-xs bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-black uppercase tracking-widest py-4 rounded-2xl shadow-xl shadow-[#38BDF8]/20 transition-transform active:scale-95 mb-4 block">{ui.leaveReview}</a>
+                  <button onClick={() => { setCheckoutStep('cart'); setIsCartOpen(false); }} className="w-full max-w-xs bg-slate-800 text-gray-300 font-bold uppercase py-4 rounded-2xl border border-slate-700 hover:bg-slate-700 transition-colors">{ui.close}</button>
                 </div>
               ) : checkoutStep === 'success' ? (
                 <div className="flex flex-col items-center py-6 w-full">
@@ -694,7 +690,7 @@ export default function OrderPage() {
                     {t.schedule}
                   </button>
                 ) : checkoutStep === 'cart' ? (
-                  <button onClick={() => auth.user ? setCheckoutStep('checkout') : setCheckoutStep('auth')} className="w-full bg-[#38BDF8] text-slate-900 font-black uppercase tracking-widest py-4 rounded-xl shadow-lg shadow-[#38BDF8]/20 hover:bg-sky-400 transition-transform active:scale-95">{ui.toCheckout}</button>
+                  <button onClick={() => auth.user ? setCheckoutStep('checkout') : setCheckoutStep('auth')} className="w-full bg-gradient-to-r from-sky-400 to-blue-500 text-white font-black uppercase tracking-widest py-4.5 rounded-2xl shadow-[0_10px_30px_rgba(56,189,248,0.3)] hover:scale-[1.02] transition-transform active:scale-95">{ui.toCheckout}</button>
                 ) : checkoutStep === 'auth' ? (
                   <button type="button" onClick={() => setCheckoutStep('cart')} className="w-full px-6 py-4 rounded-xl bg-slate-800 text-white font-black border border-white/10 uppercase tracking-widest hover:bg-slate-700 transition-colors">{ui.backToCart}</button>
                 ) : (
