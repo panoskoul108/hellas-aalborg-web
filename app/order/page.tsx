@@ -224,8 +224,8 @@ export default function OrderPage() {
   return (
     <div className="min-h-screen font-sans bg-[#0B1120] text-gray-200 selection:bg-[#38BDF8] selection:text-[#0B1120] pb-28 md:pb-12 relative overflow-hidden">
       
-      {/* TEMP: THEME SWITCHER ΓΙΑ ΔΟΚΙΜΕΣ */}
-      <div className="fixed top-24 left-4 z-[9999] bg-slate-900/90 backdrop-blur-md border border-sky-400/50 p-3 rounded-2xl shadow-2xl flex flex-col gap-3 text-xs font-black shadow-sky-500/20 hidden md:flex">
+     {/* TEMP: THEME SWITCHER ΓΙΑ ΔΟΚΙΜΕΣ */}
+      <div className="fixed top-24 left-4 z-[9999] bg-slate-900/90 backdrop-blur-md border border-sky-400/50 p-3 rounded-2xl shadow-2xl flex flex-col gap-3 text-xs font-black shadow-sky-500/20 flex">
         <span className="text-sky-400 uppercase tracking-widest border-b border-white/10 pb-1">🎨 Design Tester</span>
         <button onClick={() => setDesignTheme('glass')} className={`text-left transition-colors ${designTheme === 'glass' ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}>1. Glassmorphism (Τωρινό)</button>
         <button onClick={() => setDesignTheme('bento')} className={`text-left transition-colors ${designTheme === 'bento' ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}>2. Bento Box (Apple)</button>
