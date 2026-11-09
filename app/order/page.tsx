@@ -8,7 +8,7 @@ import { dict } from '../utils/dict';
 import { useCart } from '../hooks/useCart'; 
 import { useStore } from '../hooks/useStore';
 import { useAuth } from '../hooks/useAuth';
-import { Icons } from '../../components/Icons'; // Ή το σωστό path ανάλογα με το πού έβαλες το αρχείο!
+import { Icons } from '../../components/Icons'; 
 
 const MAX_ORDERS = 50; 
 const LOCKOUT_MS = 5 * 60 * 1000;
@@ -188,11 +188,29 @@ export default function OrderPage() {
   };
 
   const getItemsForCategory = (cat: string) => cat === 'POPULAR' ? menuItems.filter(i => i.popular) : menuItems.filter(i => i.category === cat);
+  
+  // --- ΔΙΟΡΘΩΜΕΝΟ ΛΕΞΙΚΟ ΚΑΤΗΓΟΡΙΩΝ ---
   const translateCategory = (cat: string, currentLang: string) => {
     if (cat === 'POPULAR') return currentLang === 'da' ? 'Populært' : currentLang === 'en' ? 'Popular' : 'Δημοφιλή';
-    const catDict: Record<string, any> = { 'COMBOS': { da: 'Menuer', en: 'Combos', el: 'Μενού' }, 'GYROS PITA': { da: 'Gyros', en: 'Gyros', el: 'Γύρος' }, 'HALLOUMI PITA': { da: 'Halloumi', en: 'Halloumi', el: 'Χαλούμι' }, 'PITA CLUB': { da: 'Pita Club', en: 'Pita Club', el: 'Σκεπαστή' }, 'PORTIONER': { da: 'Portioner', en: 'Portions', el: 'Μερίδες' }, 'RUM': { da: 'Drikkevarer', en: 'Drinks', el: 'Αναψυκτικά' }, 'DIPS': { da: 'Dips & Ekstra', en: 'Dips', el: 'Έξτρα' } };
+    const catDict: Record<string, any> = { 
+      'COMBOS': { da: 'Menuer', en: 'Combos', el: 'Μενού' }, 
+      'KOMBO TILBUD': { da: 'Kombo tilbud', en: 'Combos', el: 'Μενού' }, 
+      'GYROS PITA': { da: 'Gyros Pita', en: 'Gyros Pita', el: 'Γύρος Πίτα' }, 
+      'HALLOUMI PITA': { da: 'Halloumi Pita', en: 'Halloumi Pita', el: 'Χαλούμι Πίτα' }, 
+      'PITA CLUB': { da: 'Pita Club', en: 'Pita Club', el: 'Σκεπαστή' }, 
+      'DOBBELT INDBAGT PITA': { da: 'Dobbelt indbagt pita', en: 'Dobbelt indbagt pita', el: 'Dobbelt indbagt pita' }, 
+      'PORTIONER': { da: 'Portioner', en: 'Portions', el: 'Μερίδες' }, 
+      'RUM': { da: 'Drikkevarer', en: 'Drinks', el: 'Αναψυκτικά' }, 
+      'DIPS': { da: 'Dips & Ekstra', en: 'Dips', el: 'Έξτρα' } 
+    };
+    
+    // Αφαιρούμε τα κενά από την αρχή και το τέλος και κάνουμε το κείμενο κεφαλαία
     const normalizedCat = cat.toUpperCase().trim();
-    return catDict[normalizedCat] && catDict[normalizedCat][currentLang] ? catDict[normalizedCat][currentLang] : cat.charAt(0).toUpperCase() + cat.slice(1).toLowerCase();
+    
+    // Αν υπάρχει στο λεξικό, φέρε τη μετάφραση. Αλλιώς άφησέ το όπως είναι στη βάση!
+    return catDict[normalizedCat] && catDict[normalizedCat][currentLang] 
+      ? catDict[normalizedCat][currentLang] 
+      : cat;
   };
 
   const getItemsForDisplay = () => {
