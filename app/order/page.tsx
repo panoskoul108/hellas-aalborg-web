@@ -135,7 +135,7 @@ export default function OrderPage() {
 
   const localUi = {
     da: { search: "Søg i menuen...", closed: "Lukket", opensAt: `Åbner kl. ${nextOpenTimeStr}`, smiley: "Smiley rapport", details: "Restaurant info", schedule: "Planlæg ordre", viewOrder: "Se bestilling", legalName: "Juridisk navn", cvr: "CVR-nummer", address: "Adresse", maps: "Vis på kort", hours: "Åbningstider", promoBadge: "Opret konto & Få 35 kr.", repeatOrder: "Gentag" },
-    en: { search: "Search menu...", closed: "Closed", opensAt: `Opens at ${nextOpenTimeStr}`, smiley: "Smiley report", details: "Restaurant info", schedule: "Schedule order", viewOrder: "View order", legalName: "Legal Name", cvr: "Registered number", address: "Address", maps: "View on Maps", hours: "Opening hours", promoBadge: "Sign up & Get 35 kr.", repeatOrder: "Repeat" },
+    en: { search: "Search menu...", closed: "Closed", opensAt: `Opens at ${nextOpenTimeStr}`, smiley: "Smiley report", details: "Restaurant info", schedule: "Schedule order", viewOrder: "View order", legalName: "Legal Name", cvr: "Registered number", address: "Registered address", maps: "View on Maps", hours: "Opening hours", promoBadge: "Sign up & Get 35 kr.", repeatOrder: "Repeat" },
     el: { search: "Αναζήτηση μενού...", closed: "Κλειστά", opensAt: `Ανοίγει στις ${nextOpenTimeStr}`, smiley: "Αναφορά Smiley", details: "Πληροφορίες", schedule: "Προγραμματισμός", viewOrder: "Καλάθι", legalName: "Νομική Επωνυμία", cvr: "Αριθμός Μητρώου (CVR)", address: "Διεύθυνση", maps: "Προβολή στο Χάρτη", hours: "Ωράριο Λειτουργίας", promoBadge: "35 kr. Δώρο Εγγραφής", repeatOrder: "Επανάληψη" }
   };
   const t = localUi[lang];
@@ -230,10 +230,10 @@ export default function OrderPage() {
         </div>
         
         <div className="flex items-center gap-3 md:gap-5">
-          <div className="flex gap-1 text-sm bg-slate-800/50 p-1 rounded-full border border-white/5">
-            <button onClick={() => setLang('da')} className={`w-8 h-8 flex items-center justify-center rounded-full font-bold transition-all duration-300 ${lang === 'da' ? 'bg-[#38BDF8] text-[#0B1120]' : 'text-gray-400 hover:text-white hover:bg-slate-700/50'}`}>DA</button>
-            <button onClick={() => setLang('en')} className={`w-8 h-8 flex items-center justify-center rounded-full font-bold transition-all duration-300 ${lang === 'en' ? 'bg-[#38BDF8] text-[#0B1120]' : 'text-gray-400 hover:text-white hover:bg-slate-700/50'}`}>EN</button>
-            <button onClick={() => setLang('el')} className={`w-8 h-8 flex items-center justify-center rounded-full font-bold transition-all duration-300 ${lang === 'el' ? 'bg-[#38BDF8] text-[#0B1120]' : 'text-gray-400 hover:text-white hover:bg-slate-700/50'}`}>EL</button>
+          <div className="flex gap-1 text-lg bg-slate-800/50 p-1 rounded-full border border-white/5">
+            <button onClick={() => setLang('da')} className={`w-8 h-8 flex items-center justify-center rounded-full transition-all duration-300 ${lang === 'da' ? 'bg-[#38BDF8] shadow-md' : 'opacity-50 hover:opacity-100 hover:bg-slate-700/50'}`}>🇩🇰</button>
+            <button onClick={() => setLang('en')} className={`w-8 h-8 flex items-center justify-center rounded-full transition-all duration-300 ${lang === 'en' ? 'bg-[#38BDF8] shadow-md' : 'opacity-50 hover:opacity-100 hover:bg-slate-700/50'}`}>🇬🇧</button>
+            <button onClick={() => setLang('el')} className={`w-8 h-8 flex items-center justify-center rounded-full transition-all duration-300 ${lang === 'el' ? 'bg-[#38BDF8] shadow-md' : 'opacity-50 hover:opacity-100 hover:bg-slate-700/50'}`}>🇬🇷</button>
           </div>
           
           <button onClick={() => { auth.user ? openProfile() : setCheckoutStep('auth'); setIsCartOpen(true); }} className="w-10 h-10 bg-slate-800/50 rounded-full flex items-center justify-center text-gray-300 border border-white/5 hover:bg-slate-700 hover:text-white transition-all duration-300">
