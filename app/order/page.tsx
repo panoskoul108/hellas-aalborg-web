@@ -189,19 +189,18 @@ export default function OrderPage() {
 
   const getItemsForCategory = (cat: string) => cat === 'POPULAR' ? menuItems.filter(i => i.popular) : menuItems.filter(i => i.category === cat);
   
-  // --- ΔΙΟΡΘΩΜΕΝΟ ΛΕΞΙΚΟ ΚΑΤΗΓΟΡΙΩΝ ---
-  const translateCategory = (cat: string, currentLang: string) => {
+const translateCategory = (cat: string, currentLang: string) => {
     if (cat === 'POPULAR') return currentLang === 'da' ? 'Populært' : currentLang === 'en' ? 'Popular' : 'Δημοφιλή';
     const catDict: Record<string, any> = { 
-      'COMBOS': { da: 'Menuer', en: 'Combos', el: 'Μενού' }, 
-      'KOMBO TILBUD': { da: 'Kombo tilbud', en: 'Combos', el: 'Μενού' }, 
-      'GYROS PITA': { da: 'Gyros Pita', en: 'Gyros Pita', el: 'Γύρος Πίτα' }, 
-      'HALLOUMI PITA': { da: 'Halloumi Pita', en: 'Halloumi Pita', el: 'Χαλούμι Πίτα' }, 
-      'PITA CLUB': { da: 'Pita Club', en: 'Pita Club', el: 'Σκεπαστή' }, 
-      'DOBBELT INDBAGT PITA': { da: 'Dobbelt indbagt pita', en: 'Dobbelt indbagt pita', el: 'Dobbelt indbagt pita' }, 
+      'KOMBO TILBUD': { da: 'Kombo tilbud', en: 'Combos', el: 'Προσφορές' }, 
+      'GYROS PITA': { da: 'Gyros Pita', en: 'Gyros Pita', el: 'Πίτα με Γύρο' }, 
+      'HALLOUMI PITA': { da: 'Halloumi Pita', en: 'Halloumi Pita', el: 'Πίτα με Χαλούμι' }, 
+      'PITA CLUB': { da: 'Pita Club', en: 'Pita Club', el: 'Πίτα Κλάμπ' }, 
+      'DOBBELT INDBAGT PITA': { da: 'Dobbelt indbagt pita', en: 'Double baked pita', el: 'Σκεπαστή' }, 
       'PORTIONER': { da: 'Portioner', en: 'Portions', el: 'Μερίδες' }, 
-      'RUM': { da: 'Drikkevarer', en: 'Drinks', el: 'Αναψυκτικά' }, 
-      'DIPS': { da: 'Dips & Ekstra', en: 'Dips', el: 'Έξτρα' } 
+      'Drikkevarer': { da: 'Drikkevarer', en: 'Drinks', el: 'Αναψυκτικά' }, 
+      'TILBEHØR': { da: 'TILBEHØR', en: 'Sides', el: 'Συνοδευτικά' }, 
+      'DIPS': { da: 'Dips', en: 'Dips', el: 'Έξτρα' } 
     };
     
     // Αφαιρούμε τα κενά από την αρχή και το τέλος και κάνουμε το κείμενο κεφαλαία
