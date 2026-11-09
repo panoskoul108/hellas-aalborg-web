@@ -63,7 +63,6 @@ export default function OrderPage() {
       if (hoursRes.data && hoursRes.data.length > 0) {
         setStoreSchedule(hoursRes.data);
         
-        // --- Υπολογισμός Επόμενης Ώρας Ανοίγματος ---
         const mapDayOfWeek = (jsDay: number) => jsDay === 0 ? 7 : jsDay; 
         const now = new Date();
         const currentJS = now.getDay();
@@ -128,7 +127,7 @@ export default function OrderPage() {
     return () => { supabase.removeChannel(channel); };
   }, [placedOrder?.id]);
 
-  // --- LOCAL DICT ΓΙΑ ΤΑ ΝΕΑ ΣΤΟΙΧΕΙΑ WOLT STYLE ---
+  // --- LOCAL DICT ---
   const localUi = {
     da: { search: "Søg i Hellas Aalborg", closed: "Lukket", opensAt: `Åbner kl. ${nextOpenTimeStr}`, smiley: "Smiley info", details: "Restaurant detaljer", schedule: "Planlæg ordre", viewOrder: "Se bestilling", legalName: "Juridisk navn", cvr: "Registreret nummer", address: "Registreret adresse", maps: "Se på kort", hours: "Åbningstider", promoBadge: "Få 35 kr. rabat", repeatOrder: "Gentag" },
     en: { search: "Search in Hellas Aalborg", closed: "Closed", opensAt: `Opens at ${nextOpenTimeStr}`, smiley: "Smiley info", details: "Restaurant details", schedule: "Schedule order", viewOrder: "View order", legalName: "Legal Name", cvr: "Registered number", address: "Registered address", maps: "View on Maps", hours: "Opening hours", promoBadge: "Get 35 kr. off", repeatOrder: "Repeat" },
@@ -217,7 +216,6 @@ export default function OrderPage() {
     setPlacedOrder(null); clearCart(); setCheckoutStep('review');
   };
 
-  // Μετάφραση Ημερών (Με αφαίρεση τόνων)
   const translateDay = (dayName: string, currentLang: string) => {
     const dict: Record<string, any> = {
       'ΔΕΥΤΕΡΑ': { da: 'Mandag', en: 'Monday', el: 'Δευτέρα' },
@@ -287,69 +285,72 @@ export default function OrderPage() {
   const displayedItems = getItemsForDisplay();
 
   return (
-    <div className="min-h-screen font-sans bg-[#0F172A] text-gray-200 selection:bg-[#38BDF8] selection:text-[#0B1120] pb-24 md:pb-10 bg-slate-900 relative">
+    <div className="min-h-screen font-sans bg-[#0B1120] text-gray-200 selection:bg-[#38BDF8] selection:text-[#0B1120] pb-24 md:pb-10 relative overflow-hidden">
       
-      {/* 1. ΣΤΑΘΕΡΟ HEADER */}
-      <header className="bg-[#0F172A] p-4 flex justify-between items-center z-50 relative border-b border-white/5 shadow-md">
+      {/* --- MESH GRADIENT GLOWS ΓΙΑ ΜΟΝΤΕΡΝΟ BACKGROUND --- */}
+      <div className="fixed top-[-10%] left-[-10%] w-[40rem] h-[40rem] bg-[#38BDF8]/10 rounded-full mix-blend-screen filter blur-[120px] opacity-60 pointer-events-none z-0"></div>
+      <div className="fixed bottom-[-10%] right-[-10%] w-[35rem] h-[35rem] bg-purple-600/10 rounded-full mix-blend-screen filter blur-[120px] opacity-60 pointer-events-none z-0"></div>
+      
+      {/* 1. ΣΤΑΘΕΡΟ HEADER (Glassmorphism) */}
+      <header className="bg-[#0B1120]/80 backdrop-blur-xl p-4 flex justify-between items-center z-50 sticky top-0 border-b border-white/5 shadow-md">
         <div className="flex items-center gap-3">
           <Image src="/logo.png" alt="Logo" width={40} height={40} className="object-contain rounded-lg" />
         </div>
         
         <div className="flex items-center gap-2 md:gap-4">
-          <div className="flex gap-1 text-lg bg-slate-800 p-1 rounded-full border border-white/10">
-            <button onClick={() => setLang('da')} className={`w-8 h-8 flex items-center justify-center rounded-full ${lang === 'da' ? 'bg-white/20' : 'opacity-50'}`}>🇩🇰</button>
-            <button onClick={() => setLang('en')} className={`w-8 h-8 flex items-center justify-center rounded-full ${lang === 'en' ? 'bg-white/20' : 'opacity-50'}`}>🇬🇧</button>
-            <button onClick={() => setLang('el')} className={`w-8 h-8 flex items-center justify-center rounded-full ${lang === 'el' ? 'bg-white/20' : 'opacity-50'}`}>🇬🇷</button>
+          <div className="flex gap-1 text-lg bg-slate-800/80 p-1 rounded-full border border-white/10 shadow-inner">
+            <button onClick={() => setLang('da')} className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${lang === 'da' ? 'bg-white/20' : 'opacity-50 hover:opacity-80'}`}>🇩🇰</button>
+            <button onClick={() => setLang('en')} className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${lang === 'en' ? 'bg-white/20' : 'opacity-50 hover:opacity-80'}`}>🇬🇧</button>
+            <button onClick={() => setLang('el')} className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${lang === 'el' ? 'bg-white/20' : 'opacity-50 hover:opacity-80'}`}>🇬🇷</button>
           </div>
           
-          <button onClick={() => { auth.user ? openProfile() : setCheckoutStep('auth'); setIsCartOpen(true); }} className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center text-lg text-[#38BDF8] border border-white/10">
+          <button onClick={() => { auth.user ? openProfile() : setCheckoutStep('auth'); setIsCartOpen(true); }} className="w-10 h-10 bg-slate-800/80 rounded-full flex items-center justify-center text-lg text-[#38BDF8] border border-white/10 shadow-inner hover:bg-slate-700 transition-colors">
             👤
           </button>
           
-          <button onClick={() => setIsCartOpen(true)} className="hidden md:flex relative bg-[#38BDF8] text-[#0B1120] px-5 py-2 rounded-full font-black items-center gap-2 transition-transform active:scale-95">
+          <button onClick={() => setIsCartOpen(true)} className="hidden md:flex relative bg-[#38BDF8] text-[#0B1120] px-5 py-2 rounded-full font-black items-center gap-2 transition-transform active:scale-95 shadow-lg shadow-[#38BDF8]/20">
             🛒 <span>{cart.reduce((sum, item) => sum + item.quantity, 0)}</span>
           </button>
         </div>
       </header>
 
+      {/* ΗΕRO IMAGE ΑΦΑΙΡΕΘΗΚΕ - ΜΟΝΟ ΚΑΘΑΡΟ ΜΕΣΗ GRADIENT BG ΠΛΕΟΝ */}
+
       <main className="max-w-4xl mx-auto px-4 md:px-6 pt-6 relative z-10">
         
-        {/* 2. ΠΛΗΡΟΦΟΡΙΕΣ ΚΑΤΑΣΤΗΜΑΤΟΣ (ΧΩΡΙΣ ΚΕΝΟ) & SCHEDULE ORDER */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-black text-white mb-3">Hellas Aalborg</h1>
+        {/* 2. ΠΛΗΡΟΦΟΡΙΕΣ ΚΑΤΑΣΤΗΜΑΤΟΣ (Glassmorphism Card) & SCHEDULE ORDER */}
+        <div className="bg-[#0F172A]/80 backdrop-blur-xl mx-0 md:mx-0 p-5 md:p-8 rounded-3xl shadow-2xl border border-white/10 mb-6">
+          <h1 className="text-3xl font-black text-white mb-3 tracking-tight">Hellas Aalborg</h1>
           
           <div className="flex flex-wrap items-center gap-2 text-sm font-medium text-gray-300 mb-4">
-            {!storeOpen ? <span className="text-gray-400 font-bold">{t.closed}</span> : <span className="text-emerald-400 font-bold">Open</span>}
+            {!storeOpen ? <span className="text-red-400 font-bold">{t.closed}</span> : <span className="text-emerald-400 font-bold">Open</span>}
             {!storeOpen && <span className="text-gray-600">•</span>}
             {!storeOpen && <span className="text-gray-400">{t.opensAt}</span>}
           </div>
 
           <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-[#38BDF8] mb-6">
-            <a href="https://www.findsmiley.dk/app/1579343" target="_blank" rel="noreferrer" className="hover:underline flex items-center gap-1">
+            <a href="https://www.findsmiley.dk/app/1579343" target="_blank" rel="noreferrer" className="hover:text-white transition-colors flex items-center gap-1 bg-[#38BDF8]/10 px-3 py-1.5 rounded-lg border border-[#38BDF8]/20">
               🔍 {t.smiley}
             </a>
-            <span className="text-gray-600">•</span>
-            <button onClick={() => setIsDetailsModalOpen(true)} className="hover:underline flex items-center gap-1">
+            
+            <button onClick={() => setIsDetailsModalOpen(true)} className="hover:text-white transition-colors flex items-center gap-1 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-white/10">
               ℹ️ {t.details}
             </button>
             
             {!auth.user && (
-              <>
-                <span className="text-gray-600">•</span>
-                <button onClick={() => { setIsCartOpen(true); setCheckoutStep('auth'); }} className="text-purple-400 bg-purple-500/10 px-2.5 py-1 rounded flex items-center gap-1 font-black hover:bg-purple-500/20 transition-colors border border-purple-500/20">
-                  🎁 {t.promoBadge}
-                </button>
-              </>
+              <button onClick={() => { setIsCartOpen(true); setCheckoutStep('auth'); }} className="text-purple-400 bg-purple-500/10 px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-black hover:bg-purple-500/20 transition-colors border border-purple-500/20 shadow-sm animate-pulse-slow">
+                🎁 {t.promoBadge}
+              </button>
             )}
           </div>
           
-          <button onClick={() => { setIsCartOpen(true); setCheckoutStep('cart'); }} className="w-full bg-[#38BDF8] text-[#0B1120] py-4 rounded-xl font-black text-sm uppercase flex justify-center items-center gap-2 transition-transform active:scale-95 shadow-md">
+          <button onClick={() => { setIsCartOpen(true); setCheckoutStep('cart'); }} className="w-full bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] py-4 rounded-xl font-black text-sm uppercase flex justify-center items-center gap-2 transition-transform active:scale-95 shadow-lg shadow-[#38BDF8]/20">
             🕒 {t.schedule}
           </button>
         </div>
 
-        {/* 3. ΜΠΑΡΑ ΑΝΑΖΗΤΗΣΗΣ */}
-        <div className="mb-6 sticky top-[72px] z-20 bg-[#0F172A] py-2 -mx-4 px-4 md:mx-0 md:px-0">
+        {/* 3. ΜΠΑΡΑ ΑΝΑΖΗΤΗΣΗΣ (Sticky Glassmorphism) */}
+        <div className="mb-6 sticky top-[72px] z-40 bg-[#0B1120]/90 backdrop-blur-xl py-3 -mx-4 px-4 md:mx-0 md:px-0 border-b border-white/5">
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg text-gray-500">🔍</span>
             <input 
@@ -357,17 +358,17 @@ export default function OrderPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t.search}
-              className="w-full bg-slate-800 border border-slate-700 text-white rounded-full py-3.5 pl-12 pr-4 font-bold text-sm outline-none focus:border-[#38BDF8] transition-colors placeholder:text-gray-500 shadow-inner"
+              className="w-full bg-slate-800/80 border border-white/10 text-white rounded-full py-3.5 pl-12 pr-4 font-bold text-sm outline-none focus:border-[#38BDF8] transition-colors placeholder:text-gray-500 shadow-inner"
             />
           </div>
         </div>
 
         {/* 4. ΚΑΤΗΓΟΡΙΕΣ (ΑΝ ΔΕΝ ΥΠΑΡΧΕΙ ΑΝΑΖΗΤΗΣΗ) */}
         {!searchQuery && !isLoading && (
-          <div className="mb-2 flex items-center gap-3 overflow-x-auto no-scrollbar pb-4 border-b border-white/5 -mx-4 px-4 md:mx-0 md:px-0">
+          <div className="mb-4 flex items-center gap-3 overflow-x-auto no-scrollbar pb-2 -mx-4 px-4 md:mx-0 md:px-0">
             <button 
               onClick={() => setIsCategoryMenuOpen(!isCategoryMenuOpen)}
-              className="shrink-0 bg-[#38BDF8]/10 text-[#38BDF8] border border-[#38BDF8]/30 px-5 py-2 rounded-full font-black text-xs uppercase tracking-widest flex items-center gap-2 transition-colors"
+              className="shrink-0 bg-[#38BDF8]/10 text-[#38BDF8] border border-[#38BDF8]/30 px-5 py-2.5 rounded-full font-black text-xs uppercase tracking-widest flex items-center gap-2 transition-colors shadow-sm"
             >
               📑 Menu ▼
             </button>
@@ -375,7 +376,7 @@ export default function OrderPage() {
               <button 
                 key={cat} 
                 onClick={() => scrollToCategory(cat)}
-                className="shrink-0 text-gray-400 hover:text-white px-3 py-2 font-bold text-sm transition-colors whitespace-nowrap"
+                className="shrink-0 text-gray-400 hover:text-white bg-slate-800/50 border border-white/5 px-4 py-2 rounded-full font-bold text-sm transition-colors whitespace-nowrap shadow-sm"
               >
                 {translateCategory(cat, lang).replace('⭐', '').trim()}
               </button>
@@ -385,13 +386,13 @@ export default function OrderPage() {
 
         {/* DROPDOWN ΚΑΤΗΓΟΡΙΩΝ */}
         {isCategoryMenuOpen && !searchQuery && (
-          <div className="mb-6 bg-slate-800 border border-slate-700 rounded-2xl shadow-xl overflow-hidden animate-fade-in-up">
+          <div className="mb-8 bg-[#0F172A]/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-fade-in-up">
             <div className="grid grid-cols-1 sm:grid-cols-2 p-2">
               {displayCategories.map(cat => (
                 <button 
                   key={cat} 
                   onClick={() => scrollToCategory(cat)}
-                  className="text-left px-5 py-4 hover:bg-slate-700 text-gray-200 font-black text-sm uppercase rounded-xl transition-colors border border-transparent"
+                  className="text-left px-5 py-4 hover:bg-[#38BDF8]/10 text-gray-200 hover:text-[#38BDF8] font-black text-sm uppercase rounded-xl transition-colors border border-transparent"
                 >
                   {translateCategory(cat, lang)}
                 </button>
@@ -400,28 +401,31 @@ export default function OrderPage() {
           </div>
         )}
 
-        {/* 5. ΛΙΣΤΑ ΠΡΟΪΟΝΤΩΝ (WOLT STYLE) */}
+        {/* 5. ΛΙΣΤΑ ΠΡΟΪΟΝΤΩΝ (Glass Cards) */}
         <div>
           {isLoading ? (
-            <p className="text-center text-[#38BDF8] animate-pulse my-10">Loading menu...</p>
+            <div className="flex flex-col items-center justify-center my-20 opacity-50">
+              <div className="w-12 h-12 border-4 border-[#38BDF8] border-t-transparent rounded-full animate-spin mb-4"></div>
+              <p className="font-bold text-[#38BDF8] tracking-widest uppercase text-sm">Loading Menu...</p>
+            </div>
           ) : searchQuery ? (
             <div className="flex flex-col gap-4">
               <h3 className="font-black text-xl text-white mb-2">Search Results</h3>
               {displayedItems.length === 0 ? <p className="text-gray-500">No items found.</p> : null}
               {displayedItems.map(item => (
-                <div key={item.id} onClick={() => setActiveProduct(item)} className="bg-slate-800/50 p-4 md:p-5 rounded-2xl flex justify-between gap-4 border border-white/5 cursor-pointer hover:border-white/10 transition-colors shadow-sm">
+                <div key={item.id} onClick={() => setActiveProduct(item)} className="bg-slate-900/60 backdrop-blur-md p-4 md:p-5 rounded-3xl flex justify-between gap-4 border border-white/5 cursor-pointer hover:border-[#38BDF8]/30 transition-colors shadow-lg">
                   <div className="flex-1 flex flex-col justify-center">
                     <h3 className="font-bold text-base text-white mb-1.5 leading-tight pr-2">{item[`title_${lang}`] || item.name}</h3>
                     <p className="text-[13px] text-gray-400 line-clamp-2 mb-3 leading-snug pr-2">{item[`desc_${lang}`] || ''}</p>
-                    <span className="font-bold text-[#38BDF8] text-[15px]">{getItemPrice(item)} DKK</span>
+                    <span className="font-black text-[#38BDF8] text-[15px]">{getItemPrice(item)} DKK</span>
                   </div>
-                  <div className="relative w-28 h-28 md:w-32 md:h-32 shrink-0 rounded-xl bg-slate-700 shadow-inner">
+                  <div className="relative w-28 h-28 md:w-32 md:h-32 shrink-0 rounded-2xl bg-slate-800 shadow-inner">
                     {item.image_path ? (
-                      <img src={`${supabaseImageUrl}${item.image_path}`} alt="Food" className="w-full h-full object-cover rounded-xl" />
+                      <img src={`${supabaseImageUrl}${item.image_path}`} alt="Food" className="w-full h-full object-cover rounded-2xl" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-3xl opacity-50">🍽️</div>
                     )}
-                    <button onClick={(e) => { e.stopPropagation(); setActiveProduct(item); }} className="absolute -bottom-2 -right-2 w-10 h-10 bg-[#38BDF8] text-[#0B1120] rounded-full flex items-center justify-center font-black text-xl shadow-lg border-[3px] border-[#0F172A] active:scale-95 transition-transform">
+                    <button onClick={(e) => { e.stopPropagation(); setActiveProduct(item); }} className="absolute -bottom-2 -right-2 w-10 h-10 bg-[#38BDF8] text-[#0B1120] rounded-full flex items-center justify-center font-black text-xl shadow-lg border-4 border-[#0F172A] active:scale-95 transition-transform hover:bg-sky-400">
                       +
                     </button>
                   </div>
@@ -429,34 +433,34 @@ export default function OrderPage() {
               ))}
             </div>
           ) : (
-            <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-10">
               {displayCategories.map(cat => {
                 const items = getItemsForCategory(cat);
                 if (items.length === 0) return null;
                 return (
                   <div key={cat} id={`category-${cat}`} className="scroll-mt-32">
-                    <h3 className="text-xl font-black text-white mb-4 flex items-center gap-2">
+                    <h3 className="text-2xl font-black text-white mb-5 flex items-center gap-2 tracking-tight">
                       {translateCategory(cat, lang)}
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {items.map(item => (
-                        <div key={item.id} onClick={() => setActiveProduct(item)} className="bg-slate-800/50 p-4 rounded-2xl flex justify-between gap-4 border border-white/5 cursor-pointer hover:border-white/10 transition-colors shadow-sm">
+                        <div key={item.id} onClick={() => setActiveProduct(item)} className="bg-slate-900/60 backdrop-blur-md p-4 rounded-3xl flex justify-between gap-4 border border-white/5 cursor-pointer hover:border-[#38BDF8]/30 transition-colors shadow-lg group">
                           
                           {/* ΚΕΙΜΕΝΟ ΑΡΙΣΤΕΡΑ */}
                           <div className="flex-1 flex flex-col justify-center">
-                            <h3 className="font-bold text-base text-white mb-1.5 leading-tight pr-2">{item[`title_${lang}`] || item.name}</h3>
+                            <h3 className="font-bold text-base text-white mb-1.5 leading-tight pr-2 group-hover:text-[#38BDF8] transition-colors">{item[`title_${lang}`] || item.name}</h3>
                             <p className="text-[13px] text-gray-400 line-clamp-2 mb-3 leading-snug pr-2">{item[`desc_${lang}`] || ''}</p>
-                            <span className="font-bold text-[#38BDF8] text-[15px]">{getItemPrice(item)} DKK</span>
+                            <span className="font-black text-[#38BDF8] text-[15px]">{getItemPrice(item)} DKK</span>
                           </div>
                           
                           {/* ΕΙΚΟΝΑ ΔΕΞΙΑ ΜΕ ΤΟ + */}
-                          <div className="relative w-28 h-28 md:w-32 md:h-32 shrink-0 rounded-xl bg-slate-700 shadow-inner">
+                          <div className="relative w-28 h-28 md:w-32 md:h-32 shrink-0 rounded-2xl bg-slate-800 shadow-inner">
                             {item.image_path ? (
-                              <img src={`${supabaseImageUrl}${item.image_path}`} alt="Food" className="w-full h-full object-cover rounded-xl" />
+                              <img src={`${supabaseImageUrl}${item.image_path}`} alt="Food" className="w-full h-full object-cover rounded-2xl" />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-3xl opacity-50">🍽️</div>
                             )}
-                            <button onClick={(e) => { e.stopPropagation(); setActiveProduct(item); }} className="absolute -bottom-2 -right-2 w-10 h-10 bg-[#38BDF8] text-[#0B1120] rounded-full flex items-center justify-center font-black text-xl shadow-lg border-[3px] border-slate-800 active:scale-95 transition-transform">
+                            <button onClick={(e) => { e.stopPropagation(); setActiveProduct(item); }} className="absolute -bottom-2 -right-2 w-10 h-10 bg-[#38BDF8] text-[#0B1120] rounded-full flex items-center justify-center font-black text-xl shadow-lg border-4 border-[#0F172A] active:scale-95 transition-transform group-hover:bg-sky-400">
                               +
                             </button>
                           </div>
@@ -472,10 +476,10 @@ export default function OrderPage() {
         </div>
       </main>
 
-      {/* 6. FLOATING ΚΟΥΜΠΙ ΚΑΛΑΘΙΟΥ ΓΙΑ ΚΙΝΗΤΑ */}
+      {/* 6. FLOATING ΚΟΥΜΠΙ ΚΑΛΑΘΙΟΥ ΓΙΑ ΚΙΝΗΤΑ (Glassmorphism) */}
       {cart.length > 0 && !isCartOpen && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-[#0B1120] via-[#0B1120] to-transparent z-40 md:hidden animate-fade-in-up pb-6">
-          <button onClick={() => setIsCartOpen(true)} className="w-full bg-[#38BDF8] text-[#0B1120] py-4 rounded-xl font-black uppercase tracking-widest shadow-2xl flex justify-between items-center px-5 transition-transform active:scale-95">
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-[#0B1120] via-[#0B1120]/90 to-transparent z-40 md:hidden animate-fade-in-up pb-6">
+          <button onClick={() => setIsCartOpen(true)} className="w-full bg-[#38BDF8] text-[#0B1120] py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-[#38BDF8]/20 flex justify-between items-center px-5 transition-transform active:scale-95">
             <span className="bg-[#0B1120] text-[#38BDF8] w-7 h-7 rounded-full flex items-center justify-center text-xs shadow-inner">
               {cart.reduce((sum, item) => sum + item.quantity, 0)}
             </span>
@@ -487,39 +491,39 @@ export default function OrderPage() {
 
       {/* --- MODAL ΠΛΗΡΟΦΟΡΙΩΝ ΕΣΤΙΑΤΟΡΙΟΥ --- */}
       {isDetailsModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex justify-center items-center p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex justify-center items-center p-4">
           <div className="bg-[#0F172A] w-full max-w-md rounded-3xl shadow-2xl border border-white/10 overflow-hidden animate-fade-in-up">
-            <div className="flex justify-between items-center p-5 border-b border-white/10 bg-slate-900">
+            <div className="flex justify-between items-center p-5 border-b border-white/10 bg-slate-900/50">
               <h2 className="text-lg font-black text-white uppercase tracking-widest">{t.details}</h2>
-              <button onClick={() => setIsDetailsModalOpen(false)} className="w-8 h-8 flex items-center justify-center bg-slate-800 rounded-full text-gray-400 hover:text-white transition-colors">✕</button>
+              <button onClick={() => setIsDetailsModalOpen(false)} className="w-8 h-8 flex items-center justify-center bg-slate-800 rounded-full text-gray-400 hover:text-white transition-colors hover:bg-slate-700">✕</button>
             </div>
             <div className="p-6 flex flex-col gap-6">
               
               <div>
-                <h3 className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">{t.legalName}</h3>
+                <h3 className="text-[10px] text-[#38BDF8] font-black uppercase tracking-widest mb-1">{t.legalName}</h3>
                 <p className="text-white font-bold text-sm">Nordic-mythos 1 ApS</p>
               </div>
               
               <div>
-                <h3 className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">{t.cvr}</h3>
+                <h3 className="text-[10px] text-[#38BDF8] font-black uppercase tracking-widest mb-1">{t.cvr}</h3>
                 <p className="text-white font-bold text-sm">46414373</p>
               </div>
               
               <div>
-                <h3 className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">{t.address}</h3>
-                <p className="text-white font-bold text-sm">Ved Stranden 21, 9000, Aalborg, Danmark</p>
-                <a href="https://maps.app.goo.gl/EQMBBoujJMQBvYLy5" target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-2 bg-[#38BDF8]/10 hover:bg-[#38BDF8]/20 border border-[#38BDF8]/50 text-[#38BDF8] text-xs font-black uppercase tracking-widest px-5 py-3 rounded-xl transition-colors">
+                <h3 className="text-[10px] text-[#38BDF8] font-black uppercase tracking-widest mb-1">{t.address}</h3>
+                <p className="text-gray-300 font-bold text-sm leading-relaxed">Ved Stranden 21, 9000<br/>Aalborg, Danmark</p>
+                <a href="https://maps.app.goo.gl/EQMBBoujJMQBvYLy5" target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 bg-[#38BDF8]/10 hover:bg-[#38BDF8]/20 border border-[#38BDF8]/30 text-[#38BDF8] text-xs font-black uppercase tracking-widest px-5 py-3 rounded-xl transition-colors">
                   📍 {t.maps}
                 </a>
               </div>
               
-              <div className="pt-4 border-t border-white/10">
-                <h3 className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-3">{t.hours}</h3>
+              <div className="pt-5 border-t border-white/10">
+                <h3 className="text-[10px] text-[#38BDF8] font-black uppercase tracking-widest mb-4">{t.hours}</h3>
                 <ul className="flex flex-col gap-3">
                   {storeSchedule.map(day => (
                     <li key={day.day_of_week} className="flex justify-between items-center text-xs border-b border-slate-800/50 pb-2 last:border-0">
-                      <span className="text-gray-300 font-bold uppercase">{translateDay(day.day_name, lang)}</span>
-                      <span className={day.is_closed ? 'text-red-400 font-black' : 'text-emerald-400 font-bold'}>
+                      <span className="text-gray-400 font-bold uppercase tracking-wide">{translateDay(day.day_name, lang)}</span>
+                      <span className={day.is_closed ? 'text-red-400 font-black tracking-wider' : 'text-white font-bold tracking-wider'}>
                         {day.is_closed ? t.closed : `${day.open_time.slice(0,5)} - ${day.close_time.slice(0,5)}`}
                       </span>
                     </li>
@@ -536,11 +540,11 @@ export default function OrderPage() {
       {activeProduct && <ProductModal activeProduct={activeProduct} lang={lang} closeModal={() => setActiveProduct(null)} addToCart={addToCart} supabaseImageUrl={supabaseImageUrl} />}
 
       {isCartOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-end">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex justify-end">
           <div className="w-full md:max-w-md bg-[#0F172A] h-full flex flex-col shadow-2xl md:border-l border-white/10 animate-fade-in-up md:animate-slide-in-right">
-            <div className="p-6 border-b border-white/10 flex justify-between items-center bg-slate-900 shrink-0">
-              <h2 className="text-xl font-bold text-white">{checkoutStep === 'profile' ? ui.profileTitle : ui.cartTitle}</h2>
-              {checkoutStep !== 'success' && <button onClick={() => { setIsCartOpen(false); if(checkoutStep === 'review' || checkoutStep === 'profile') setCheckoutStep('cart'); }} className="text-gray-400 hover:text-white text-3xl md:text-2xl font-light">&times;</button>}
+            <div className="p-6 border-b border-white/10 flex justify-between items-center bg-slate-900/80 backdrop-blur-md shrink-0">
+              <h2 className="text-xl font-black text-white uppercase tracking-widest">{checkoutStep === 'profile' ? ui.profileTitle : ui.cartTitle}</h2>
+              {checkoutStep !== 'success' && <button onClick={() => { setIsCartOpen(false); if(checkoutStep === 'review' || checkoutStep === 'profile') setCheckoutStep('cart'); }} className="text-gray-400 hover:text-white text-3xl font-light transition-colors hover:scale-110">&times;</button>}
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20">
@@ -548,21 +552,21 @@ export default function OrderPage() {
                 <div className="flex flex-col gap-6 animate-fade-in">
                   <div className="text-center mb-4"><div className="w-20 h-20 bg-slate-800 border-2 border-[#38BDF8] rounded-full mx-auto flex items-center justify-center text-3xl mb-3 shadow-lg">👤</div><h3 className="text-xl font-black text-white">{auth.customerName || auth.user?.email}</h3><p className="text-sm text-gray-400 font-bold">{auth.customerPhone}</p></div>
                   <LoyaltyWallet userId={auth.user?.id} subtotal={0} lang={lang} onApplyDiscount={() => {}} settings={storeSettings} />
-                  <div className="bg-slate-900/50 rounded-2xl border border-white/5 p-5">
-                    <h4 className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-4 border-b border-slate-700 pb-2">{ui.myOrders}</h4>
-                    {auth.userOrderHistory.length === 0 ? <p className="text-sm text-gray-400">No orders yet.</p> : (
+                  <div className="bg-slate-900/50 rounded-2xl border border-white/5 p-5 shadow-inner">
+                    <h4 className="text-xs text-[#38BDF8] font-black uppercase tracking-widest mb-4 border-b border-slate-700 pb-2">{ui.myOrders}</h4>
+                    {auth.userOrderHistory.length === 0 ? <p className="text-sm text-gray-400 font-medium">No orders yet.</p> : (
                       <ul className="space-y-4">
                         {auth.userOrderHistory.map(o => (
                           <li key={o.id} className="flex flex-col gap-3 border-b border-white/5 pb-4 last:border-0 last:pb-0">
                             <div className="flex justify-between items-start">
                               <div>
-                                <p className="font-bold text-white text-sm">#{o.order_number || o.id.toString().slice(-4)}</p>
-                                <p className="text-[10px] text-gray-400">{new Date(o.created_at).toLocaleDateString()} - {o.total_price} kr.</p>
-                                <p className="text-[10px] text-gray-500 mt-1.5 leading-snug line-clamp-1">{o.items?.map((i:any) => `${i.quantity}x ${i[`title_${lang}`] || i.title_en || i.title_da || 'Item'}`).join(', ')}</p>
+                                <p className="font-black text-white text-sm">#{o.order_number || o.id.toString().slice(-4)}</p>
+                                <p className="text-[10px] text-gray-400 font-bold mt-0.5">{new Date(o.created_at).toLocaleDateString()} - {o.total_price} kr.</p>
+                                <p className="text-[11px] text-gray-500 mt-2 leading-snug line-clamp-2">{o.items?.map((i:any) => `${i.quantity}x ${i[`title_${lang}`] || i.title_en || i.title_da || 'Item'}`).join(', ')}</p>
                               </div>
-                              <div className="flex flex-col items-end gap-2.5">
-                                <span className={`text-[9px] px-2 py-1 rounded font-bold uppercase ${o.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-orange-500/20 text-orange-400'}`}>{o.status}</span>
-                                <button onClick={() => handleRepeatOrder(o)} className="bg-[#38BDF8]/10 hover:bg-[#38BDF8]/20 text-[#38BDF8] border border-[#38BDF8]/30 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-colors flex items-center gap-1 active:scale-95">
+                              <div className="flex flex-col items-end gap-3">
+                                <span className={`text-[9px] px-2.5 py-1 rounded-md font-black uppercase tracking-wider ${o.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/20' : 'bg-orange-500/20 text-orange-400 border border-orange-500/20'}`}>{o.status}</span>
+                                <button onClick={() => handleRepeatOrder(o)} className="bg-[#38BDF8]/10 hover:bg-[#38BDF8]/20 text-[#38BDF8] border border-[#38BDF8]/30 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-colors flex items-center gap-1.5 active:scale-95 shadow-sm">
                                   <span className="text-sm">🔁</span> {t.repeatOrder}
                                 </button>
                               </div>
@@ -572,40 +576,40 @@ export default function OrderPage() {
                       </ul>
                     )}
                   </div>
-                  <button onClick={() => auth.logout(() => { setIsCartOpen(false); setCheckoutStep('cart'); })} className="w-full bg-red-900/30 text-red-400 hover:bg-red-900/50 font-bold py-3 rounded-xl border border-red-900/50 uppercase transition-colors mt-4">{ui.logout}</button>
+                  <button onClick={() => auth.logout(() => { setIsCartOpen(false); setCheckoutStep('cart'); })} className="w-full bg-red-900/20 text-red-400 hover:bg-red-900/40 hover:text-red-300 font-black py-4 rounded-xl border border-red-900/30 uppercase tracking-widest transition-colors mt-4">{ui.logout}</button>
                 </div>
               ) : checkoutStep === 'review' ? (
                 <div className="flex flex-col items-center justify-center py-10 h-full text-center animate-fade-in">
                   <span className="text-7xl mb-6">🙏</span><h2 className="text-2xl md:text-3xl font-black text-white mb-4 uppercase italic tracking-wider">{ui.thankYou}</h2><p className="text-gray-400 font-bold mb-10 px-2 leading-relaxed">{ui.reviewPrompt}</p>
-                  <a href="https://reviewshellas.dk" target="_blank" rel="noopener noreferrer" className="w-full max-w-xs bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-black uppercase tracking-widest py-4 rounded-2xl shadow-xl shadow-[#38BDF8]/20 transition-transform active:scale-95 mb-4 block">{ui.leaveReview}</a>
-                  <button onClick={() => { setCheckoutStep('cart'); setIsCartOpen(false); }} className="w-full max-w-xs bg-slate-800 text-gray-300 font-bold uppercase py-4 rounded-2xl border border-slate-700 hover:bg-slate-700 transition-colors">{ui.close}</button>
+                  <a href="https://reviewshellas.dk" target="_blank" rel="noopener noreferrer" className="w-full max-w-xs bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-black uppercase tracking-widest py-4 rounded-xl shadow-lg shadow-[#38BDF8]/20 transition-transform active:scale-95 mb-4 block">{ui.leaveReview}</a>
+                  <button onClick={() => { setCheckoutStep('cart'); setIsCartOpen(false); }} className="w-full max-w-xs bg-slate-800 text-gray-300 font-bold uppercase tracking-widest py-4 rounded-xl border border-slate-700 hover:bg-slate-700 transition-colors">{ui.close}</button>
                 </div>
               ) : checkoutStep === 'success' ? (
                 <div className="flex flex-col items-center py-6 w-full">
                   <h2 className="text-xl md:text-2xl font-black text-white mb-8 uppercase tracking-widest italic text-center"># {placedOrder?.order_number || placedOrder?.id?.toString().slice(-4)}</h2>
                   <div className="w-full max-w-xs mb-10 relative">
-                    <div className="absolute top-4 left-0 h-1 bg-gray-700 w-full -z-10 rounded-full"></div><div className={`absolute top-4 left-0 h-1 bg-[#38BDF8] -z-10 transition-all duration-500 rounded-full ${placedOrder?.status === 'pending' ? 'w-[15%]' : placedOrder?.status === 'preparing' ? 'w-[50%]' : 'w-full !bg-emerald-500'}`}></div>
+                    <div className="absolute top-4 left-0 h-1.5 bg-slate-800 w-full -z-10 rounded-full"></div><div className={`absolute top-4 left-0 h-1.5 bg-[#38BDF8] -z-10 transition-all duration-700 ease-out rounded-full shadow-[0_0_10px_rgba(56,189,248,0.5)] ${placedOrder?.status === 'pending' ? 'w-[15%]' : placedOrder?.status === 'preparing' ? 'w-[50%]' : 'w-full !bg-emerald-500 !shadow-[0_0_10px_rgba(16,185,129,0.5)]'}`}></div>
                     <div className="flex justify-between">
-                      <div className="flex flex-col items-center gap-2"><div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm transition-colors duration-500 ${placedOrder?.status === 'pending' || placedOrder?.status === 'preparing' || placedOrder?.status === 'completed' ? 'bg-[#38BDF8] text-[#0B1120]' : 'bg-gray-800 text-gray-500'}`}>1</div><span className={`text-[9px] md:text-[10px] font-black uppercase ${placedOrder?.status === 'pending' ? 'text-white' : 'text-gray-500'}`}>{ui.trackPending}</span></div>
-                      <div className="flex flex-col items-center gap-2"><div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm transition-colors duration-500 ${placedOrder?.status === 'preparing' || placedOrder?.status === 'completed' ? 'bg-[#38BDF8] text-[#0B1120]' : 'bg-gray-800 text-gray-500'}`}>2</div><span className={`text-[9px] md:text-[10px] font-black uppercase ${placedOrder?.status === 'preparing' ? 'text-white' : 'text-gray-500'}`}>{ui.trackPrep}</span></div>
-                      <div className="flex flex-col items-center gap-2"><div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm transition-colors duration-500 ${placedOrder?.status === 'completed' ? 'bg-emerald-500 text-[#0B1120]' : 'bg-gray-800 text-gray-500'}`}>3</div><span className={`text-[9px] md:text-[10px] font-black uppercase ${placedOrder?.status === 'completed' ? 'text-emerald-400' : 'text-gray-500'}`}>{ui.trackReady}</span></div>
+                      <div className="flex flex-col items-center gap-2.5"><div className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-sm transition-colors duration-500 shadow-md ${placedOrder?.status === 'pending' || placedOrder?.status === 'preparing' || placedOrder?.status === 'completed' ? 'bg-[#38BDF8] text-[#0B1120]' : 'bg-slate-800 text-gray-500 border border-white/10'}`}>1</div><span className={`text-[9px] md:text-[10px] font-black uppercase tracking-wide ${placedOrder?.status === 'pending' ? 'text-white' : 'text-gray-500'}`}>{ui.trackPending}</span></div>
+                      <div className="flex flex-col items-center gap-2.5"><div className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-sm transition-colors duration-500 shadow-md ${placedOrder?.status === 'preparing' || placedOrder?.status === 'completed' ? 'bg-[#38BDF8] text-[#0B1120]' : 'bg-slate-800 text-gray-500 border border-white/10'}`}>2</div><span className={`text-[9px] md:text-[10px] font-black uppercase tracking-wide ${placedOrder?.status === 'preparing' ? 'text-white' : 'text-gray-500'}`}>{ui.trackPrep}</span></div>
+                      <div className="flex flex-col items-center gap-2.5"><div className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-sm transition-colors duration-500 shadow-md ${placedOrder?.status === 'completed' ? 'bg-emerald-500 text-[#0B1120]' : 'bg-slate-800 text-gray-500 border border-white/10'}`}>3</div><span className={`text-[9px] md:text-[10px] font-black uppercase tracking-wide ${placedOrder?.status === 'completed' ? 'text-emerald-400' : 'text-gray-500'}`}>{ui.trackReady}</span></div>
                     </div>
                   </div>
-                  <div className="w-full bg-slate-800/50 border border-slate-700 rounded-3xl p-6 mb-8 text-center shadow-xl">
-                    {placedOrder?.status === 'pending' && (<div className="animate-fade-in"><div className="w-12 h-12 rounded-full border-4 border-[#38BDF8] border-t-transparent animate-spin mx-auto mb-4"></div><h3 className="text-xl font-black text-white mb-2 uppercase">{ui.trackPendingTitle}</h3><p className="text-sm text-gray-400 font-bold">{ui.trackPendingDesc}</p></div>)}
-                    {placedOrder?.status === 'preparing' && (<div className="animate-fade-in"><span className="text-6xl mb-4 block">🔥</span><h3 className="text-xl font-black text-white mb-4 uppercase">{ui.trackPrepTitle}</h3><div className="bg-[#38BDF8]/20 border border-[#38BDF8]/50 rounded-2xl p-4 inline-block"><p className="text-[10px] font-black text-[#38BDF8] uppercase tracking-widest mb-1">{ui.trackPrepTime}</p><p className="text-4xl font-black text-white">{placedOrder?.requested_time && placedOrder.requested_time !== 'ASAP' ? placedOrder.requested_time.slice(0, 5) : '...'}</p></div></div>)}
-                    {placedOrder?.status === 'completed' && (<div className="animate-fade-in"><span className="text-6xl mb-4 block">✅</span><h3 className="text-xl font-black text-emerald-400 mb-2 uppercase">{ui.trackReadyTitle}</h3><p className="text-sm text-gray-300 font-bold mb-6">{ui.trackReadyDesc}</p><button onClick={handleCustomerPickup} className="w-full bg-emerald-500 hover:bg-emerald-400 text-[#0B1120] font-black text-sm uppercase py-4 rounded-xl shadow-lg active:scale-95 transition-transform">🖐️ {ui.pickedUpBtn}</button></div>)}
+                  <div className="w-full bg-slate-900/60 border border-slate-700 rounded-3xl p-8 mb-8 text-center shadow-xl backdrop-blur-md">
+                    {placedOrder?.status === 'pending' && (<div className="animate-fade-in"><div className="w-14 h-14 rounded-full border-4 border-[#38BDF8]/30 border-t-[#38BDF8] animate-spin mx-auto mb-5"></div><h3 className="text-xl font-black text-white mb-2 uppercase tracking-wide">{ui.trackPendingTitle}</h3><p className="text-sm text-gray-400 font-medium leading-relaxed">{ui.trackPendingDesc}</p></div>)}
+                    {placedOrder?.status === 'preparing' && (<div className="animate-fade-in"><span className="text-7xl mb-5 block animate-bounce-slow">🔥</span><h3 className="text-xl font-black text-white mb-5 uppercase tracking-wide">{ui.trackPrepTitle}</h3><div className="bg-[#38BDF8]/10 border border-[#38BDF8]/30 rounded-2xl p-5 inline-block shadow-inner"><p className="text-[10px] font-black text-[#38BDF8] uppercase tracking-widest mb-1.5">{ui.trackPrepTime}</p><p className="text-5xl font-black text-white tracking-tighter">{placedOrder?.requested_time && placedOrder.requested_time !== 'ASAP' ? placedOrder.requested_time.slice(0, 5) : '...'}</p></div></div>)}
+                    {placedOrder?.status === 'completed' && (<div className="animate-fade-in"><span className="text-7xl mb-5 block">✅</span><h3 className="text-xl font-black text-emerald-400 mb-3 uppercase tracking-wide">{ui.trackReadyTitle}</h3><p className="text-sm text-gray-300 font-medium mb-8 leading-relaxed">{ui.trackReadyDesc}</p><button onClick={handleCustomerPickup} className="w-full bg-emerald-500 hover:bg-emerald-400 text-[#0B1120] font-black text-sm uppercase py-4 rounded-xl shadow-lg active:scale-95 transition-transform tracking-widest">🖐️ {ui.pickedUpBtn}</button></div>)}
                   </div>
                 </div>
               ) : checkoutStep === 'auth' ? (
                 <div className="flex flex-col gap-6 animate-fade-in py-2">
-                  <div className="bg-gradient-to-r from-[#38BDF8]/20 to-purple-500/20 border border-[#38BDF8]/30 rounded-2xl p-4 flex items-center gap-4 shadow-lg mb-2">
-                    <div className="w-12 h-12 rounded-full bg-[#38BDF8] flex items-center justify-center text-xl shrink-0">🎁</div>
+                  <div className="bg-gradient-to-r from-[#38BDF8]/20 to-purple-500/20 border border-[#38BDF8]/30 rounded-2xl p-5 flex items-center gap-5 shadow-lg mb-2">
+                    <div className="w-12 h-12 rounded-full bg-[#38BDF8] flex items-center justify-center text-xl shrink-0 shadow-md">🎁</div>
                     <div>
-                      <h4 className="font-black text-white text-sm uppercase tracking-wide">
+                      <h4 className="font-black text-white text-sm uppercase tracking-wide mb-1">
                         {lang === 'da' ? 'Opret konto & få 35 DKK!' : lang === 'en' ? 'Create an account & get 35 DKK!' : 'Φτιάξε λογαριασμό & κέρδισε 35 DKK!'}
                       </h4>
-                      <p className="text-xs text-gray-300 font-medium">
+                      <p className="text-[11px] text-gray-300 font-medium leading-relaxed">
                         {lang === 'da' ? 'Saml point og spar på dine næste ordrer.' : lang === 'en' ? 'Collect points and save on your next orders.' : 'Μάζεψε πόντους και κέρδισε έκπτωση στις επόμενες παραγγελίες σου.'}
                       </p>
                     </div>
@@ -614,88 +618,89 @@ export default function OrderPage() {
                     <h3 className="text-2xl font-black text-white uppercase tracking-widest">{ui.guestCheckout}</h3>
                     <p className="text-gray-400 text-sm mt-2">{ui.guestDesc}</p>
                   </div>
-                  <button onClick={() => setCheckoutStep('checkout')} className="w-full bg-white hover:bg-gray-200 text-[#0B1120] font-black py-4 rounded-2xl shadow-lg uppercase tracking-widest transition-transform active:scale-95">🚀 {ui.guestCheckout}</button>
+                  <button onClick={() => setCheckoutStep('checkout')} className="w-full bg-white hover:bg-gray-200 text-[#0B1120] font-black py-4 rounded-2xl shadow-xl uppercase tracking-widest transition-transform active:scale-95">🚀 {ui.guestCheckout}</button>
                   <div className="flex items-center gap-4 my-2 opacity-50">
                     <hr className="flex-1 border-slate-600" />
-                    <span className="text-xs text-slate-400 font-bold uppercase">{ui.or}</span>
+                    <span className="text-xs text-slate-400 font-black uppercase tracking-widest">{ui.or}</span>
                     <hr className="flex-1 border-slate-600" />
                   </div>
-                  <div className="bg-slate-900/50 p-6 rounded-3xl border border-white/10 shadow-inner">
-                    <h3 className="text-lg font-bold text-white text-center mb-5">{auth.authMode === 'signup' ? ui.regTitle : ui.loginTitle}</h3>
+                  <div className="bg-slate-900/60 p-6 rounded-3xl border border-white/10 shadow-inner backdrop-blur-sm">
+                    <h3 className="text-lg font-black text-white text-center mb-6 uppercase tracking-widest">{auth.authMode === 'signup' ? ui.regTitle : ui.loginTitle}</h3>
                     <form onSubmit={(e) => auth.handleAuth(e, () => setCheckoutStep('checkout'))} className="flex flex-col gap-4">
-                      {auth.authError && <div className="bg-red-500/10 border border-red-500 text-red-400 p-3 rounded-lg text-sm font-bold text-center">{auth.authError}</div>}
+                      {auth.authError && <div className="bg-red-500/10 border border-red-500/50 text-red-400 p-4 rounded-xl text-sm font-bold text-center">{auth.authError}</div>}
                       {auth.authMode === 'signup' && (
                         <div className="flex flex-col gap-4 animate-fade-in">
-                          <input type="text" placeholder={ui.nameLabel} value={auth.regName} onChange={e => auth.setRegName(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8] transition-colors" />
-                          <input type="tel" placeholder={ui.phoneLabel} value={auth.regPhone} onChange={e => auth.setRegPhone(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8] transition-colors" />
-                          <div><label className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1 block ml-1">{ui.dobPlh}</label><input type="text" onFocus={(e) => e.target.type = 'date'} onBlur={(e) => { if (!e.target.value) e.target.type = 'text'; }} placeholder={lang === 'da' ? "dd/mm/åååå" : lang === 'en' ? "dd/mm/yyyy" : "ηη/μμ/εεεε"} value={auth.regDob} onChange={e => auth.setRegDob(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8] transition-colors" /></div>
+                          <input type="text" placeholder={ui.nameLabel} value={auth.regName} onChange={e => auth.setRegName(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white font-bold outline-none focus:border-[#38BDF8] transition-colors" />
+                          <input type="tel" placeholder={ui.phoneLabel} value={auth.regPhone} onChange={e => auth.setRegPhone(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white font-bold outline-none focus:border-[#38BDF8] transition-colors" />
+                          <div><label className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1.5 block ml-1">{ui.dobPlh}</label><input type="text" onFocus={(e) => e.target.type = 'date'} onBlur={(e) => { if (!e.target.value) e.target.type = 'text'; }} placeholder={lang === 'da' ? "dd/mm/åååå" : lang === 'en' ? "dd/mm/yyyy" : "ηη/μμ/εεεε"} value={auth.regDob} onChange={e => auth.setRegDob(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white font-bold outline-none focus:border-[#38BDF8] transition-colors" /></div>
                         </div>
                       )}
-                      <input type="email" placeholder={ui.emailPlh} value={auth.email} onChange={e => auth.setEmail(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8] transition-colors" />
-                      <input type="password" placeholder={ui.passPlh} value={auth.password} onChange={e => auth.setPassword(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8] transition-colors" />
-                      <button type="submit" className="w-full bg-slate-800 hover:bg-slate-700 text-[#38BDF8] border border-[#38BDF8]/50 font-black py-4 rounded-xl shadow-lg mt-2 uppercase tracking-widest transition-transform active:scale-95">{auth.authMode === 'signup' ? ui.regTitle : ui.loginTitle}</button>
+                      <input type="email" placeholder={ui.emailPlh} value={auth.email} onChange={e => auth.setEmail(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white font-bold outline-none focus:border-[#38BDF8] transition-colors" />
+                      <input type="password" placeholder={ui.passPlh} value={auth.password} onChange={e => auth.setPassword(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white font-bold outline-none focus:border-[#38BDF8] transition-colors" />
+                      <button type="submit" className="w-full bg-[#38BDF8]/10 hover:bg-[#38BDF8]/20 text-[#38BDF8] border border-[#38BDF8]/50 font-black py-4 rounded-xl shadow-sm mt-3 uppercase tracking-widest transition-colors">{auth.authMode === 'signup' ? ui.regTitle : ui.loginTitle}</button>
                     </form>
-                    <button type="button" onClick={() => { auth.setAuthMode(auth.authMode === 'signup' ? 'login' : 'signup'); auth.setAuthError(''); }} className="w-full text-sm text-gray-400 hover:text-white mt-5 font-bold transition-colors">{auth.authMode === 'signup' ? ui.hasAcc : ui.noAcc}</button>
+                    <button type="button" onClick={() => { auth.setAuthMode(auth.authMode === 'signup' ? 'login' : 'signup'); auth.setAuthError(''); }} className="w-full text-xs text-gray-400 hover:text-white mt-6 font-bold transition-colors uppercase tracking-widest">{auth.authMode === 'signup' ? ui.hasAcc : ui.noAcc}</button>
                   </div>
                 </div>
               ) : cart.length === 0 ? (
-                <div className="text-center text-gray-500 mt-20"><span className="text-4xl mb-3 block">🛒</span><p>{ui.emptyCart}</p></div>
+                <div className="text-center text-gray-500 mt-24 flex flex-col items-center"><span className="text-5xl mb-4 block opacity-50">🛒</span><p className="font-bold text-lg">{ui.emptyCart}</p></div>
               ) : checkoutStep === 'cart' ? (
                 <div className="flex flex-col gap-4">
-                  <a href="https://wolt.com" target="_blank" rel="noreferrer" className="block text-center bg-[#38BDF8]/10 border border-[#38BDF8]/30 text-[#38BDF8] text-xs font-bold p-3 rounded-xl hover:bg-[#38BDF8]/20 transition-colors">{ui.wolt}</a>
+                  <a href="https://wolt.com" target="_blank" rel="noreferrer" className="block text-center bg-[#38BDF8]/10 border border-[#38BDF8]/30 text-[#38BDF8] text-xs font-black p-3.5 rounded-xl hover:bg-[#38BDF8]/20 transition-colors tracking-widest uppercase">{ui.wolt}</a>
                   {cart.map((cartItem, idx) => (
-                    <div key={idx} className="flex flex-col bg-slate-800/30 p-3 rounded-xl border border-white/5">
-                      <div className="flex justify-between items-center mb-2">
-                        <div className="flex-1 pr-2"><p className="font-bold text-white text-sm">{cartItem.item[`title_${lang}`] || cartItem.item.name}</p><p className="text-xs text-[#38BDF8]">{getItemPrice(cartItem.item)} DKK</p></div>
-                        <div className="flex items-center gap-3 bg-slate-900 rounded-lg p-1 border border-white/5">
-                          <button onClick={() => updateQuantity(cartItem.cartId, -1)} className="w-8 h-8 flex items-center justify-center text-white bg-slate-800 hover:bg-slate-700 rounded-md font-bold text-lg">-</button>
-                          <span className="font-bold text-sm w-4 text-center">{cartItem.quantity}</span>
-                          <button onClick={() => updateQuantity(cartItem.cartId, 1)} className="w-8 h-8 flex items-center justify-center text-white bg-slate-800 hover:bg-slate-700 rounded-md font-bold text-lg">+</button>
+                    <div key={idx} className="flex flex-col bg-slate-900/50 p-4 rounded-2xl border border-white/5 shadow-inner">
+                      <div className="flex justify-between items-center mb-3">
+                        <div className="flex-1 pr-3"><p className="font-bold text-white text-sm leading-tight mb-1">{cartItem.item[`title_${lang}`] || cartItem.item.name}</p><p className="text-xs font-black text-[#38BDF8]">{getItemPrice(cartItem.item)} DKK</p></div>
+                        <div className="flex items-center gap-3 bg-slate-800 rounded-xl p-1.5 border border-white/5 shadow-sm">
+                          <button onClick={() => updateQuantity(cartItem.cartId, -1)} className="w-8 h-8 flex items-center justify-center text-white bg-slate-700 hover:bg-slate-600 rounded-lg font-black text-lg transition-colors">-</button>
+                          <span className="font-black text-sm w-4 text-center">{cartItem.quantity}</span>
+                          <button onClick={() => updateQuantity(cartItem.cartId, 1)} className="w-8 h-8 flex items-center justify-center text-white bg-slate-700 hover:bg-slate-600 rounded-lg font-black text-lg transition-colors">+</button>
                         </div>
-                        <div className="flex items-center gap-1 ml-2">
-                          <button onClick={() => setActiveProduct({ ...cartItem.item, cartId: cartItem.cartId, quantity: cartItem.quantity })} className="text-[#38BDF8] hover:text-sky-300 text-lg bg-[#38BDF8]/10 w-10 h-10 flex items-center justify-center rounded-lg transition-colors">✏️</button>
-                          <button onClick={() => removeFromCart(cartItem.cartId)} className="text-red-400 hover:text-red-300 text-lg bg-red-500/10 w-10 h-10 flex items-center justify-center rounded-lg transition-colors">🗑️</button>
+                        <div className="flex flex-col gap-2 ml-3">
+                          <button onClick={() => removeFromCart(cartItem.cartId)} className="text-red-400 hover:text-red-300 text-lg bg-red-500/10 w-9 h-9 flex items-center justify-center rounded-lg transition-colors border border-red-500/20">✕</button>
                         </div>
                       </div>
-                      {cartItem.item.selectedOptions?.length > 0 && <p className="text-[10px] text-gray-400 font-bold uppercase ml-1">+ {cartItem.item.selectedOptions.join(', ')}</p>}
-                      {cartItem.item.note && <p className="text-[10px] text-yellow-500 font-bold italic ml-1 mt-1">📝 {cartItem.item.note}</p>}
+                      {cartItem.item.selectedOptions?.length > 0 && <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wide ml-1 border-t border-white/5 pt-2 mt-1">+ {cartItem.item.selectedOptions.join(', ')}</p>}
+                      {cartItem.item.note && <p className="text-[10px] text-yellow-500 font-bold italic ml-1 mt-1.5">📝 {cartItem.item.note}</p>}
                     </div>
                   ))}
-                  <SmartUpsell cart={cart} menuItems={menuItems} lang={lang} onAdd={(item) => addToCart(item, 1)} />
+                  <div className="mt-4">
+                    <SmartUpsell cart={cart} menuItems={menuItems} lang={lang} onAdd={(item) => addToCart(item, 1)} />
+                  </div>
                 </div>
               ) : (
-                <form id="checkoutForm" onSubmit={submitOrder} className="flex flex-col gap-5">
-                  <h3 className="font-bold text-lg text-white border-b border-white/10 pb-2">{ui.detailsTitle}</h3>
+                <form id="checkoutForm" onSubmit={submitOrder} className="flex flex-col gap-6">
+                  <h3 className="font-black text-lg text-white border-b border-white/10 pb-3 uppercase tracking-widest">{ui.detailsTitle}</h3>
                   <LoyaltyWallet userId={auth.user?.id} subtotal={subtotal} lang={lang} onApplyDiscount={setLoyaltyDiscount} settings={storeSettings} />
-                  <div><label className="text-xs text-gray-400 block mb-1">{ui.nameLabel}</label><input type="text" value={auth.customerName} onChange={e => auth.setCustomerName(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" /></div>
-                  <div><label className="text-xs text-gray-400 block mb-1">{ui.phoneLabel}</label><input type="tel" value={auth.customerPhone} onChange={e => auth.setCustomerPhone(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8]" /></div>
+                  <div><label className="text-[11px] text-gray-500 font-black uppercase tracking-widest block mb-2">{ui.nameLabel}</label><input type="text" value={auth.customerName} onChange={e => auth.setCustomerName(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white font-bold outline-none focus:border-[#38BDF8] transition-colors" /></div>
+                  <div><label className="text-[11px] text-gray-500 font-black uppercase tracking-widest block mb-2">{ui.phoneLabel}</label><input type="tel" value={auth.customerPhone} onChange={e => auth.setCustomerPhone(e.target.value)} required className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white font-bold outline-none focus:border-[#38BDF8] transition-colors" /></div>
                   
-                  <div><label className="text-xs text-gray-400 block mb-1">{ui.timeLabel}</label><select value={requestedTime} onChange={e => setRequestedTime(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8] font-bold">{generateTimeSlots().map((slot, i) => <option key={i} value={slot.value}>{slot.label}</option>)}</select></div>
+                  <div><label className="text-[11px] text-gray-500 font-black uppercase tracking-widest block mb-2">{ui.timeLabel}</label><select value={requestedTime} onChange={e => setRequestedTime(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8] font-black transition-colors">{generateTimeSlots().map((slot, i) => <option key={i} value={slot.value}>{slot.label}</option>)}</select></div>
                   
-                  <div><label className="text-xs text-gray-400 block mb-1">{ui.orderNoteTitle}</label><textarea value={orderNote} onChange={e => setOrderNote(e.target.value)} placeholder={ui.orderNotePlh} rows={2} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-[#38BDF8] resize-none"></textarea></div>
-                  <div className="mt-2"><label className="text-xs text-gray-400 block mb-2">{ui.payLabel}</label><div className="grid grid-cols-2 gap-3"><div onClick={() => setPaymentMethod('card')} className={`cursor-pointer p-4 rounded-xl border text-center transition-all font-bold ${paymentMethod === 'card' ? 'bg-[#38BDF8]/10 border-[#38BDF8] text-[#38BDF8]' : 'bg-slate-800 border-white/5 text-gray-400'}`}>💳 {ui.card}</div><div onClick={() => setPaymentMethod('cash')} className={`cursor-pointer p-4 rounded-xl border text-center transition-all font-bold ${paymentMethod === 'cash' ? 'bg-[#38BDF8]/10 border-[#38BDF8] text-[#38BDF8]' : 'bg-slate-800 border-white/5 text-gray-400'}`}>💵 {ui.cash}</div></div></div>
+                  <div><label className="text-[11px] text-gray-500 font-black uppercase tracking-widest block mb-2">{ui.orderNoteTitle}</label><textarea value={orderNote} onChange={e => setOrderNote(e.target.value)} placeholder={ui.orderNotePlh} rows={2} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white font-medium outline-none focus:border-[#38BDF8] resize-none transition-colors"></textarea></div>
+                  <div className="mt-2"><label className="text-[11px] text-gray-500 font-black uppercase tracking-widest block mb-3">{ui.payLabel}</label><div className="grid grid-cols-2 gap-4"><div onClick={() => setPaymentMethod('card')} className={`cursor-pointer p-4 rounded-xl border-2 text-center transition-colors font-black uppercase tracking-wider flex items-center justify-center gap-2 ${paymentMethod === 'card' ? 'bg-[#38BDF8]/10 border-[#38BDF8] text-[#38BDF8]' : 'bg-slate-800 border-transparent text-gray-400 hover:bg-slate-700'}`}>💳 {ui.card}</div><div onClick={() => setPaymentMethod('cash')} className={`cursor-pointer p-4 rounded-xl border-2 text-center transition-colors font-black uppercase tracking-wider flex items-center justify-center gap-2 ${paymentMethod === 'cash' ? 'bg-[#38BDF8]/10 border-[#38BDF8] text-[#38BDF8]' : 'bg-slate-800 border-transparent text-gray-400 hover:bg-slate-700'}`}>💵 {ui.cash}</div></div></div>
                 </form>
               )}
             </div>
 
             {cart.length > 0 && checkoutStep !== 'success' && checkoutStep !== 'review' && checkoutStep !== 'profile' && (
-              <div className="p-6 bg-slate-900 border-t border-white/10 shrink-0">
-                <div className="flex justify-between items-center mb-1"><span className="text-gray-400">{ui.subtotal}</span><span className="text-white font-bold">{subtotal} kr.</span></div>
-                {loyaltyDiscount > 0 && <div className="flex justify-between items-center mb-1 text-[#38BDF8]"><span className="text-xs">{ui.loyaltyDiscount}</span><span className="font-bold">-{loyaltyDiscount.toFixed(2)} kr.</span></div>}
-                <div className="flex justify-between items-center mt-4 mb-6 border-t border-white/10 pt-4"><span className="text-gray-200 font-bold">{ui.totalPay}</span><span className="text-2xl font-black text-[#38BDF8]">{finalTotal.toFixed(2)} kr.</span></div>
+              <div className="p-6 bg-slate-900/80 backdrop-blur-md border-t border-white/10 shrink-0">
+                <div className="flex justify-between items-center mb-1.5"><span className="text-gray-400 font-bold text-sm">{ui.subtotal}</span><span className="text-white font-black">{subtotal} kr.</span></div>
+                {loyaltyDiscount > 0 && <div className="flex justify-between items-center mb-1 text-[#38BDF8]"><span className="text-xs font-bold uppercase tracking-wide">{ui.loyaltyDiscount}</span><span className="font-black">-{loyaltyDiscount.toFixed(2)} kr.</span></div>}
+                <div className="flex justify-between items-center mt-5 mb-6 border-t border-white/10 pt-5"><span className="text-gray-200 font-black uppercase tracking-widest">{ui.totalPay}</span><span className="text-3xl font-black text-[#38BDF8]">{finalTotal.toFixed(2)} kr.</span></div>
                 
                 {!storeOpen && checkoutStep === 'cart' && requestedTime === 'ASAP' ? (
-                  <button onClick={() => setCheckoutStep('checkout')} className="w-full bg-orange-500 hover:bg-orange-400 text-white font-black uppercase tracking-wider py-4 rounded-xl text-center shadow-lg transition-colors">
+                  <button onClick={() => setCheckoutStep('checkout')} className="w-full bg-orange-500 hover:bg-orange-400 text-white font-black uppercase tracking-widest py-4 rounded-xl text-center shadow-lg transition-transform active:scale-95">
                     {t.schedule}
                   </button>
                 ) : checkoutStep === 'cart' ? (
-                  <button onClick={() => auth.user ? setCheckoutStep('checkout') : setCheckoutStep('auth')} className="w-full bg-[#38BDF8] text-slate-900 font-black uppercase tracking-wider py-4 rounded-xl shadow-lg hover:bg-sky-400 transition-colors">{ui.toCheckout}</button>
+                  <button onClick={() => auth.user ? setCheckoutStep('checkout') : setCheckoutStep('auth')} className="w-full bg-[#38BDF8] text-slate-900 font-black uppercase tracking-widest py-4 rounded-xl shadow-lg shadow-[#38BDF8]/20 hover:bg-sky-400 transition-transform active:scale-95">{ui.toCheckout}</button>
                 ) : checkoutStep === 'auth' ? (
-                  <button type="button" onClick={() => setCheckoutStep('cart')} className="w-full px-6 py-4 rounded-xl bg-slate-800 text-white font-bold border border-white/5 uppercase">{ui.backToCart}</button>
+                  <button type="button" onClick={() => setCheckoutStep('cart')} className="w-full px-6 py-4 rounded-xl bg-slate-800 text-white font-black border border-white/10 uppercase tracking-widest hover:bg-slate-700 transition-colors">{ui.backToCart}</button>
                 ) : (
                   <div className="flex gap-3">
-                    <button type="button" onClick={() => setCheckoutStep('cart')} className="px-6 py-4 rounded-xl bg-slate-800 text-white font-bold border border-white/5 uppercase">{ui.back}</button>
-                    <button type="submit" form="checkoutForm" disabled={isSubmitting} className="flex-1 bg-emerald-500 hover:bg-emerald-400 transition-colors text-[#0B1120] font-black py-4 rounded-xl disabled:opacity-50 uppercase tracking-wider">{isSubmitting ? ui.sending : ui.confirm}</button>
+                    <button type="button" onClick={() => setCheckoutStep('cart')} className="px-6 py-4 rounded-xl bg-slate-800 text-gray-300 hover:text-white font-black border border-white/10 uppercase tracking-widest hover:bg-slate-700 transition-colors">{ui.back}</button>
+                    <button type="submit" form="checkoutForm" disabled={isSubmitting} className="flex-1 bg-emerald-500 hover:bg-emerald-400 transition-transform active:scale-95 text-[#0B1120] font-black py-4 rounded-xl disabled:opacity-50 uppercase tracking-widest shadow-lg shadow-emerald-500/20">{isSubmitting ? ui.sending : ui.confirm}</button>
                   </div>
                 )}
               </div>
