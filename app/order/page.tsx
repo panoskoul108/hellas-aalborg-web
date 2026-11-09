@@ -189,12 +189,12 @@ export default function OrderPage() {
 
   const getItemsForCategory = (cat: string) => cat === 'POPULAR' ? menuItems.filter(i => i.popular) : menuItems.filter(i => i.category === cat);
   
-const translateCategory = (cat: string, currentLang: string) => {
+  const translateCategory = (cat: string, currentLang: string) => {
     if (cat === 'POPULAR') return currentLang === 'da' ? 'Populært' : currentLang === 'en' ? 'Popular' : 'Δημοφιλή';
     const catDict: Record<string, any> = { 
       'KOMBO TILBUD': { da: 'Kombo tilbud', en: 'Combos', el: 'Προσφορές' }, 
       'GYROS PITA': { da: 'Gyros Pita', en: 'Gyros Pita', el: 'Πίτα με Γύρο' }, 
-      'HALLOUMI PITA': { da: 'Halloumi Pita', en: 'Halloumi Pita', el: 'Πίτα με Χαλούμι' }, 
+      'VEGETERIAN PITA': { da: 'Vegeterian Pita', en: 'Vegeterian Pita', el: 'Πίτα Vegeterian' }, 
       'PITA CLUB': { da: 'Pita Club', en: 'Pita Club', el: 'Πίτα Κλάμπ' }, 
       'DOBBELT INDBAGT PITA': { da: 'Dobbelt indbagt pita', en: 'Double baked pita', el: 'Σκεπαστή' }, 
       'PORTIONER': { da: 'Portioner', en: 'Portions', el: 'Μερίδες' }, 
@@ -225,7 +225,32 @@ const translateCategory = (cat: string, currentLang: string) => {
   };
 
   const hasRecommended = menuItems.some(p => p.popular);
-  const uniqueCategories = [...new Set(menuItems.map(p => p.category))].filter(Boolean);
+  const rawCategories = [...new Set(menuItems.map(p => p.category))].filter(Boolean) as string[];
+  
+  // --- ΕΔΩ ΟΡΙΖΕΙΣ ΤΗ ΣΕΙΡΑ ΤΩΝ ΚΑΤΗΓΟΡΙΩΝ ΣΟΥ ---
+  const desiredOrder = [
+    'KOMBO TILBUD',
+    'GYROS PITA',
+    'VEGETERIAN PITA',
+    'PITA CLUB',
+    'DOBBELT INDBAGT PITA',
+    'PORTIONER',
+    'TILBEHØR',
+    'DIPS',
+    'DRIKKEVARER'
+  ];
+
+  // Ταξινομεί τις κατηγορίες με βάση τη λίστα desiredOrder
+  const uniqueCategories = rawCategories.sort((a, b) => {
+    const idxA = desiredOrder.indexOf(a.toUpperCase().trim());
+    const idxB = desiredOrder.indexOf(b.toUpperCase().trim());
+    
+    // Αν ξεχάσεις να βάλεις μια κατηγορία στη λίστα, θα εμφανιστεί απλά στο τέλος
+    if (idxA === -1) return 1; 
+    if (idxB === -1) return -1;
+    return idxA - idxB;
+  });
+
   const displayCategories = hasRecommended ? ['POPULAR', ...uniqueCategories] : uniqueCategories;
   const displayedItems = getItemsForDisplay();
 
