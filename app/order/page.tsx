@@ -3,30 +3,16 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { supabase } from '../supabase';
 import ProductModal from './ProductModal';
-import LoyaltyWallet from '../../components/order/LoyaltyWallet'; 
-import SmartUpsell from '../../components/order/SmartUpsell';
+import CheckoutSidebar from '../../components/order/CheckoutSidebar';
 import { dict } from '../utils/dict'; 
 import { useCart } from '../hooks/useCart'; 
 import { useStore } from '../hooks/useStore';
 import { useAuth } from '../hooks/useAuth';
+import { Icons } from '../../components/Icons'; // Ή το σωστό path ανάλογα με το πού έβαλες το αρχείο!
 
 const MAX_ORDERS = 50; 
 const LOCKOUT_MS = 5 * 60 * 1000;
 const supabaseImageUrl = "https://keolpijcsvwsrzkjqtkc.supabase.co/storage/v1/object/public/menu-images/";
-
-// --- ICONS (SVG) ---
-const Icons = {
-  Cart: () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>,
-  User: () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>,
-  Search: () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>,
-  Info: () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>,
-  Clock: () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-  Gift: () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 109.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1114.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" /></svg>,
-  Repeat: () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>,
-  Check: () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>,
-  Close: () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>,
-  Plus: () => <svg fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>,
-};
 
 export default function OrderPage() {
   const [lang, setLang] = useState<'da' | 'en' | 'el'>('da');
@@ -133,12 +119,18 @@ export default function OrderPage() {
     return () => { supabase.removeChannel(channel); };
   }, [placedOrder?.id]);
 
+  // --- LOCAL DICT ---
   const localUi = {
-    da: { search: "Søg i menuen...", closed: "Lukket", opensAt: `Åbner kl. ${nextOpenTimeStr}`, smiley: "Smiley rapport", details: "Restaurant info", schedule: "Planlæg ordre", viewOrder: "Se bestilling", legalName: "Juridisk navn", cvr: "CVR-nummer", address: "Adresse", maps: "Vis på kort", hours: "Åbningstider", promoBadge: "Opret konto & Få 35 kr.", repeatOrder: "Gentag" },
-    en: { search: "Search menu...", closed: "Closed", opensAt: `Opens at ${nextOpenTimeStr}`, smiley: "Smiley report", details: "Restaurant info", schedule: "Schedule order", viewOrder: "View order", legalName: "Legal Name", cvr: "Registered number", address: "Registered address", maps: "View on Maps", hours: "Opening hours", promoBadge: "Sign up & Get 35 kr.", repeatOrder: "Repeat" },
-    el: { search: "Αναζήτηση μενού...", closed: "Κλειστά", opensAt: `Ανοίγει στις ${nextOpenTimeStr}`, smiley: "Αναφορά Smiley", details: "Πληροφορίες", schedule: "Προγραμματισμός", viewOrder: "Καλάθι", legalName: "Νομική Επωνυμία", cvr: "Αριθμός Μητρώου (CVR)", address: "Διεύθυνση", maps: "Προβολή στο Χάρτη", hours: "Ωράριο Λειτουργίας", promoBadge: "35 kr. Δώρο Εγγραφής", repeatOrder: "Επανάληψη" }
+    da: { search: "Søg i menuen...", closed: "Lukket", opensAt: `Åbner kl. ${nextOpenTimeStr}`, smiley: "Smiley rapport", details: "Restaurant info", schedule: "Planlæg ordre", viewOrder: "Se bestilling", legalName: "Juridisk navn", cvr: "CVR-nummer", address: "Adresse", maps: "Vis på kort", hours: "Åbningstider", promoBadge: "Opret konto & Få 35 kr.", repeatOrder: "Gentag", card: "Kort", cash: "Kontant", pickupConfirm: "Bekræft afhentning", dobPlaceholder: "Fødselsdato (dd/mm/åååå)" },
+    en: { search: "Search menu...", closed: "Closed", opensAt: `Opens at ${nextOpenTimeStr}`, smiley: "Smiley report", details: "Restaurant info", schedule: "Schedule order", viewOrder: "View order", legalName: "Legal Name", cvr: "Registered number", address: "Registered address", maps: "View on Maps", hours: "Opening hours", promoBadge: "Sign up & Get 35 kr.", repeatOrder: "Repeat", card: "Card", cash: "Cash", pickupConfirm: "Pickup Confirmation", dobPlaceholder: "Birthdate (dd/mm/yyyy)" },
+    el: { search: "Αναζήτηση μενού...", closed: "Κλειστά", opensAt: `Ανοίγει στις ${nextOpenTimeStr}`, smiley: "Αναφορά Smiley", details: "Πληροφορίες", schedule: "Προγραμματισμός", viewOrder: "Καλάθι", legalName: "Νομική Επωνυμία", cvr: "Αριθμός Μητρώου (CVR)", address: "Διεύθυνση", maps: "Προβολή στο Χάρτη", hours: "Ωράριο Λειτουργίας", promoBadge: "35 kr. Δώρο Εγγραφής", repeatOrder: "Επανάληψη", card: "Κάρτα", cash: "Μετρητά", pickupConfirm: "Επιβεβαίωση Παραλαβής", dobPlaceholder: "Ημ. Γέννησης (ηη/μμ/εεεε)" }
   };
   const t = localUi[lang];
+
+  const getLocaleDateString = (dateStr: string, currentLang: string) => {
+    const locales: Record<string, string> = { da: 'da-DK', en: 'en-GB', el: 'el-GR' };
+    return new Date(dateStr).toLocaleDateString(locales[currentLang] || 'da-DK');
+  };
 
   const openProfile = async () => { setCheckoutStep('profile'); setIsCartOpen(true); auth.fetchOrderHistory(); };
 
@@ -223,7 +215,7 @@ export default function OrderPage() {
   return (
     <div className="min-h-screen font-sans bg-[#0B1120] text-gray-200 selection:bg-[#38BDF8] selection:text-[#0B1120] pb-28 md:pb-12 relative overflow-hidden">
       
-      {/* 1. ΣΤΑΘΕΡΟ HEADER (Premium Glassmorphism) */}
+      {/* 1. ΣΤΑΘΕΡΟ HEADER */}
       <header className="bg-[#0B1120]/80 backdrop-blur-xl p-4 flex justify-between items-center z-50 sticky top-0 border-b border-white/5 shadow-sm transition-all duration-300">
         <div className="flex items-center gap-3">
           <Image src="/logo.png" alt="Logo" width={38} height={38} className="object-contain" />
@@ -248,7 +240,7 @@ export default function OrderPage() {
 
       <main className="max-w-4xl mx-auto px-4 md:px-6 pt-8 relative z-10">
         
-        {/* 2. ΠΛΗΡΟΦΟΡΙΕΣ ΚΑΤΑΣΤΗΜΑΤΟΣ (Clean Typography) */}
+        {/* 2. ΠΛΗΡΟΦΟΡΙΕΣ ΚΑΤΑΣΤΗΜΑΤΟΣ */}
         <div className="mb-8">
           <h1 className="text-4xl md:text-5xl font-extrabold mb-3 text-white tracking-tight">Hellas Aalborg</h1>
           
@@ -283,7 +275,7 @@ export default function OrderPage() {
           </button>
         </div>
 
-        {/* 3. ΜΠΑΡΑ ΑΝΑΖΗΤΗΣΗΣ (Sleek Glass) */}
+        {/* 3. ΜΠΑΡΑ ΑΝΑΖΗΤΗΣΗΣ */}
         <div className="mb-6 sticky top-[72px] md:top-[88px] z-40 bg-[#0B1120]/90 backdrop-blur-xl py-3 -mx-4 px-4 md:mx-0 md:px-0 border-b border-white/5 transition-all">
           <div className="relative group">
             <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#38BDF8] transition-colors"><Icons.Search /></span>
@@ -297,7 +289,7 @@ export default function OrderPage() {
           </div>
         </div>
 
-        {/* 4. ΚΑΤΗΓΟΡΙΕΣ (Minimal Pills) */}
+        {/* 4. ΚΑΤΗΓΟΡΙΕΣ */}
         {!searchQuery && !isLoading && (
           <div className="mb-6 flex items-center gap-2.5 overflow-x-auto no-scrollbar pb-3 -mx-4 px-4 md:mx-0 md:px-0">
             {displayCategories.map(cat => {
@@ -315,7 +307,7 @@ export default function OrderPage() {
           </div>
         )}
 
-        {/* 5. ΛΙΣΤΑ ΠΡΟΪΟΝΤΩΝ (Premium Glass Cards) */}
+        {/* 5. ΛΙΣΤΑ ΠΡΟΪΟΝΤΩΝ */}
         <div>
           {isLoading ? (
             <div className="flex flex-col items-center justify-center my-24 opacity-60">
@@ -388,7 +380,7 @@ export default function OrderPage() {
         </div>
       </main>
 
-      {/* 6. FLOATING PILL CART (ΚΙΝΗΤΑ) - Clean iOS Look */}
+      {/* 6. FLOATING PILL CART (ΚΙΝΗΤΑ) */}
       {cart.length > 0 && !isCartOpen && (
         <div className="fixed bottom-6 left-4 right-4 z-40 md:hidden animate-fade-in-up">
           <button onClick={() => setIsCartOpen(true)} className="w-full bg-[#38BDF8] text-[#0B1120] py-4 rounded-2xl font-bold uppercase tracking-wide shadow-xl flex justify-between items-center px-5 transition-transform active:scale-95">
@@ -401,7 +393,7 @@ export default function OrderPage() {
         </div>
       )}
 
-      {/* --- MODAL ΠΛΗΡΟΦΟΡΙΩΝ ΕΣΤΙΑΤΟΡΙΟΥ (Clean UI) --- */}
+      {/* --- MODAL ΠΛΗΡΟΦΟΡΙΩΝ ΕΣΤΙΑΤΟΡΙΟΥ --- */}
       {isDetailsModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex justify-center items-center p-4">
           <div className="bg-slate-900 w-full max-w-md rounded-2xl shadow-2xl border border-white/10 overflow-hidden animate-fade-in-up">
@@ -448,170 +440,47 @@ export default function OrderPage() {
         </div>
       )}
 
-      {/* MODALS & CART */}
+      {/* PRODUCT MODAL */}
       {activeProduct && <ProductModal activeProduct={activeProduct} lang={lang} closeModal={() => setActiveProduct(null)} addToCart={addToCart} supabaseImageUrl={supabaseImageUrl} />}
 
-      {isCartOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-end">
-          <div className="w-full md:max-w-md bg-[#0F172A] h-full flex flex-col shadow-2xl md:border-l border-white/10 animate-fade-in-up md:animate-slide-in-right">
-            <div className="p-5 border-b border-white/5 flex justify-between items-center bg-slate-900 shrink-0">
-              <h2 className="text-lg font-bold text-white uppercase tracking-wide">{checkoutStep === 'profile' ? ui.profileTitle : ui.cartTitle}</h2>
-              {checkoutStep !== 'success' && <button onClick={() => { setIsCartOpen(false); if(checkoutStep === 'review' || checkoutStep === 'profile') setCheckoutStep('cart'); }} className="text-gray-400 hover:text-white transition-colors p-1"><Icons.Close /></button>}
-            </div>
+      {/* CHECKOUT SIDEBAR ΕΞΩΤΕΡΙΚΟ COMPONENT */}
+      <CheckoutSidebar
+        isCartOpen={isCartOpen}
+        setIsCartOpen={setIsCartOpen}
+        checkoutStep={checkoutStep}
+        setCheckoutStep={setCheckoutStep}
+        lang={lang}
+        ui={ui}
+        t={t}
+        auth={auth}
+        cart={cart}
+        updateQuantity={updateQuantity}
+        removeFromCart={removeFromCart}
+        addToCart={addToCart}
+        setActiveProduct={setActiveProduct}
+        getItemPrice={getItemPrice}
+        subtotal={subtotal}
+        finalTotal={finalTotal}
+        loyaltyDiscount={loyaltyDiscount}
+        setLoyaltyDiscount={setLoyaltyDiscount}
+        storeSettings={storeSettings}
+        storeOpen={storeOpen}
+        generateTimeSlots={generateTimeSlots}
+        requestedTime={requestedTime}
+        setRequestedTime={setRequestedTime}
+        orderNote={orderNote}
+        setOrderNote={setOrderNote}
+        paymentMethod={paymentMethod}
+        setPaymentMethod={setPaymentMethod}
+        submitOrder={submitOrder}
+        isSubmitting={isSubmitting}
+        placedOrder={placedOrder}
+        handleCustomerPickup={handleCustomerPickup}
+        handleRepeatOrder={handleRepeatOrder}
+        getLocaleDateString={getLocaleDateString}
+        menuItems={menuItems}
+      />
 
-            <div className="flex-1 overflow-y-auto p-5 pb-24">
-              {checkoutStep === 'profile' ? (
-                <div className="flex flex-col gap-6 animate-fade-in">
-                  <div className="text-center mb-2"><div className="w-16 h-16 bg-slate-800 rounded-full mx-auto flex items-center justify-center text-gray-400 mb-3"><Icons.User /></div><h3 className="text-lg font-bold text-white">{auth.customerName || auth.user?.email}</h3><p className="text-sm text-gray-400">{auth.customerPhone}</p></div>
-                  <LoyaltyWallet userId={auth.user?.id} subtotal={0} lang={lang} onApplyDiscount={() => {}} settings={storeSettings} />
-                  <div className="bg-slate-800/30 rounded-2xl border border-white/5 p-5">
-                    <h4 className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-4 border-b border-white/5 pb-2">{ui.myOrders}</h4>
-                    {auth.userOrderHistory.length === 0 ? <p className="text-sm text-gray-500 font-medium">No orders yet.</p> : (
-                      <ul className="space-y-4">
-                        {auth.userOrderHistory.map(o => (
-                          <li key={o.id} className="flex flex-col gap-3 border-b border-white/5 pb-4 last:border-0 last:pb-0">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <p className="font-bold text-white text-sm">#{o.order_number || o.id.toString().slice(-4)}</p>
-                                <p className="text-xs text-gray-400 mt-1">{new Date(o.created_at).toLocaleDateString()} - {o.total_price} kr.</p>
-                                <p className="text-xs text-gray-500 mt-2 leading-relaxed line-clamp-2">{o.items?.map((i:any) => `${i.quantity}x ${i[`title_${lang}`] || i.title_en || i.title_da || 'Item'}`).join(', ')}</p>
-                              </div>
-                              <div className="flex flex-col items-end gap-3">
-                                <span className={`text-[10px] px-2.5 py-1 rounded font-bold uppercase tracking-wide ${o.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'}`}>{o.status}</span>
-                                <button onClick={() => handleRepeatOrder(o)} className="text-[#38BDF8] hover:bg-[#38BDF8]/10 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 border border-transparent hover:border-[#38BDF8]/20"><Icons.Repeat /> {t.repeatOrder}</button>
-                              </div>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                  <button onClick={() => auth.logout(() => { setIsCartOpen(false); setCheckoutStep('cart'); })} className="w-full text-red-400 hover:bg-red-500/10 font-bold py-3.5 rounded-xl transition-colors mt-2 text-sm uppercase tracking-wide">{ui.logout}</button>
-                </div>
-              ) : checkoutStep === 'review' ? (
-                <div className="flex flex-col items-center justify-center py-10 h-full text-center animate-fade-in">
-                  <div className="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center text-[#38BDF8] mb-6"><Icons.Check /></div>
-                  <h2 className="text-2xl font-bold text-white mb-3 uppercase tracking-wide">{ui.thankYou}</h2><p className="text-gray-400 text-sm mb-10 px-4 leading-relaxed">{ui.reviewPrompt}</p>
-                  <a href="https://reviewshellas.dk" target="_blank" rel="noopener noreferrer" className="w-full bg-[#38BDF8] text-[#0B1120] font-bold uppercase tracking-wide py-4 rounded-xl mb-4 block">{ui.leaveReview}</a>
-                  <button onClick={() => { setCheckoutStep('cart'); setIsCartOpen(false); }} className="w-full bg-slate-800 text-gray-300 font-bold uppercase tracking-wide py-4 rounded-xl hover:bg-slate-700 transition-colors">{ui.close}</button>
-                </div>
-              ) : checkoutStep === 'success' ? (
-                <div className="flex flex-col items-center py-6 w-full">
-                  <h2 className="text-xl font-bold text-white mb-8 tracking-widest text-center">#{placedOrder?.order_number || placedOrder?.id?.toString().slice(-4)}</h2>
-                  <div className="w-full mb-10 relative">
-                    <div className="absolute top-4 left-0 h-1 bg-slate-800 w-full -z-10 rounded-full"></div><div className={`absolute top-4 left-0 h-1 bg-[#38BDF8] -z-10 transition-all duration-700 ease-out rounded-full ${placedOrder?.status === 'pending' ? 'w-[15%]' : placedOrder?.status === 'preparing' ? 'w-[50%]' : 'w-full !bg-emerald-500'}`}></div>
-                    <div className="flex justify-between">
-                      <div className="flex flex-col items-center gap-3"><div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm transition-colors duration-500 ${placedOrder?.status === 'pending' || placedOrder?.status === 'preparing' || placedOrder?.status === 'completed' ? 'bg-[#38BDF8] text-[#0B1120]' : 'bg-slate-800 text-gray-500'}`}>1</div><span className={`text-[10px] font-bold uppercase tracking-wider ${placedOrder?.status === 'pending' ? 'text-white' : 'text-gray-500'}`}>{ui.trackPending}</span></div>
-                      <div className="flex flex-col items-center gap-3"><div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm transition-colors duration-500 ${placedOrder?.status === 'preparing' || placedOrder?.status === 'completed' ? 'bg-[#38BDF8] text-[#0B1120]' : 'bg-slate-800 text-gray-500'}`}>2</div><span className={`text-[10px] font-bold uppercase tracking-wider ${placedOrder?.status === 'preparing' ? 'text-white' : 'text-gray-500'}`}>{ui.trackPrep}</span></div>
-                      <div className="flex flex-col items-center gap-3"><div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm transition-colors duration-500 ${placedOrder?.status === 'completed' ? 'bg-emerald-500 text-[#0B1120]' : 'bg-slate-800 text-gray-500'}`}>3</div><span className={`text-[10px] font-bold uppercase tracking-wider ${placedOrder?.status === 'completed' ? 'text-emerald-400' : 'text-gray-500'}`}>{ui.trackReady}</span></div>
-                    </div>
-                  </div>
-                  <div className="w-full bg-slate-800/30 border border-white/5 rounded-2xl p-8 mb-8 text-center">
-                    {placedOrder?.status === 'pending' && (<div className="animate-fade-in"><div className="w-12 h-12 border-4 border-[#38BDF8]/20 border-t-[#38BDF8] rounded-full animate-spin mx-auto mb-5"></div><h3 className="text-lg font-bold text-white mb-2 uppercase tracking-wide">{ui.trackPendingTitle}</h3><p className="text-sm text-gray-400">{ui.trackPendingDesc}</p></div>)}
-                    {placedOrder?.status === 'preparing' && (<div className="animate-fade-in"><div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center text-orange-400 mx-auto mb-5 animate-pulse"><Icons.Clock /></div><h3 className="text-lg font-bold text-white mb-5 uppercase tracking-wide">{ui.trackPrepTitle}</h3><div className="bg-[#38BDF8]/10 border border-[#38BDF8]/20 rounded-xl p-4 inline-block"><p className="text-[10px] font-bold text-[#38BDF8] uppercase tracking-widest mb-1">{ui.trackPrepTime}</p><p className="text-4xl font-bold text-white">{placedOrder?.requested_time && placedOrder.requested_time !== 'ASAP' ? placedOrder.requested_time.slice(0, 5) : '...'}</p></div></div>)}
-                    {placedOrder?.status === 'completed' && (<div className="animate-fade-in"><div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-400 mx-auto mb-5"><Icons.Check /></div><h3 className="text-lg font-bold text-emerald-400 mb-3 uppercase tracking-wide">{ui.trackReadyTitle}</h3><p className="text-sm text-gray-300 mb-8">{ui.trackReadyDesc}</p><button onClick={handleCustomerPickup} className="w-full bg-emerald-500 hover:bg-emerald-400 text-[#0B1120] font-bold text-sm uppercase py-4 rounded-xl transition-colors tracking-wide">Pickup Confirmation</button></div>)}
-                  </div>
-                </div>
-              ) : checkoutStep === 'auth' ? (
-                <div className="flex flex-col gap-6 animate-fade-in py-2">
-                  <div className="bg-[#38BDF8]/10 border border-[#38BDF8]/20 rounded-2xl p-5 flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-[#38BDF8]/20 text-[#38BDF8] flex items-center justify-center shrink-0"><Icons.Gift /></div>
-                    <div>
-                      <h4 className="font-bold text-white text-sm mb-1">{lang === 'da' ? 'Opret konto & få 35 DKK!' : lang === 'en' ? 'Create an account & get 35 DKK!' : 'Φτιάξε λογαριασμό & κέρδισε 35 DKK!'}</h4>
-                      <p className="text-xs text-gray-400 leading-relaxed">{lang === 'da' ? 'Saml point og spar på dine næste ordrer.' : lang === 'en' ? 'Collect points and save on your next orders.' : 'Μάζεψε πόντους και κέρδισε έκπτωση στις επόμενες παραγγελίες σου.'}</p>
-                    </div>
-                  </div>
-                  <div className="text-center mt-2 mb-2">
-                    <h3 className="text-xl font-bold text-white uppercase tracking-wide">{ui.guestCheckout}</h3>
-                    <p className="text-gray-400 text-sm mt-2">{ui.guestDesc}</p>
-                  </div>
-                  <button onClick={() => setCheckoutStep('checkout')} className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-4 rounded-xl border border-white/5 uppercase tracking-wide transition-colors">{ui.guestCheckout}</button>
-                  <div className="flex items-center gap-4 my-2 opacity-50">
-                    <hr className="flex-1 border-slate-600" />
-                    <span className="text-xs text-slate-400 font-bold uppercase">{ui.or}</span>
-                    <hr className="flex-1 border-slate-600" />
-                  </div>
-                  <div className="bg-slate-800/30 p-6 rounded-2xl border border-white/5">
-                    <h3 className="text-base font-bold text-white text-center mb-6 uppercase tracking-wide">{auth.authMode === 'signup' ? ui.regTitle : ui.loginTitle}</h3>
-                    <form onSubmit={(e) => auth.handleAuth(e, () => setCheckoutStep('checkout'))} className="flex flex-col gap-4">
-                      {auth.authError && <div className="bg-red-500/10 text-red-400 p-3 rounded-lg text-sm font-medium text-center border border-red-500/20">{auth.authError}</div>}
-                      {auth.authMode === 'signup' && (
-                        <div className="flex flex-col gap-4 animate-fade-in">
-                          <input type="text" placeholder={ui.nameLabel} value={auth.regName} onChange={e => auth.setRegName(e.target.value)} required className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 transition-colors" />
-                          <input type="tel" placeholder={ui.phoneLabel} value={auth.regPhone} onChange={e => auth.setRegPhone(e.target.value)} required className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 transition-colors" />
-                          <input type="text" onFocus={(e) => e.target.type = 'date'} onBlur={(e) => { if (!e.target.value) e.target.type = 'text'; }} placeholder={lang === 'da' ? "Fødselsdato (dd/mm/åååå)" : lang === 'en' ? "Birthdate (dd/mm/yyyy)" : "Ημ. Γέννησης (ηη/μμ/εεεε)"} value={auth.regDob} onChange={e => auth.setRegDob(e.target.value)} className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 transition-colors" />
-                        </div>
-                      )}
-                      <input type="email" placeholder={ui.emailPlh} value={auth.email} onChange={e => auth.setEmail(e.target.value)} required className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 transition-colors" />
-                      <input type="password" placeholder={ui.passPlh} value={auth.password} onChange={e => auth.setPassword(e.target.value)} required className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 transition-colors" />
-                      <button type="submit" className="w-full bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-bold py-4 rounded-xl mt-2 uppercase tracking-wide transition-colors">{auth.authMode === 'signup' ? ui.regTitle : ui.loginTitle}</button>
-                    </form>
-                    <button type="button" onClick={() => { auth.setAuthMode(auth.authMode === 'signup' ? 'login' : 'signup'); auth.setAuthError(''); }} className="w-full text-sm text-gray-400 hover:text-white mt-6 font-medium transition-colors">{auth.authMode === 'signup' ? ui.hasAcc : ui.noAcc}</button>
-                  </div>
-                </div>
-              ) : cart.length === 0 ? (
-                <div className="text-center text-gray-500 mt-24 flex flex-col items-center"><div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center text-gray-400 mb-4"><Icons.Cart /></div><p className="font-medium text-lg">{ui.emptyCart}</p></div>
-              ) : checkoutStep === 'cart' ? (
-                <div className="flex flex-col gap-4">
-                  {cart.map((cartItem, idx) => (
-                    <div key={idx} className="flex flex-col bg-slate-800/30 p-4 rounded-2xl border border-white/5">
-                      <div className="flex justify-between items-center mb-3">
-                        <div className="flex-1 pr-3"><p className="font-bold text-white text-sm leading-tight mb-1">{cartItem.item[`title_${lang}`] || cartItem.item.name}</p><p className="text-sm font-bold text-[#38BDF8]">{getItemPrice(cartItem.item)} DKK</p></div>
-                        <div className="flex items-center gap-3 bg-slate-900 rounded-lg p-1 border border-white/5">
-                          <button onClick={() => updateQuantity(cartItem.cartId, -1)} className="w-8 h-8 flex items-center justify-center text-gray-300 hover:text-white hover:bg-slate-800 rounded-md font-bold transition-colors">-</button>
-                          <span className="font-bold text-sm w-4 text-center">{cartItem.quantity}</span>
-                          <button onClick={() => updateQuantity(cartItem.cartId, 1)} className="w-8 h-8 flex items-center justify-center text-gray-300 hover:text-white hover:bg-slate-800 rounded-md font-bold transition-colors">+</button>
-                        </div>
-                        <div className="ml-3">
-                          <button onClick={() => removeFromCart(cartItem.cartId)} className="text-gray-500 hover:text-red-400 p-2 transition-colors"><Icons.Close /></button>
-                        </div>
-                      </div>
-                      {cartItem.item.selectedOptions?.length > 0 && <p className="text-xs text-gray-400 border-t border-white/5 pt-3 mt-1">+ {cartItem.item.selectedOptions.join(', ')}</p>}
-                      {cartItem.item.note && <p className="text-xs text-gray-400 italic mt-2">Note: {cartItem.item.note}</p>}
-                    </div>
-                  ))}
-                  <div className="mt-4"><SmartUpsell cart={cart} menuItems={menuItems} lang={lang} onAdd={(item) => addToCart(item, 1)} /></div>
-                </div>
-              ) : (
-                <form id="checkoutForm" onSubmit={submitOrder} className="flex flex-col gap-6">
-                  <h3 className="font-bold text-lg text-white border-b border-white/10 pb-3 uppercase tracking-wide">{ui.detailsTitle}</h3>
-                  <LoyaltyWallet userId={auth.user?.id} subtotal={subtotal} lang={lang} onApplyDiscount={setLoyaltyDiscount} settings={storeSettings} />
-                  <div><label className="text-xs text-gray-500 font-bold uppercase tracking-wider block mb-2">{ui.nameLabel}</label><input type="text" value={auth.customerName} onChange={e => auth.setCustomerName(e.target.value)} required className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 transition-colors" /></div>
-                  <div><label className="text-xs text-gray-500 font-bold uppercase tracking-wider block mb-2">{ui.phoneLabel}</label><input type="tel" value={auth.customerPhone} onChange={e => auth.setCustomerPhone(e.target.value)} required className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 transition-colors" /></div>
-                  <div><label className="text-xs text-gray-500 font-bold uppercase tracking-wider block mb-2">{ui.timeLabel}</label><select value={requestedTime} onChange={e => setRequestedTime(e.target.value)} className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white font-medium text-sm outline-none focus:border-[#38BDF8]/50 transition-colors">{generateTimeSlots().map((slot, i) => <option key={i} value={slot.value}>{slot.label}</option>)}</select></div>
-                  <div><label className="text-xs text-gray-500 font-bold uppercase tracking-wider block mb-2">{ui.orderNoteTitle}</label><textarea value={orderNote} onChange={e => setOrderNote(e.target.value)} placeholder={ui.orderNotePlh} rows={2} className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 resize-none transition-colors"></textarea></div>
-                  <div className="mt-2"><label className="text-xs text-gray-500 font-bold uppercase tracking-wider block mb-3">{ui.payLabel}</label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div onClick={() => setPaymentMethod('card')} className={`cursor-pointer p-4 rounded-xl border text-center transition-colors font-bold uppercase tracking-wide text-xs ${paymentMethod === 'card' ? 'bg-[#38BDF8]/10 border-[#38BDF8] text-[#38BDF8]' : 'bg-slate-900 border-white/5 text-gray-400 hover:bg-slate-800'}`}>Card</div>
-                      <div onClick={() => setPaymentMethod('cash')} className={`cursor-pointer p-4 rounded-xl border text-center transition-colors font-bold uppercase tracking-wide text-xs ${paymentMethod === 'cash' ? 'bg-[#38BDF8]/10 border-[#38BDF8] text-[#38BDF8]' : 'bg-slate-900 border-white/5 text-gray-400 hover:bg-slate-800'}`}>Cash</div>
-                    </div>
-                  </div>
-                </form>
-              )}
-            </div>
-
-            {cart.length > 0 && checkoutStep !== 'success' && checkoutStep !== 'review' && checkoutStep !== 'profile' && (
-              <div className="p-5 bg-slate-900 border-t border-white/5 shrink-0">
-                <div className="flex justify-between items-center mb-2"><span className="text-gray-400 text-sm">{ui.subtotal}</span><span className="text-white font-bold">{subtotal} kr.</span></div>
-                {loyaltyDiscount > 0 && <div className="flex justify-between items-center mb-2 text-[#38BDF8]"><span className="text-sm">{ui.loyaltyDiscount}</span><span className="font-bold">-{loyaltyDiscount.toFixed(2)} kr.</span></div>}
-                <div className="flex justify-between items-center mt-4 mb-6 border-t border-white/5 pt-4"><span className="text-white font-bold uppercase tracking-wide">{ui.totalPay}</span><span className="text-2xl font-bold text-[#38BDF8]">{finalTotal.toFixed(2)} kr.</span></div>
-                {!storeOpen && checkoutStep === 'cart' && requestedTime === 'ASAP' ? (
-                  <button onClick={() => setCheckoutStep('checkout')} className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold uppercase tracking-wide py-4 rounded-xl transition-colors">{t.schedule}</button>
-                ) : checkoutStep === 'cart' ? (
-                  <button onClick={() => auth.user ? setCheckoutStep('checkout') : setCheckoutStep('auth')} className="w-full bg-[#38BDF8] text-[#0B1120] font-bold uppercase tracking-wide py-4 rounded-xl hover:bg-sky-400 transition-colors">{ui.toCheckout}</button>
-                ) : checkoutStep === 'auth' ? (
-                  <button type="button" onClick={() => setCheckoutStep('cart')} className="w-full bg-slate-800 text-white font-bold py-4 rounded-xl hover:bg-slate-700 uppercase tracking-wide transition-colors">{ui.backToCart}</button>
-                ) : (
-                  <div className="flex gap-3">
-                    <button type="button" onClick={() => setCheckoutStep('cart')} className="px-6 py-4 rounded-xl bg-slate-800 text-white font-bold uppercase tracking-wide hover:bg-slate-700 transition-colors">{ui.back}</button>
-                    <button type="submit" form="checkoutForm" disabled={isSubmitting} className="flex-1 bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-bold py-4 rounded-xl disabled:opacity-50 uppercase tracking-wide transition-colors">{isSubmitting ? ui.sending : ui.confirm}</button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
