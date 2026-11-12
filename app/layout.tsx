@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import CookieBanner from '@/components/CookieBanner'; // Βεβαιώσου ότι το αρχείο είναι στον φάκελο components
+import InstallBanner from '@/components/InstallBanner'; // ΠΡΟΣΘΗΚΗ 1: Κάνουμε import το νέο banner
 
 // Το Viewport διαχειρίζεται το πώς φαίνεται και συμπεριφέρεται η εφαρμογή στις οθόνες των κινητών
 export const viewport: Viewport = {
@@ -59,8 +60,28 @@ export default function RootLayout({
     // suppressHydrationWarning για να μην κρασάρει το React από Adblockers ή εργαλεία μετάφρασης
     <html lang="da" className="scroll-smooth" suppressHydrationWarning>
       <body className="bg-[#0B1120] text-gray-200 antialiased selection:bg-[#38BDF8] selection:text-[#0B1120]" suppressHydrationWarning>
+        
         {children}
         <CookieBanner />
+        
+        {/* ΠΡΟΣΘΗΚΗ 2: Το banner εγκατάστασης που θα εμφανίζεται στα κινητά */}
+        <InstallBanner /> 
+
+        {/* ΠΡΟΣΘΗΚΗ 3: Το script που ενεργοποιεί τον "εγκέφαλο" (Service Worker) για το PWA */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').then(
+                    function(registration) { console.log('SW registered'); },
+                    function(err) { console.log('SW registration failed: ', err); }
+                  );
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   );
