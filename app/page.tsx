@@ -14,13 +14,15 @@ const translations = {
     tabTakeaway: 'Takeaway Menu', tabDelivery: 'Wolt Menu',
     aboutTitle: 'Græsk Hjerte, Dansk Hygge',
     aboutDesc: 'Hos Hellas Aalborg forener vi den varme græske gæstfrihed med nordisk kvalitet. Vores gyros laves efter originale familieopskrifter med kød af højeste kvalitet og håndlavet tzatziki.',
-    hoursTitle: 'Åbningstider', monThu: 'Mandag - Torsdag', friSat: 'Fredag - Lørdag', sun: 'Søndag',
+    hoursTitle: 'Åbningstider',
     footerDesc: 'Dit lille stykke Grækenland i Nordjylland. Vi glæder os til at se dig.',
     footerDelivery: 'Bestil Delivery', allergies: 'Allergier eller særlige behov? Spørg vores personale!',
-    veg: 'Vegetarisk', smiley: 'Se Fødevarestyrelsens smiley-rapport', followUs: 'Følg os på Instagram', callNow: 'Ring nu',
+    veg: 'Vegetarisk', smiley: 'Se Fødevarestyrelsens smiley-rapport', followUs: 'Følg os på Instagram', 
+    callNow: 'Ring nu', orderTakeaway: 'Bestil Takeaway',
     cateringTitle: 'Græsk Catering & Events',
     cateringDesc: 'Vi bringer den autentiske græske smag til dit arrangement. Vi håndterer store ordrer med særlige priser og gratis levering til din dør.',
-    cateringBtn: 'Ring for Tilbud'
+    cateringBtn: 'Ring for Tilbud',
+    days: ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'] // <-- ΝΕΟ: ΜΕΤΑΦΡΑΣΗ ΗΜΕΡΩΝ
   },
   en: {
     menu: 'Menu', location: 'Find Us', orderWolt: 'Order Wolt', tag: 'Taste of Greece',
@@ -32,13 +34,15 @@ const translations = {
     tabTakeaway: 'Takeaway Menu', tabDelivery: 'Wolt Menu',
     aboutTitle: 'Greek Heart, Danish Hygge',
     aboutDesc: 'At Hellas Aalborg, we combine warm Greek hospitality with Nordic quality. Our gyros are made using original family recipes, premium meat, and handmade tzatziki.',
-    hoursTitle: 'Opening Hours', monThu: 'Monday - Thursday', friSat: 'Friday - Saturday', sun: 'Sunday',
+    hoursTitle: 'Opening Hours',
     footerDesc: 'Your little piece of Greece in North Jutland. We look forward to seeing you.',
     footerDelivery: 'Order Delivery', allergies: 'Allergies or dietary needs? Please ask our staff!',
-    veg: 'Vegetarian', smiley: 'Food safety inspection report', followUs: 'Follow us on Instagram', callNow: 'Call Now',
+    veg: 'Vegetarian', smiley: 'Food safety inspection report', followUs: 'Follow us on Instagram', 
+    callNow: 'Call Now', orderTakeaway: 'Order Takeaway',
     cateringTitle: 'Greek Catering & Events',
     cateringDesc: 'Bring authentic Greek flavors to your event. We accommodate large orders with special pricing and complimentary delivery to your venue.',
-    cateringBtn: 'Call for a Quote'
+    cateringBtn: 'Call for a Quote',
+    days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
   },
   el: {
     menu: 'Μενού', location: 'Βρείτε μας', orderWolt: 'Μέσω Wolt', tag: 'Η Γεύση της Ελλάδας',
@@ -50,13 +54,15 @@ const translations = {
     tabTakeaway: 'Μενού Takeaway', tabDelivery: 'Μενού Wolt',
     aboutTitle: 'Ελληνική Ψυχή, Δανέζικη Ποιότητα',
     aboutDesc: 'Στο Hellas Aalborg ενώνουμε τη ζεστή ελληνική φιλοξενία με την ποιότητα του Βορρά. Ο γύρος μας φτιάχνεται με αυθεντικές οικογενειακές συνταγές, εκλεκτά κρέατα και χειροποίητο τζατζίκι.',
-    hoursTitle: 'Ωράριο Λειτουργίας', monThu: 'Δευτέρα - Πέμπτη', friSat: 'Παρασκευή - Σάββατο', sun: 'Κυριακή',
+    hoursTitle: 'Ωράριο Λειτουργίας',
     footerDesc: 'Το δικό σας κομμάτι Ελλάδας στη Βόρεια Γιουτλάνδη. Σας περιμένουμε.',
     footerDelivery: 'Παραγγελία Delivery', allergies: 'Έχετε αλλεργίες; Ρωτήστε το προσωπικό μας!',
-    veg: 'Χορτοφαγικό', smiley: 'Αναφορά υγειονομικού ελέγχου', followUs: 'Ακολουθήστε μας στο Instagram', callNow: 'Κλήση',
+    veg: 'Χορτοφαγικό', smiley: 'Αναφορά υγειονομικού ελέγχου', followUs: 'Ακολουθήστε μας στο Instagram', 
+    callNow: 'Κλήση', orderTakeaway: 'Παραγγελία Takeaway',
     cateringTitle: 'Ελληνικό Catering & Εκδηλώσεις',
     cateringDesc: 'Φέρνουμε την αυθεντική ελληνική γεύση στην εκδήλωσή σας. Αναλαμβάνουμε μεγάλες παραγγελίες με ειδικές προνομιακές τιμές και δωρεάν διανομή.',
-    cateringBtn: 'Καλέστε μας'
+    cateringBtn: 'Καλέστε μας',
+    days: ['Δευτέρα', 'Τρίτη', 'Τετάρτη', 'Πέμπτη', 'Παρασκευή', 'Σάββατο', 'Κυριακή']
   }
 };
 
@@ -74,6 +80,7 @@ export default function Home() {
   const [isScrolled, setIsScrolled] = useState(false);
   
   const [menuItems, setMenuItems] = useState<any[]>([]);
+  const [storeHours, setStoreHours] = useState<any[]>([]); 
   const [isLoading, setIsLoading] = useState(true);
   
   const [selectedItem, setSelectedItem] = useState<any>(null);
@@ -81,46 +88,36 @@ export default function Home() {
   const supabaseImageUrl = "https://keolpijcsvwsrzkjqtkc.supabase.co/storage/v1/object/public/menu-images/";
 
   useEffect(() => {
-    const fetchMenu = async () => {
-      const { data, error } = await supabase
-        .from('menu_items')
-        .select('*')
-        .order('sort_order', { ascending: true });
-      
-      if (data) {
-        const formattedData = data.map(item => ({
-          id: item.id,
-          category: item.category,
+    const fetchData = async () => {
+      const { data: menuData } = await supabase.from('menu_items').select('*').order('sort_order', { ascending: true });
+      if (menuData) {
+        const formattedData = menuData.map(item => ({
+          id: item.id, category: item.category,
           title: { da: item.title_da, en: item.title_en, el: item.title_el },
           desc: { da: item.desc_da, en: item.desc_en, el: item.desc_el },
-          priceTakeaway: item.price_takeaway,
-          priceDelivery: item.price_delivery,
-          popular: item.popular,
-          vegetarian: item.vegetarian,
-          featured: item.featured,
-          imagePath: item.image_path
+          priceTakeaway: item.price_takeaway, priceDelivery: item.price_delivery,
+          popular: item.popular, vegetarian: item.vegetarian,
+          featured: item.featured, imagePath: item.image_path
         }));
         setMenuItems(formattedData);
       }
+      
+      const { data: hoursData } = await supabase.from('store_hours').select('*').order('day_of_week', { ascending: true });
+      if (hoursData) setStoreHours(hoursData);
+      
       setIsLoading(false);
     };
 
-    fetchMenu();
+    fetchData();
 
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % heroImages.length);
-    }, 6000);
-
+    const timer = setInterval(() => setCurrentSlide((prev) => (prev + 1) % heroImages.length), 6000);
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
     
     if (selectedItem) document.body.style.overflow = 'hidden';
     else document.body.style.overflow = 'unset';
     
-    return () => {
-      clearInterval(timer);
-      window.removeEventListener('scroll', handleScroll);
-    };
+    return () => { clearInterval(timer); window.removeEventListener('scroll', handleScroll); };
   }, [selectedItem]);
   
   const t = translations[lang as keyof typeof translations];
@@ -250,7 +247,7 @@ export default function Home() {
                     <h3 className={`${item.featured ? 'text-3xl font-extrabold' : 'text-xl font-bold'} text-white mb-3 tracking-wide group-hover:text-[#38BDF8] transition-colors duration-300`}>
                       {item.title[lang as keyof typeof item.title] || item.title.da}
                     </h3>
-                    <p className="text-gray-400 text-sm md:text-base font-light leading-relaxed max-w-lg line-clamp-2">
+                    <p className="text-gray-400 text-sm md:text-base font-light leading-relaxed max-w-lg">
                       {item.desc[lang as keyof typeof item.desc] || item.desc.da}
                     </p>
                   </div>
@@ -277,8 +274,8 @@ export default function Home() {
               {t.orderWolt}
             </a>
           ) : (
-            <a href="tel:+4542177754" className="inline-flex items-center gap-3 bg-white text-[#0B1120] font-bold py-4 px-14 rounded-full shadow-[0_0_25px_rgba(255,255,255,0.15)] transition-all transform hover:scale-105 hover:shadow-[0_0_35px_rgba(255,255,255,0.25)]">
-              📞 {t.callNow}
+            <a href="/order" className="inline-flex items-center gap-3 bg-white text-[#0B1120] font-bold py-4 px-14 rounded-full shadow-[0_0_25px_rgba(255,255,255,0.15)] transition-all transform hover:scale-105 hover:shadow-[0_0_35px_rgba(255,255,255,0.25)]">
+              🛍️ {t.orderTakeaway}
             </a>
           )}
         </div>
@@ -342,9 +339,17 @@ export default function Home() {
           <div>
             <h4 className="text-lg font-bold text-white mb-8 tracking-wide">{t.hoursTitle}</h4>
             <ul className="space-y-4 text-sm">
-              <li className="flex justify-between border-b border-white/5 pb-3"><span className="text-gray-400">{t.monThu}</span><span className="font-bold text-white">16:00 - 22:00</span></li>
-              <li className="flex justify-between border-b border-white/5 pb-3"><span className="text-[#38BDF8] font-medium">{t.friSat}</span><span className="font-bold text-[#38BDF8]">17:00 - 05:00</span></li>
-              <li className="flex justify-between border-b border-white/5 pb-3"><span className="text-gray-400">{t.sun}</span><span className="font-bold text-white">17:00 - 22:00</span></li>
+              {/* ΔΙΟΡΘΩΣΗ: ΧΡΗΣΗ ΜΕΤΑΦΡΑΣΜΕΝΩΝ ΗΜΕΡΩΝ */}
+              {storeHours.length > 0 ? storeHours.map(day => (
+                <li key={day.day_of_week} className="flex justify-between border-b border-white/5 pb-3">
+                  <span className="text-gray-400">{t.days[day.day_of_week - 1]}</span>
+                  <span className={`font-bold ${day.is_closed ? 'text-red-400' : 'text-white'}`}>
+                    {day.is_closed ? (lang === 'da' ? 'LUKKET' : lang === 'en' ? 'CLOSED' : 'ΚΛΕΙΣΤΑ') : `${day.open_time.slice(0,5)} - ${day.close_time.slice(0,5)}`}
+                  </span>
+                </li>
+              )) : (
+                <li className="text-gray-500 animate-pulse">Loading...</li>
+              )}
             </ul>
           </div>
           <div className="h-72 w-full rounded-3xl overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.5)] opacity-80 hover:opacity-100 transition-opacity border border-white/10 relative">
@@ -369,11 +374,11 @@ export default function Home() {
       </footer>
 
       <div className="md:hidden fixed bottom-0 left-0 w-full bg-[#0B1120]/90 backdrop-blur-xl border-t border-white/10 px-4 py-3 z-40 flex justify-between gap-3 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
-        <a href="tel:+4542177754" className="flex-1 bg-white text-[#0B1120] text-center font-bold py-3 rounded-2xl flex justify-center items-center gap-2 active:scale-95 transition-transform">📞 {t.callNow}</a>
+        <a href="/order" className="flex-1 bg-white text-[#0B1120] text-center font-bold py-3 rounded-2xl flex justify-center items-center gap-2 active:scale-95 transition-transform">🛍️ {t.orderTakeaway}</a>
         <a href="https://wolt.com/da/dnk/aalborg/restaurant/hellas-food1" target="_blank" rel="noopener noreferrer" className="flex-1 bg-gradient-to-r from-[#009de0] to-[#007fb5] text-white text-center font-bold py-3 rounded-2xl flex justify-center items-center gap-2 active:scale-95 transition-transform">🛵 {t.orderWolt}</a>
       </div>
 
-      {/* ΝΕΟ: ΑΝΑΔΥΟΜΕΝΟ ΠΑΡΑΘΥΡΟ ΠΙΑΤΟΥ (MODAL) */}
+      {/* ΑΝΑΔΥΟΜΕΝΟ ΠΑΡΑΘΥΡΟ ΠΙΑΤΟΥ (MODAL) */}
       {selectedItem && (
         <div 
           className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 md:p-6 opacity-100 transition-opacity"
@@ -429,8 +434,8 @@ export default function Home() {
                     {t.orderWolt}
                   </a>
                 ) : (
-                  <a href="tel:+4542177754" className="bg-white text-[#0B1120] px-6 py-3 rounded-full font-bold hover:scale-105 transition-transform shadow-lg">
-                    {t.callNow}
+                  <a href="/order" className="bg-white text-[#0B1120] px-6 py-3 rounded-full font-bold hover:scale-105 transition-transform shadow-lg">
+                    {t.orderTakeaway}
                   </a>
                 )}
               </div>

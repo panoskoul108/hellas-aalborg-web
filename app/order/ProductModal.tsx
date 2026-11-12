@@ -1,0 +1,187 @@
+'use client';
+import React, { useState, useEffect } from 'react';
+
+export default function ProductModal({ activeProduct, lang, closeModal, addToCart, supabaseImageUrl }: any) {
+  const [quantity, setQuantity] = useState(1);
+  const [note, setNote] = useState('');
+  const [selections, setSelections] = useState<Record<string, string[]>>({});
+
+  useEffect(() => {
+    if (activeProduct) {
+      setQuantity(activeProduct.quantity || 1);
+      setNote(activeProduct.note || '');
+      setSelections(activeProduct.rawSelections || {}); 
+    }
+  }, [activeProduct]);
+
+  const isEditing = !!activeProduct?.cartId;
+  const title = activeProduct[`title_${lang}`] || activeProduct.title_da || activeProduct.title_el || activeProduct.name;
+  const desc = activeProduct[`desc_${lang}`] || activeProduct.desc_da;
+  
+  const basePrice = Number(activeProduct.original_price || activeProduct.price_takeaway || activeProduct.price || 0);
+  const addBtnText = isEditing 
+    ? (lang === 'da' ? 'GEM ÆNDRINGER' : lang === 'en' ? 'SAVE CHANGES' : 'ΑΠΟΘΗΚΕΥΣΗ')
+    : (lang === 'da' ? 'TILFØJ' : lang === 'en' ? 'ADD' : 'ΠΡΟΣΘΗΚΗ');
+
+  let extras: Record<string, any> = {};
+  try { 
+    if (activeProduct.extras) extras = typeof activeProduct.extras === 'string' ? JSON.parse(activeProduct.extras) : activeProduct.extras; 
+  } catch (e) { extras = {}; }
+
+  const getGroupTitle = (group: any, key: string) => group[`title_${lang}`] || group.title_da || key;
+  const getOptLabel = (opt: any) => opt[`label_${lang}`] || opt.label_da || opt.name;
+
+  let extraPrice = 0;
+  Object.keys(extras).forEach(groupKey => {
+    const group = extras[groupKey];
+    if (group && Array.isArray(group.options)) {
+      (selections[groupKey] || []).forEach(optName => {
+        const optionDef = group.options.find((o: any) => o.name === optName);
+        if (optionDef) extraPrice += Number(optionDef.price || 0);
+      });
+    }
+  });
+  
+  const totalPrice = (basePrice + extraPrice) * quantity;
+
+  // Βελτιωμένη λογική επιλογής (Λαμβάνει υπόψη το maxVal)
+  const handleSelect = (groupKey: string, optionName: string, isSingle: boolean, maxVal: number) => {
+    setSelections(prev => {
+      const currentSelections = prev[groupKey] || [];
+      if (isSingle) return { ...prev, [groupKey]: [optionName] };
+      else {
+        if (currentSelections.includes(optionName)) return { ...prev, [groupKey]: currentSelections.filter(n => n !== optionName) };
+        else {
+          if (maxVal > 0 && currentSelections.length >= maxVal) return prev; 
+          return { ...prev, [groupKey]: [...currentSelections, optionName] };
+        }
+      }
+    });
+  };
+
+  const handleAdd = () => {
+    for (const groupKey of Object.keys(extras)) {
+      const group = extras[groupKey];
+      const maxVal = Number(group.max) || 0;
+      const isSingle = (group.type === 'single' && maxVal <= 1) || maxVal === 1;
+
+      if (isSingle && (!selections[groupKey] || selections[groupKey].length === 0)) {
+        alert(lang === 'da' ? `Vælg venligst: ${getGroupTitle(group, groupKey)}` : lang === 'en' ? `Please select: ${getGroupTitle(group, groupKey)}` : `Παρακαλώ επιλέξτε: ${getGroupTitle(group, groupKey)}`);
+        return;
+      }
+    }
+    
+    const flatSelections: string[] = [];
+    Object.keys(selections).forEach(groupKey => {
+       const group = extras[groupKey];
+       if (group && Array.isArray(group.options)) {
+           selections[groupKey].forEach(optName => {
+               const optionDef = group.options.find((o: any) => o.name === optName);
+               if (optionDef) {
+                 const label = getOptLabel(optionDef);
+                 const priceStr = Number(optionDef.price) > 0 ? ` (+${optionDef.price} kr.)` : '';
+                 flatSelections.push(`${label}${priceStr}`);
+               }
+           });
+       }
+    });
+
+    addToCart({ 
+      ...activeProduct, 
+      original_price: basePrice,
+      final_price: basePrice + extraPrice, 
+      price_takeaway: basePrice + extraPrice, 
+      selectedOptions: flatSelections, 
+      rawSelections: selections, 
+      note 
+    }, quantity);
+    
+    closeModal();
+  };
+
+  if (!activeProduct) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/90 md:bg-black/80 z-[100] flex items-end md:items-center justify-center md:p-4 backdrop-blur-sm animate-fade-in" onClick={closeModal}>
+      <div className="bg-[#0F172A] w-full h-[95vh] md:h-auto md:max-w-xl rounded-t-3xl md:rounded-3xl overflow-hidden flex flex-col shadow-2xl md:max-h-[90vh] md:border border-white/10" onClick={e => e.stopPropagation()}>
+        
+        <div className="relative h-48 sm:h-56 shrink-0 bg-slate-800">
+          <button onClick={closeModal} className="absolute top-8 right-4 md:top-4 md:right-4 w-10 h-10 bg-black/50 text-white rounded-full flex items-center justify-center font-black text-xl hover:bg-black/70 transition-colors shadow-md z-10">✕</button>          {activeProduct?.image_path ? (
+            <img src={`${supabaseImageUrl}${activeProduct.image_path}`} alt={title} className="w-full h-full object-cover" />
+          ) : <div className="w-full h-full flex items-center justify-center text-5xl">🍽️</div>}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A] to-transparent"></div>
+        </div>
+
+        <div className="p-5 overflow-y-auto flex-1 pb-8">
+          <h2 className="text-2xl font-black text-white uppercase tracking-tight mb-1">{title}</h2>
+          <p className="text-[#38BDF8] font-black text-lg mb-2">{basePrice} DKK</p>
+          <p className="text-gray-400 text-sm mb-8 leading-relaxed">{desc}</p>
+
+          {Object.keys(extras).length > 0 && (
+            <div className="flex flex-col gap-6 mb-8">
+              {Object.keys(extras).map((groupKey) => {
+                const group = extras[groupKey];
+                const maxVal = Number(group.max) || 0;
+                
+                // ΕΞΥΠΝΟΣ ΕΛΕΓΧΟΣ: Ακυρώνει το "single" από το Supabase αν το max είναι >= 2
+                const isSingle = (group.type === 'single' && maxVal <= 1) || maxVal === 1;
+                const currentSelections = selections[groupKey] || [];
+
+                return (
+                  <div key={groupKey} className="bg-slate-900/60 p-4 rounded-2xl border border-white/5 shadow-inner">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="font-bold text-white text-sm uppercase tracking-wide">{getGroupTitle(group, groupKey)}</h3>
+                      <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-md ${isSingle ? 'bg-[#38BDF8]/20 text-[#38BDF8]' : 'bg-gray-800 text-gray-400'}`}>
+                        {isSingle ? (lang === 'da' ? 'OBLIGATORISK (Vælg 1)' : lang === 'en' ? 'REQUIRED (Select 1)' : 'ΥΠΟΧΡΕΩΤΙΚΟ (Επιλέξτε 1)') : maxVal > 0 ? (lang === 'da' ? `MAX ${maxVal} VALG` : lang === 'en' ? `UP TO ${maxVal} OPTIONS` : `ΕΩΣ ${maxVal} ΕΠΙΛΟΓΕΣ`) : (lang === 'da' ? 'VALGFRIT' : lang === 'en' ? 'OPTIONAL' : 'ΠΡΟΑΙΡΕΤΙΚΟ')}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col gap-2.5">
+                      {(Array.isArray(group.options) ? group.options : []).map((opt: any, idx: number) => {
+                        const isSelected = currentSelections.includes(opt.name);
+                        const isDisabled = !isSingle && !isSelected && maxVal > 0 && currentSelections.length >= maxVal;
+
+                        return (
+                          <label key={idx} className={`flex items-center justify-between p-4 rounded-xl border transition-colors cursor-pointer ${isSelected ? 'border-[#38BDF8] bg-[#38BDF8]/10' : 'border-white/5 bg-slate-800/80 hover:bg-slate-800'} ${isDisabled ? 'opacity-40 cursor-not-allowed' : ''}`}>
+                            <div className="flex items-center gap-3">
+                              <div className={`w-5 h-5 shrink-0 flex items-center justify-center border-2 transition-colors ${isSingle ? 'rounded-full' : 'rounded-md'} ${isSelected ? 'border-[#38BDF8] bg-[#38BDF8]' : 'border-gray-500'}`}>
+                                {isSelected && <span className={`bg-[#0F172A] ${isSingle ? 'w-2 h-2 rounded-full' : 'w-3 h-3'}`} style={!isSingle ? { clipPath: 'polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%)', backgroundColor: '#0F172A'} : {}}></span>}
+                              </div>
+                              <span className={`text-sm font-bold ${isSelected ? 'text-white' : 'text-gray-300'}`}>{getOptLabel(opt)}</span>
+                            </div>
+                            <span className="text-xs font-black text-gray-400">{Number(opt.price) > 0 ? `+${opt.price} kr.` : ''}</span>
+                            <input type={isSingle ? "radio" : "checkbox"} name={groupKey} checked={isSelected} disabled={isDisabled} onChange={() => handleSelect(groupKey, opt.name, isSingle, maxVal)} className="hidden" />
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="mb-4">
+            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2">
+              {lang === 'da' ? 'Kommentarer / Særlige instruktioner' : lang === 'en' ? 'Comments / Special Instructions' : 'ΣΧΟΛΙΑ / ΕΙΔΙΚΕΣ ΟΔΗΓΙΕΣ'}
+            </label>
+            <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="..." className="w-full bg-slate-900 border border-slate-700 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8] resize-none h-24" />
+          </div>
+        </div>
+
+        <div className="p-4 md:p-5 border-t border-slate-800 bg-slate-900 shrink-0 flex flex-col md:flex-row items-stretch md:items-center gap-4">
+          <div className="flex items-center justify-between md:justify-start gap-4 bg-slate-800 rounded-xl p-2 md:p-1.5 border border-white/5">
+            <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-12 h-12 md:w-10 md:h-10 flex items-center justify-center text-white bg-slate-700 md:bg-transparent md:hover:bg-slate-700 rounded-lg font-black text-2xl transition-colors">-</button>
+            <span className="font-black text-xl md:text-lg w-8 text-center">{quantity}</span>
+            <button onClick={() => setQuantity(q => q + 1)} className="w-12 h-12 md:w-10 md:h-10 flex items-center justify-center text-white bg-slate-700 md:bg-transparent md:hover:bg-slate-700 rounded-lg font-black text-2xl transition-colors">+</button>
+          </div>
+          
+          <button onClick={handleAdd} className="flex-1 bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-black py-4 md:py-4 rounded-xl shadow-lg transition-transform active:scale-95 flex justify-between px-6 uppercase tracking-wider items-center">
+            <span className="text-sm md:text-base">{addBtnText}</span>
+            <span className="bg-[#0B1120]/10 px-3 py-1.5 rounded-lg text-sm md:text-base">{totalPrice} DKK</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
