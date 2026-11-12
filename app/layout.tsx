@@ -1,16 +1,35 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import CookieBanner from '@/components/CookieBanner'; // Βεβαιώσου ότι το αρχείο είναι στον φάκελο components
 
-// Εδώ ρυθμίζουμε το SEO και το Εικονίδιο
+// Το Viewport διαχειρίζεται το πώς φαίνεται και συμπεριφέρεται η εφαρμογή στις οθόνες των κινητών
+export const viewport: Viewport = {
+  themeColor: '#0B1120',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false, // Αποτρέπει το ενοχλητικό ζουμ όταν οι χρήστες πατάνε γρήγορα τα κουμπιά (+/-) στο καλάθι
+};
+
+// Εδώ ρυθμίζουμε το SEO, τα Εικονίδια και το PWA (για εγκατάσταση στο κινητό)
 export const metadata: Metadata = {
   title: 'Hellas Aalborg | Ægte Græsk Gyros i Aalborg',
   description: 'Oplev den autentiske græske stemning i hjertet af Aalborg. Vi bringer opskrifterne direkte fra Grækenland til dig. Bestil Takeaway eller via Wolt.',
   
-  // ΑΥΤΟ ΕΔΩ ΑΛΛΑΖΕΙ ΤΟ ΕΙΚΟΝΙΔΙΟ ΣΤΟ BROWSER:
+  // Σύνδεση με το manifest.json για να γίνει εγκαταστάσιμο Web App (PWA)
+  manifest: '/manifest.json',
+
+  // Ειδικές ρυθμίσεις για να φαίνεται σαν native εφαρμογή στα iPhone (iOS)
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Hellas',
+  },
+  
+  // Εικονίδια για browser και κινητά
   icons: {
-    icon: '/logo.png', // Χρησιμοποιεί το λογότυπό σας!
-    apple: '/logo.png', // Για να φαίνεται ωραία αν κάποιος το αποθηκεύσει σαν εφαρμογή στο iPhone του
+    icon: '/logo.png', // Το εικονίδιο στο tab του browser (Favicon)
+    apple: '/apple-icon.png', // Το ειδικό, τετράγωνο εικονίδιο για την οθόνη του iPhone
   },
 
   openGraph: {
@@ -37,7 +56,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    // ΠΡΟΣΘΗΚΗ: suppressHydrationWarning για να μην κρασάρει το React από Adblockers ή Google Translate
+    // suppressHydrationWarning για να μην κρασάρει το React από Adblockers ή εργαλεία μετάφρασης
     <html lang="da" className="scroll-smooth" suppressHydrationWarning>
       <body className="bg-[#0B1120] text-gray-200 antialiased selection:bg-[#38BDF8] selection:text-[#0B1120]" suppressHydrationWarning>
         {children}
