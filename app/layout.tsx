@@ -1,27 +1,3 @@
-import type { Metadata } from 'next';
-
-// Εδώ κάνουμε override το manifest μόνο για το /admin
-export const metadata: Metadata = {
-  title: 'Hellas Admin Dashboard',
-  manifest: '/admin-manifest.json', // Το κρίσιμο σημείο!
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'black-translucent',
-    title: 'Hellas Admin',
-  },
-};
-
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="admin-wrapper bg-slate-900 min-h-screen">
-      {children}
-    </div>
-  );
-}
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import CookieBanner from '@/components/CookieBanner'; // Βεβαιώσου ότι το αρχείο είναι στον φάκελο components
