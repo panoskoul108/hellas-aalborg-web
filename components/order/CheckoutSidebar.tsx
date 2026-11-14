@@ -39,7 +39,7 @@ export default function CheckoutSidebar({
                             <p className="text-xs text-gray-500 mt-2 leading-relaxed line-clamp-2">{o.items?.map((i:any) => `${i.quantity}x ${i[`title_${lang}`] || i.title_en || i.title_da || 'Item'}`).join(', ')}</p>
                           </div>
                           <div className="flex flex-col items-end gap-3">
-                            <span className={`text-[10px] px-2.5 py-1 rounded font-bold uppercase tracking-wide ${o.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : o.status === 'cancelled' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'}`}>{o.status}</span>
+                            <span className={`text-[10px] px-2.5 py-1 rounded font-bold uppercase tracking-wide ${o.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'}`}>{o.status}</span>
                             <button onClick={() => handleRepeatOrder(o)} className="text-[#38BDF8] hover:bg-[#38BDF8]/10 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 border border-transparent hover:border-[#38BDF8]/20"><Icons.Repeat /> {t.repeatOrder}</button>
                           </div>
                         </div>
@@ -61,7 +61,6 @@ export default function CheckoutSidebar({
             <div className="flex flex-col items-center py-6 w-full">
               <h2 className="text-xl font-bold text-white mb-8 tracking-widest text-center">#{placedOrder?.order_number || placedOrder?.id?.toString().slice(-4)}</h2>
               
-              {/* Κρύβουμε την μπάρα προόδου αν η παραγγελία έχει ακυρωθεί */}
               {placedOrder?.status !== 'cancelled' && (
                 <div className="w-full mb-10 relative">
                   <div className="absolute top-4 left-0 h-1 bg-slate-800 w-full -z-10 rounded-full"></div><div className={`absolute top-4 left-0 h-1 bg-[#38BDF8] -z-10 transition-all duration-700 ease-out rounded-full ${placedOrder?.status === 'pending' ? 'w-[15%]' : placedOrder?.status === 'preparing' ? 'w-[50%]' : 'w-full !bg-emerald-500'}`}></div>
@@ -78,7 +77,6 @@ export default function CheckoutSidebar({
                 {placedOrder?.status === 'preparing' && (<div className="animate-fade-in"><div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center text-orange-400 mx-auto mb-5 animate-pulse"><Icons.Clock /></div><h3 className="text-lg font-bold text-white mb-5 uppercase tracking-wide">{ui.trackPrepTitle}</h3><div className="bg-[#38BDF8]/10 border border-[#38BDF8]/20 rounded-xl p-4 inline-block"><p className="text-[10px] font-bold text-[#38BDF8] uppercase tracking-widest mb-1">{ui.trackPrepTime}</p><p className="text-4xl font-bold text-white">{placedOrder?.requested_time && placedOrder.requested_time !== 'ASAP' ? placedOrder.requested_time.slice(0, 5) : '...'}</p></div></div>)}
                 {placedOrder?.status === 'completed' && (<div className="animate-fade-in"><div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-400 mx-auto mb-5"><Icons.Check /></div><h3 className="text-lg font-bold text-emerald-400 mb-3 uppercase tracking-wide">{ui.trackReadyTitle}</h3><p className="text-sm text-gray-300 mb-8">{ui.trackReadyDesc}</p><button onClick={handleCustomerPickup} className="w-full bg-emerald-500 hover:bg-emerald-400 text-[#0B1120] font-bold text-sm uppercase py-4 rounded-xl transition-colors tracking-wide">{t.pickupConfirm}</button></div>)}
                 
-                {/* ΠΡΟΣΘΗΚΗ: Το μήνυμα της Ακύρωσης μεταφρασμένο */}
                 {placedOrder?.status === 'cancelled' && (
                   <div className="animate-fade-in">
                     <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center text-red-400 mx-auto mb-5">
@@ -187,12 +185,17 @@ export default function CheckoutSidebar({
             {loyaltyDiscount > 0 && <div className="flex justify-between items-center mb-2 text-[#38BDF8]"><span className="text-sm">{ui.loyaltyDiscount}</span><span className="font-bold">-{loyaltyDiscount.toFixed(2)} kr.</span></div>}
             <div className="flex justify-between items-center mt-4 mb-6 border-t border-white/5 pt-4"><span className="text-white font-bold uppercase tracking-wide">{ui.totalPay}</span><span className="text-2xl font-bold text-[#38BDF8]">{finalTotal.toFixed(2)} kr.</span></div>
             
+            {/* ΠΡΟΣΘΗΚΗ: Το μήνυμα για κλειστό/παύση, μεταφρασμένο ανάλογα με το lang */}
             {!storeOpen ? (
               <div className="flex flex-col gap-2 animate-fade-in-up">
                  <button disabled className="w-full bg-red-900/50 text-red-300 font-black uppercase tracking-widest py-4 rounded-xl border border-red-500/30 cursor-not-allowed">
-                   ΠΡΟΣΩΡΙΝΑ ΚΛΕΙΣΤΟ
+                   {lang === 'da' ? 'MIDLERTIDIGT LUKKET' : lang === 'en' ? 'TEMPORARILY CLOSED' : 'ΠΡΟΣΩΡΙΝΑ ΚΛΕΙΣΤΟ'}
                  </button>
-                 <p className="text-xs text-red-400 font-bold text-center italic">Λόγω φόρτου εργασίας δεν δεχόμαστε νέες παραγγελίες αυτή τη στιγμή. Δοκιμάστε ξανά αργότερα!</p>
+                 <p className="text-xs text-red-400 font-bold text-center italic">
+                   {lang === 'da' ? 'På grund af travlhed modtager vi i øjeblikket ikke nye ordrer. Prøv venligst igen senere!' : 
+                    lang === 'en' ? 'Due to high demand, we are currently not accepting new orders. Please try again later!' : 
+                    'Λόγω φόρτου εργασίας δεν δεχόμαστε νέες παραγγελίες αυτή τη στιγμή. Δοκιμάστε ξανά αργότερα!'}
+                 </p>
               </div>
             ) : checkoutStep === 'cart' ? (
               <button onClick={() => auth.user ? setCheckoutStep('checkout') : setCheckoutStep('auth')} className="w-full bg-[#38BDF8] text-[#0B1120] font-bold uppercase tracking-wide py-4 rounded-xl hover:bg-sky-400 transition-colors">{ui.toCheckout}</button>
