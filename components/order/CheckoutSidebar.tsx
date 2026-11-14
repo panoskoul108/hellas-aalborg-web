@@ -39,7 +39,7 @@ export default function CheckoutSidebar({
                             <p className="text-xs text-gray-500 mt-2 leading-relaxed line-clamp-2">{o.items?.map((i:any) => `${i.quantity}x ${i[`title_${lang}`] || i.title_en || i.title_da || 'Item'}`).join(', ')}</p>
                           </div>
                           <div className="flex flex-col items-end gap-3">
-                            <span className={`text-[10px] px-2.5 py-1 rounded font-bold uppercase tracking-wide ${o.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'}`}>{o.status}</span>
+                            <span className={`text-[10px] px-2.5 py-1 rounded font-bold uppercase tracking-wide ${o.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : o.status === 'cancelled' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'}`}>{o.status}</span>
                             <button onClick={() => handleRepeatOrder(o)} className="text-[#38BDF8] hover:bg-[#38BDF8]/10 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 border border-transparent hover:border-[#38BDF8]/20"><Icons.Repeat /> {t.repeatOrder}</button>
                           </div>
                         </div>
@@ -60,18 +60,43 @@ export default function CheckoutSidebar({
           ) : checkoutStep === 'success' ? (
             <div className="flex flex-col items-center py-6 w-full">
               <h2 className="text-xl font-bold text-white mb-8 tracking-widest text-center">#{placedOrder?.order_number || placedOrder?.id?.toString().slice(-4)}</h2>
-              <div className="w-full mb-10 relative">
-                <div className="absolute top-4 left-0 h-1 bg-slate-800 w-full -z-10 rounded-full"></div><div className={`absolute top-4 left-0 h-1 bg-[#38BDF8] -z-10 transition-all duration-700 ease-out rounded-full ${placedOrder?.status === 'pending' ? 'w-[15%]' : placedOrder?.status === 'preparing' ? 'w-[50%]' : 'w-full !bg-emerald-500'}`}></div>
-                <div className="flex justify-between">
-                  <div className="flex flex-col items-center gap-3"><div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm transition-colors duration-500 ${placedOrder?.status === 'pending' || placedOrder?.status === 'preparing' || placedOrder?.status === 'completed' ? 'bg-[#38BDF8] text-[#0B1120]' : 'bg-slate-800 text-gray-500'}`}>1</div><span className={`text-[10px] font-bold uppercase tracking-wider ${placedOrder?.status === 'pending' ? 'text-white' : 'text-gray-500'}`}>{ui.trackPending}</span></div>
-                  <div className="flex flex-col items-center gap-3"><div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm transition-colors duration-500 ${placedOrder?.status === 'preparing' || placedOrder?.status === 'completed' ? 'bg-[#38BDF8] text-[#0B1120]' : 'bg-slate-800 text-gray-500'}`}>2</div><span className={`text-[10px] font-bold uppercase tracking-wider ${placedOrder?.status === 'preparing' ? 'text-white' : 'text-gray-500'}`}>{ui.trackPrep}</span></div>
-                  <div className="flex flex-col items-center gap-3"><div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm transition-colors duration-500 ${placedOrder?.status === 'completed' ? 'bg-emerald-500 text-[#0B1120]' : 'bg-slate-800 text-gray-500'}`}>3</div><span className={`text-[10px] font-bold uppercase tracking-wider ${placedOrder?.status === 'completed' ? 'text-emerald-400' : 'text-gray-500'}`}>{ui.trackReady}</span></div>
+              
+              {/* Κρύβουμε την μπάρα προόδου αν η παραγγελία έχει ακυρωθεί */}
+              {placedOrder?.status !== 'cancelled' && (
+                <div className="w-full mb-10 relative">
+                  <div className="absolute top-4 left-0 h-1 bg-slate-800 w-full -z-10 rounded-full"></div><div className={`absolute top-4 left-0 h-1 bg-[#38BDF8] -z-10 transition-all duration-700 ease-out rounded-full ${placedOrder?.status === 'pending' ? 'w-[15%]' : placedOrder?.status === 'preparing' ? 'w-[50%]' : 'w-full !bg-emerald-500'}`}></div>
+                  <div className="flex justify-between">
+                    <div className="flex flex-col items-center gap-3"><div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm transition-colors duration-500 ${placedOrder?.status === 'pending' || placedOrder?.status === 'preparing' || placedOrder?.status === 'completed' ? 'bg-[#38BDF8] text-[#0B1120]' : 'bg-slate-800 text-gray-500'}`}>1</div><span className={`text-[10px] font-bold uppercase tracking-wider ${placedOrder?.status === 'pending' ? 'text-white' : 'text-gray-500'}`}>{ui.trackPending}</span></div>
+                    <div className="flex flex-col items-center gap-3"><div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm transition-colors duration-500 ${placedOrder?.status === 'preparing' || placedOrder?.status === 'completed' ? 'bg-[#38BDF8] text-[#0B1120]' : 'bg-slate-800 text-gray-500'}`}>2</div><span className={`text-[10px] font-bold uppercase tracking-wider ${placedOrder?.status === 'preparing' ? 'text-white' : 'text-gray-500'}`}>{ui.trackPrep}</span></div>
+                    <div className="flex flex-col items-center gap-3"><div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm transition-colors duration-500 ${placedOrder?.status === 'completed' ? 'bg-emerald-500 text-[#0B1120]' : 'bg-slate-800 text-gray-500'}`}>3</div><span className={`text-[10px] font-bold uppercase tracking-wider ${placedOrder?.status === 'completed' ? 'text-emerald-400' : 'text-gray-500'}`}>{ui.trackReady}</span></div>
+                  </div>
                 </div>
-              </div>
+              )}
+
               <div className="w-full bg-slate-800/30 border border-white/5 rounded-2xl p-8 mb-8 text-center">
                 {placedOrder?.status === 'pending' && (<div className="animate-fade-in"><div className="w-12 h-12 border-4 border-[#38BDF8]/20 border-t-[#38BDF8] rounded-full animate-spin mx-auto mb-5"></div><h3 className="text-lg font-bold text-white mb-2 uppercase tracking-wide">{ui.trackPendingTitle}</h3><p className="text-sm text-gray-400">{ui.trackPendingDesc}</p></div>)}
                 {placedOrder?.status === 'preparing' && (<div className="animate-fade-in"><div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center text-orange-400 mx-auto mb-5 animate-pulse"><Icons.Clock /></div><h3 className="text-lg font-bold text-white mb-5 uppercase tracking-wide">{ui.trackPrepTitle}</h3><div className="bg-[#38BDF8]/10 border border-[#38BDF8]/20 rounded-xl p-4 inline-block"><p className="text-[10px] font-bold text-[#38BDF8] uppercase tracking-widest mb-1">{ui.trackPrepTime}</p><p className="text-4xl font-bold text-white">{placedOrder?.requested_time && placedOrder.requested_time !== 'ASAP' ? placedOrder.requested_time.slice(0, 5) : '...'}</p></div></div>)}
                 {placedOrder?.status === 'completed' && (<div className="animate-fade-in"><div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-400 mx-auto mb-5"><Icons.Check /></div><h3 className="text-lg font-bold text-emerald-400 mb-3 uppercase tracking-wide">{ui.trackReadyTitle}</h3><p className="text-sm text-gray-300 mb-8">{ui.trackReadyDesc}</p><button onClick={handleCustomerPickup} className="w-full bg-emerald-500 hover:bg-emerald-400 text-[#0B1120] font-bold text-sm uppercase py-4 rounded-xl transition-colors tracking-wide">{t.pickupConfirm}</button></div>)}
+                
+                {/* ΠΡΟΣΘΗΚΗ: Το μήνυμα της Ακύρωσης μεταφρασμένο */}
+                {placedOrder?.status === 'cancelled' && (
+                  <div className="animate-fade-in">
+                    <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center text-red-400 mx-auto mb-5">
+                      <Icons.Close />
+                    </div>
+                    <h3 className="text-lg font-bold text-red-400 mb-3 uppercase tracking-wide">
+                      {lang === 'da' ? 'Ordren er annulleret' : lang === 'en' ? 'Order Cancelled' : 'Η παραγγελία ακυρώθηκε'}
+                    </h3>
+                    <p className="text-sm text-gray-300 mb-8">
+                      {lang === 'da' ? 'Beklager, vi kan desværre ikke behandle denne ordre på nuværende tidspunkt.' : 
+                       lang === 'en' ? 'Sorry, we cannot fulfill this order at this time.' : 
+                       'Συγγνώμη, δεν μπορούμε να εξυπηρετήσουμε αυτή την παραγγελία αυτή τη στιγμή.'}
+                    </p>
+                    <button onClick={() => { setCheckoutStep('cart'); setIsCartOpen(false); }} className="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold text-sm uppercase py-4 rounded-xl transition-colors tracking-wide">
+                      {ui.close || (lang === 'da' ? 'LUK' : lang === 'en' ? 'CLOSE' : 'ΚΛΕΙΣΙΜΟ')}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ) : checkoutStep === 'auth' ? (
@@ -141,7 +166,6 @@ export default function CheckoutSidebar({
               <div><label className="text-xs text-gray-500 font-bold uppercase tracking-wider block mb-2">{ui.nameLabel}</label><input type="text" value={auth.customerName} onChange={e => auth.setCustomerName(e.target.value)} required className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 transition-colors" /></div>
               <div><label className="text-xs text-gray-500 font-bold uppercase tracking-wider block mb-2">{ui.phoneLabel}</label><input type="tel" value={auth.customerPhone} onChange={e => auth.setCustomerPhone(e.target.value)} required className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 transition-colors" /></div>
               
-              {/* ΑΝΟΙΧΤΟ ΚΑΤΑΣΤΗΜΑ: Εμφάνιση Ώρας */}
               {storeOpen && (
                 <div><label className="text-xs text-gray-500 font-bold uppercase tracking-wider block mb-2">{ui.timeLabel}</label><select value={requestedTime} onChange={e => setRequestedTime(e.target.value)} className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white font-medium text-sm outline-none focus:border-[#38BDF8]/50 transition-colors">{generateTimeSlots().map((slot: any, i: number) => <option key={i} value={slot.value}>{slot.label}</option>)}</select></div>
               )}
@@ -163,7 +187,6 @@ export default function CheckoutSidebar({
             {loyaltyDiscount > 0 && <div className="flex justify-between items-center mb-2 text-[#38BDF8]"><span className="text-sm">{ui.loyaltyDiscount}</span><span className="font-bold">-{loyaltyDiscount.toFixed(2)} kr.</span></div>}
             <div className="flex justify-between items-center mt-4 mb-6 border-t border-white/5 pt-4"><span className="text-white font-bold uppercase tracking-wide">{ui.totalPay}</span><span className="text-2xl font-bold text-[#38BDF8]">{finalTotal.toFixed(2)} kr.</span></div>
             
-            {/* ΠΡΟΣΘΗΚΗ: ΚΛΕΙΔΩΜΑ ΚΑΛΑΘΙΟΥ ΟΤΑΝ ΤΟ ΜΑΓΑΖΙ ΕΙΝΑΙ ΚΛΕΙΣΤΟ (Store Pause) */}
             {!storeOpen ? (
               <div className="flex flex-col gap-2 animate-fade-in-up">
                  <button disabled className="w-full bg-red-900/50 text-red-300 font-black uppercase tracking-widest py-4 rounded-xl border border-red-500/30 cursor-not-allowed">
