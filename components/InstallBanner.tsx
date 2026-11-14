@@ -44,7 +44,7 @@ export default function InstallBanner() {
   if (!isVisible) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 w-full bg-[#0F172A] border-t border-white/10 p-4 z-[100] flex justify-between items-center shadow-2xl animate-fade-in-up md:hidden">
+    <div className="fixed bottom-0 left-0 w-full bg-[#0F172A] border-t border-white/10 p-4 z-[100] flex justify-between items-center shadow-2xl animate-fade-in-up">
       <div className="flex items-center gap-3">
         {/* Χρησιμοποιούμε το apple-icon.png που φτιάξαμε */}
         <img src="/apple-icon.png" alt="App Icon" className="w-10 h-10 rounded-xl shadow-md" />
