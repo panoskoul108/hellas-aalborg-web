@@ -1,7 +1,8 @@
 'use client';
 import React, { useState } from 'react';
 
-export const OrderCard = ({ order, onAccept, onPrint, onComplete, onView }: any) => {
+// ΠΡΟΣΘΗΚΗ: Βάλαμε το onCancel στα props
+export const OrderCard = ({ order, onAccept, onPrint, onComplete, onView, onCancel }: any) => {
   const items = order.items || [];
   const isPending = order.status === 'pending';
   const isPreparing = order.status === 'preparing';
@@ -14,11 +15,10 @@ export const OrderCard = ({ order, onAccept, onPrint, onComplete, onView }: any)
   const customMinutes = Array.from({ length: 30 }, (_, i) => i + 1); 
 
   return (
-    // Αφαιρέσαμε το h-full και βάλαμε h-auto για να μεγαλώνει ελεύθερα
     <div className={`bg-slate-800 border rounded-xl p-3 shadow-md flex flex-col h-auto relative overflow-hidden ${isPending ? "border-[#38BDF8]/50" : "border-orange-500/50"}`}>
       {order.discount_dkk > 0 && <div className="absolute top-0 right-0 bg-emerald-600 text-white text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-bl-lg shadow-sm z-10">🎁 Loyalty</div>}
 
-      {/* HEADER: Αριθμός, Πελάτης, Προβολή */}
+      {/* HEADER: Αριθμός, Πελάτης, Προβολή & Ακύρωση */}
       <div className="flex justify-between items-start mb-2 border-b border-slate-700 pb-2 shrink-0">
         <div className="flex-1 min-w-0 pr-2">
           <h3 className="text-xl font-black text-white italic truncate">#{order.order_number || order.id.toString().slice(-4)}</h3>
@@ -26,9 +26,23 @@ export const OrderCard = ({ order, onAccept, onPrint, onComplete, onView }: any)
             <span className="text-gray-200">{order.customer_name}</span> <span className="opacity-70">({order.customer_phone})</span>
           </p>
         </div>
-        <button onClick={onView} className="bg-gray-700 hover:bg-gray-600 text-white text-[9px] font-black uppercase px-2 py-1 rounded-md transition-colors border border-gray-600 shrink-0">
-          👁️ ΠΡΟΒΟΛΗ
-        </button>
+        
+        {/* ΠΡΟΣΘΗΚΗ: Κουμπί Ακύρωσης δίπλα στην Προβολή */}
+        <div className="flex gap-1.5 shrink-0">
+          <button 
+            onClick={() => {
+              if (window.confirm("Είστε σίγουροι ότι θέλετε να ακυρώσετε αυτή την παραγγελία;")) {
+                onCancel(order.id);
+              }
+            }} 
+            className="bg-red-950 hover:bg-red-600 text-red-400 hover:text-white text-[9px] font-black uppercase px-2 py-1 rounded-md transition-colors border border-red-900 hover:border-red-500"
+          >
+            ❌ ΑΚΥΡΩΣΗ
+          </button>
+          <button onClick={onView} className="bg-gray-700 hover:bg-gray-600 text-white text-[9px] font-black uppercase px-2 py-1 rounded-md transition-colors border border-gray-600">
+            👁️ ΠΡΟΒΟΛΗ
+          </button>
+        </div>
       </div>
 
       {/* ΛΙΣΤΑ ΠΡΟΪΟΝΤΩΝ: Χωρίς scroll, ψηλώνει φυσικά */}
