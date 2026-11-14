@@ -36,37 +36,59 @@ export function useStore(ui: any) {
       const jsDay = new Date().getDay();
       const dbDay = jsDay === 0 ? 7 : jsDay; 
       
-      const { data } = await supabase.from('store_hours').select('*').eq('day_of_week', dbDay).single();
+      // ΠΡΟΣΘΗΚΗ: Διαβάζουμε το Ωράριο ΚΑΙ τις Ρυθμίσεις (Διακοπτάκι) ταυτόχρονα
+      const [hoursRes, settingsRes] = await Promise.all([
+        supabase.from('store_hours').select('*').eq('day_of_week', dbDay).single(),
+        supabase.from('store_settings').select('accepting_orders').eq('id', 1).single()
+      ]);
       
-      if (data) {
-        setTodayCloseTime(data.close_time); 
+      const hoursData = hoursRes.data;
+      const settingsData = settingsRes.data;
+      
+      if (hoursData) {
+        setTodayCloseTime(hoursData.close_time); 
         
-        if (data.is_closed) {
-          setStoreOpen(false);
-          return;
+        let isTimeOpen = false;
+
+        if (!hoursData.is_closed) {
+          const now = new Date();
+          const currentTimeMins = now.getHours() * 60 + now.getMinutes();
+          
+          const [openH, openM] = hoursData.open_time.split(':').map(Number);
+          const [closeH, closeM] = hoursData.close_time.split(':').map(Number);
+          
+          const openMins = openH * 60 + openM;
+          let closeMins = closeH * 60 + closeM;
+          
+          if (closeMins < openMins) closeMins += 24 * 60; 
+          
+          let currentAdjusted = currentTimeMins;
+          if (currentTimeMins < openMins && closeMins > 24 * 60) currentAdjusted += 24 * 60; 
+
+          isTimeOpen = (currentAdjusted >= openMins && currentAdjusted <= closeMins);
         }
 
-        const now = new Date();
-        const currentTimeMins = now.getHours() * 60 + now.getMinutes();
-        
-        const [openH, openM] = data.open_time.split(':').map(Number);
-        const [closeH, closeM] = data.close_time.split(':').map(Number);
-        
-        const openMins = openH * 60 + openM;
-        let closeMins = closeH * 60 + closeM;
-        
-        if (closeMins < openMins) closeMins += 24 * 60; 
-        
-        let currentAdjusted = currentTimeMins;
-        if (currentTimeMins < openMins && closeMins > 24 * 60) currentAdjusted += 24 * 60; 
-
-        setStoreOpen(currentAdjusted >= openMins && currentAdjusted <= closeMins);
+        // ΤΕΛΙΚΟΣ ΕΛΕΓΧΟΣ: Το μαγαζί θεωρείται ανοιχτό ΜΟΝΟ αν είναι εντός ωραρίου ΚΑΙ δεν έχει πατηθεί η παύση!
+        const isAcceptingOrders = settingsData?.accepting_orders ?? true;
+        setStoreOpen(isTimeOpen && isAcceptingOrders);
       }
     };
 
     checkStoreStatus();
     const interval = setInterval(checkStoreStatus, 15000);
-    return () => clearInterval(interval);
+
+    // ΠΡΟΣΘΗΚΗ: Realtime Listener!
+    // Ακούει συνεχώς τη βάση δεδομένων. Όταν πατάς το κουμπί στο Admin, κλείνει το καλάθι των πελατών ακαριαία.
+    const channel = supabase.channel('public:store_settings:listener')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'store_settings', filter: 'id=eq.1' }, () => {
+        checkStoreStatus(); // Κάνε ξανά τον έλεγχο αμέσως
+      })
+      .subscribe();
+
+    return () => {
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   return { storeOpen, generateTimeSlots };
