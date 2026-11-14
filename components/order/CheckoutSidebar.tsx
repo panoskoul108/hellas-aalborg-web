@@ -90,7 +90,15 @@ export default function CheckoutSidebar({
                        lang === 'en' ? 'Sorry, we cannot fulfill this order at this time.' : 
                        'Συγγνώμη, δεν μπορούμε να εξυπηρετήσουμε αυτή την παραγγελία αυτή τη στιγμή.'}
                     </p>
-                    <button onClick={() => { setCheckoutStep('cart'); setIsCartOpen(false); }} className="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold text-sm uppercase py-4 rounded-xl transition-colors tracking-wide">
+                    
+                    {/* ΔΙΟΡΘΩΣΗ: Προστέθηκε το localStorage.removeItem και το reload στο κουμπί κλεισίματος */}
+                    <button 
+                      onClick={() => { 
+                        localStorage.removeItem('hellas_active_order'); 
+                        window.location.reload(); 
+                      }} 
+                      className="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold text-sm uppercase py-4 rounded-xl transition-colors tracking-wide"
+                    >
                       {ui.close || (lang === 'da' ? 'LUK' : lang === 'en' ? 'CLOSE' : 'ΚΛΕΙΣΙΜΟ')}
                     </button>
                   </div>
@@ -185,7 +193,6 @@ export default function CheckoutSidebar({
             {loyaltyDiscount > 0 && <div className="flex justify-between items-center mb-2 text-[#38BDF8]"><span className="text-sm">{ui.loyaltyDiscount}</span><span className="font-bold">-{loyaltyDiscount.toFixed(2)} kr.</span></div>}
             <div className="flex justify-between items-center mt-4 mb-6 border-t border-white/5 pt-4"><span className="text-white font-bold uppercase tracking-wide">{ui.totalPay}</span><span className="text-2xl font-bold text-[#38BDF8]">{finalTotal.toFixed(2)} kr.</span></div>
             
-            {/* ΠΡΟΣΘΗΚΗ: Το μήνυμα για κλειστό/παύση, μεταφρασμένο ανάλογα με το lang */}
             {!storeOpen ? (
               <div className="flex flex-col gap-2 animate-fade-in-up">
                  <button disabled className="w-full bg-red-900/50 text-red-300 font-black uppercase tracking-widest py-4 rounded-xl border border-red-500/30 cursor-not-allowed">
