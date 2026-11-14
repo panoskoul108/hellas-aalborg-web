@@ -27,7 +27,7 @@ export default function AdminDashboard() {
   const [enteredPin, setEnteredPin] = useState('');
   const [pinError, setPinError] = useState(false);
 
-  // ΠΡΟΣΘΗΚΗ: State για το διακοπτάκι του καταστήματος
+  // State για το διακοπτάκι του καταστήματος
   const [isStoreOpen, setIsStoreOpen] = useState(true);
 
   const requestWakeLock = async () => {
@@ -48,7 +48,7 @@ export default function AdminDashboard() {
       const { data: pinData } = await supabase.from('pos_settings').select('pin_code').eq('id', 1).single();
       if (pinData) setExpectedPin(pinData.pin_code.trim()); 
       
-      // ΠΡΟΣΘΗΚΗ: Διαβάζουμε το status του καταστήματος
+      // Διαβάζουμε το status του καταστήματος
       const { data: storeSettings } = await supabase.from('store_settings').select('accepting_orders').eq('id', 1).single();
       if (storeSettings) setIsStoreOpen(storeSettings.accepting_orders);
 
@@ -117,10 +117,10 @@ export default function AdminDashboard() {
     }
   };
 
-  // ΠΡΟΣΘΗΚΗ: Συνάρτηση για το Διακοπτάκι
+  // Συνάρτηση για το Διακοπτάκι
   const toggleStoreStatus = async () => {
     const newStatus = !isStoreOpen;
-    setIsStoreOpen(newStatus); // Άμεση αλλαγή στο UI
+    setIsStoreOpen(newStatus); 
 
     const { error } = await supabase
       .from('store_settings')
@@ -129,11 +129,11 @@ export default function AdminDashboard() {
 
     if (error) {
       alert("Σφάλμα κατά την αλλαγή κατάστασης: " + error.message);
-      setIsStoreOpen(!newStatus); // Επαναφορά αν χτυπήσει error
+      setIsStoreOpen(!newStatus); 
     }
   };
 
-  // ΠΡΟΣΘΗΚΗ: Συνάρτηση για Ακύρωση Παραγγελίας
+  // Συνάρτηση για Ακύρωση Παραγγελίας
   const handleCancelOrder = async (orderId: number) => {
     const { error } = await supabase
       .from('orders')
@@ -214,43 +214,80 @@ export default function AdminDashboard() {
       <div className={`min-h-screen font-sans bg-[#0B1120] text-gray-200 bg-[url('/bg.jpg')] bg-cover bg-fixed bg-center relative print:hidden ${isPrinting ? "hidden" : "block"}`}>
         <div className="absolute inset-0 bg-[#0B1120]/85 -z-10"></div>
 
-        <header className="bg-[#0F172A]/90 border-b border-white/10 p-4 md:p-6 sticky top-0 z-40 flex justify-between items-center shadow-lg backdrop-blur-md transition-all">
-          <div className="flex items-center gap-6">
-            <h1 className="text-xl md:text-2xl font-black text-white italic tracking-tight">HELLAS AALBORG <span className="text-[#38BDF8]">ADMIN</span></h1>
-            
-            <div className="hidden md:flex bg-slate-900 rounded-xl p-1 border border-slate-700">
-              <button onClick={() => setActiveTab('live')} className={`px-5 py-2 rounded-lg text-xs font-black uppercase transition-colors ${activeTab === 'live' ? 'bg-[#38BDF8] text-[#0B1120]' : 'text-gray-400 hover:text-white'}`}>LIVE ΤΑΜΕΙΟ</button>
-              <button onClick={() => setActiveTab('history')} className={`px-5 py-2 rounded-lg text-xs font-black uppercase transition-colors ${activeTab === 'history' ? 'bg-[#38BDF8] text-[#0B1120]' : 'text-gray-400 hover:text-white'}`}>ΙΣΤΟΡΙΚΟ & Z</button>
-              <button onClick={() => setActiveTab('settings')} className={`px-5 py-2 rounded-lg text-xs font-black uppercase transition-colors ${activeTab === 'settings' ? 'bg-[#38BDF8] text-[#0B1120]' : 'text-gray-400 hover:text-white'}`}>ΡΥΘΜΙΣΕΙΣ</button>
-            </div>
-            
-            {/* ΠΡΟΣΘΗΚΗ: Το Διακοπτάκι (Store Pause) */}
+        <header className="bg-[#0F172A]/90 border-b border-white/10 p-4 sticky top-0 z-40 flex flex-col md:flex-row justify-between items-center gap-4 shadow-lg backdrop-blur-md transition-all">
+          {/* ΑΡΙΣΤΕΡΑ: Λογότυπο */}
+          <div className="flex-shrink-0">
+            <h1 className="text-xl font-black text-white italic tracking-tight">
+              HELLAS AALBORG <span className="text-[#38BDF8]">ADMIN</span>
+            </h1>
+          </div>
+          
+          {/* ΚΕΝΤΡΟ: Navigation Tabs */}
+          <div className="flex bg-slate-900/80 rounded-xl p-1 border border-slate-700/50 shadow-inner">
             <button 
-              onClick={toggleStoreStatus}
-              className={`hidden md:flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all border shadow-lg ${
-                isStoreOpen 
-                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50 hover:bg-emerald-500/30' 
-                  : 'bg-red-500 text-white border-red-600 hover:bg-red-600 animate-pulse'
-              }`}
+              onClick={() => setActiveTab('live')} 
+              className={`px-4 md:px-6 py-2 rounded-lg text-xs font-black uppercase transition-all duration-300 ${activeTab === 'live' ? 'bg-[#38BDF8] text-[#0B1120] shadow-md' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
             >
-              <div className={`w-3 h-3 rounded-full ${isStoreOpen ? 'bg-emerald-400' : 'bg-white'}`}></div>
-              {isStoreOpen ? 'ΠΑΡΑΓΓΕΛΙΕΣ ΑΝΟΙΧΤΕΣ' : 'ΠΑΡΑΓΓΕΛΙΕΣ ΚΛΕΙΣΤΕΣ'}
+              LIVE ΤΑΜΕΙΟ
+            </button>
+            <button 
+              onClick={() => setActiveTab('history')} 
+              className={`px-4 md:px-6 py-2 rounded-lg text-xs font-black uppercase transition-all duration-300 ${activeTab === 'history' ? 'bg-[#38BDF8] text-[#0B1120] shadow-md' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+            >
+              ΙΣΤΟΡΙΚΟ & Z
+            </button>
+            <button 
+              onClick={() => setActiveTab('settings')} 
+              className={`px-4 md:px-6 py-2 rounded-lg text-xs font-black uppercase transition-all duration-300 ${activeTab === 'settings' ? 'bg-[#38BDF8] text-[#0B1120] shadow-md' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+            >
+              ΡΥΘΜΙΣΕΙΣ
             </button>
           </div>
           
-          <div className="flex items-center gap-4">
-            <button onClick={playSound} className="hidden sm:block bg-gray-800 text-gray-300 border border-gray-600 px-3 py-2 rounded-xl text-xs font-bold hover:bg-gray-700 transition-colors">🔊 Δοκιμή Ήχου</button>
-            <Link href="/admin/products" className="hidden sm:block bg-purple-600 hover:bg-purple-500 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase shadow-lg transition-colors">📋 ΔΙΑΧΕΙΡΙΣΗ ΚΑΤΑΛΟΓΟΥ</Link>
-            <button onClick={fetchOrders} className="w-10 h-10 rounded-xl bg-slate-800 text-[#38BDF8] flex items-center justify-center hover:bg-slate-700 text-xl shadow-md transition-colors">🔄</button>
-            <button onClick={() => { setAudioUnlocked(false); setEnteredPin(''); sessionStorage.removeItem('admin_unlocked'); }} className="text-xs text-orange-400 hover:text-orange-300 font-bold uppercase ml-2 border border-orange-400/30 px-3 py-2 rounded-lg transition-colors">ΚΛΕΙΔΩΜΑ</button>
+          {/* ΔΕΞΙΑ: Action Buttons */}
+          <div className="flex items-center gap-2 md:gap-3 flex-wrap justify-center">
+            
+            {/* Το Διακοπτάκι (Store Pause) */}
+            <button 
+              onClick={toggleStoreStatus}
+              className={`hidden lg:flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border shadow-sm ${
+                isStoreOpen 
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20' 
+                  : 'bg-red-500 text-white border-red-600 hover:bg-red-600 animate-pulse'
+              }`}
+            >
+              <div className={`w-2.5 h-2.5 rounded-full ${isStoreOpen ? 'bg-emerald-400' : 'bg-white'}`}></div>
+              {isStoreOpen ? 'ΑΝΟΙΧΤΟ' : 'ΚΛΕΙΣΤΟ (PAUSE)'}
+            </button>
+
+            <Link href="/admin/products" className="hidden lg:flex items-center gap-1.5 bg-purple-600/20 text-purple-400 border border-purple-500/30 hover:bg-purple-600/30 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase shadow-sm transition-colors">
+               📋 ΚΑΤΑΛΟΓΟΣ
+            </Link>
+            
+            <button onClick={playSound} className="hidden sm:flex items-center justify-center bg-slate-800 text-gray-300 border border-slate-600 w-10 h-10 rounded-xl hover:bg-slate-700 transition-colors shadow-sm" title="Δοκιμή Ήχου">
+              🔊
+            </button>
+
+            <button onClick={fetchOrders} className="flex items-center justify-center w-10 h-10 rounded-xl bg-[#38BDF8]/10 text-[#38BDF8] border border-[#38BDF8]/30 hover:bg-[#38BDF8]/20 text-lg shadow-sm transition-colors" title="Ανανέωση">
+              🔄
+            </button>
+            
+            <div className="h-6 w-px bg-slate-700 hidden sm:block mx-1"></div>
+
+            <button onClick={() => { setAudioUnlocked(false); setEnteredPin(''); sessionStorage.removeItem('admin_unlocked'); }} className="text-[10px] text-orange-400 hover:text-white bg-orange-500/10 hover:bg-orange-500/30 border border-orange-500/30 font-black uppercase px-3 py-2.5 rounded-xl transition-colors shadow-sm">
+              ΚΛΕΙΔΩΜΑ
+            </button>
+            
             {user && (
-               <button onClick={() => supabase.auth.signOut().then(() => window.location.href="/")} className="text-xs text-red-500 hover:text-red-400 font-bold uppercase ml-1 transition-colors">ΕΞΟΔΟΣ</button>
+               <button onClick={() => supabase.auth.signOut().then(() => window.location.href="/")} className="text-[10px] text-red-400 hover:text-white bg-red-500/10 hover:bg-red-500/30 border border-red-500/30 font-black uppercase px-3 py-2.5 rounded-xl transition-colors shadow-sm">
+                 ΕΞΟΔΟΣ
+               </button>
             )}
           </div>
         </header>
 
-        {/* ΠΡΟΣΘΗΚΗ: Mobile version του Διακόπτη για μικρές οθόνες */}
-        <div className="md:hidden p-4 bg-[#0F172A] border-b border-white/10">
+        {/* Mobile version του Διακόπτη για μικρές οθόνες */}
+        <div className="lg:hidden p-4 bg-[#0F172A] border-b border-white/10 flex flex-col gap-2">
            <button 
               onClick={toggleStoreStatus}
               className={`w-full flex justify-center items-center gap-2 px-4 py-3 rounded-xl text-sm font-black uppercase tracking-wider transition-all border shadow-lg ${
@@ -262,6 +299,9 @@ export default function AdminDashboard() {
               <div className={`w-3 h-3 rounded-full ${isStoreOpen ? 'bg-emerald-400' : 'bg-white'}`}></div>
               {isStoreOpen ? 'ΠΑΡΑΓΓΕΛΙΕΣ ΑΝΟΙΧΤΕΣ' : 'ΠΑΡΑΓΓΕΛΙΕΣ ΚΛΕΙΣΤΕΣ (STORE PAUSE)'}
             </button>
+            <Link href="/admin/products" className="w-full flex justify-center items-center gap-1.5 bg-purple-600/20 text-purple-400 border border-purple-500/30 hover:bg-purple-600/30 px-4 py-3 rounded-xl text-sm font-black uppercase shadow-sm transition-colors">
+               📋 ΔΙΑΧΕΙΡΙΣΗ ΚΑΤΑΛΟΓΟΥ
+            </Link>
         </div>
 
         {activeTab === 'live' ? (
@@ -283,7 +323,6 @@ export default function AdminDashboard() {
                       <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Ληψη: {new Date(order.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}</span>
                       <OrderTimer createdAt={order.created_at} requestedTime={order.requested_time} status={order.status} />
                     </div>
-                    {/* ΠΡΟΣΘΗΚΗ: Περνάμε το onCancel στο OrderCard */}
                     <OrderCard order={order} onCancel={handleCancelOrder} onAccept={(exactTime: string | null, mins: number) => handleAcceptOrder(order, exactTime, mins)} onView={() => setSelectedOrder(order)} />
                   </div>
                 ))}
