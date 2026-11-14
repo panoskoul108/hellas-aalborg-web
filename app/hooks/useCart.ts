@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 
 export function useCart(loyaltyDiscount: number = 0) {
   const [cart, setCart] = useState<{ item: any, quantity: number, cartId: string }[]>([]);
-  const [isCartLoaded, setIsCartLoaded] = useState(false); // Για να μην σβήσει το καλάθι στο πρώτο δευτερόλεπτο
+  const [isCartLoaded, setIsCartLoaded] = useState(false);
 
-  // 1. ΦΟΡΤΩΣΗ: Όταν μπαίνει στη σελίδα, ψάχνει αν υπήρχε παλιό καλάθι
+  // 1. ΦΟΡΤΩΣΗ
   useEffect(() => {
     const savedCart = localStorage.getItem('hellas_cart');
     if (savedCart) {
@@ -13,7 +13,7 @@ export function useCart(loyaltyDiscount: number = 0) {
     setIsCartLoaded(true);
   }, []);
 
-  // 2. ΑΠΟΘΗΚΕΥΣΗ: Κάθε φορά που αλλάζει το καλάθι, το σώζει (αφού πρώτα έχει φορτώσει)
+  // 2. ΑΠΟΘΗΚΕΥΣΗ
   useEffect(() => {
     if (isCartLoaded) {
       localStorage.setItem('hellas_cart', JSON.stringify(cart));
@@ -34,6 +34,17 @@ export function useCart(loyaltyDiscount: number = 0) {
     });
   };
 
+  // Επεξεργασία Υπάρχοντος Προϊόντος (Αντικατάσταση)
+  const editCartItem = (cartId: string, updatedItem: any, newQuantity: number) => {
+    setCart(prevCart => 
+      prevCart.map(cartItem => 
+        cartItem.cartId === cartId 
+          ? { item: updatedItem, quantity: newQuantity, cartId: cartId } 
+          : cartItem
+      )
+    );
+  };
+
   // Αφαίρεση από το Καλάθι
   const removeFromCart = (cartId: string) => {
     setCart(prev => prev.filter(cartItem => cartItem.cartId !== cartId));
@@ -48,7 +59,7 @@ export function useCart(loyaltyDiscount: number = 0) {
     ));
   };
 
-  // Καθαρισμός Καλαθιού (π.χ. μετά από παραγγελία)
+  // Καθαρισμός Καλαθιού
   const clearCart = () => setCart([]);
 
   // Οικονομικοί Υπολογισμοί
@@ -57,7 +68,7 @@ export function useCart(loyaltyDiscount: number = 0) {
   const vatMoms = Number((finalTotal * 0.2).toFixed(2));
 
   return {
-    cart, addToCart, removeFromCart, updateQuantity, clearCart,
+    cart, addToCart, removeFromCart, updateQuantity, editCartItem, clearCart,
     subtotal, finalTotal, vatMoms, getItemPrice
   };
 }
