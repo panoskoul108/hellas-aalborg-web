@@ -133,7 +133,7 @@ export default function AdminDashboard() {
     }
   };
 
-  // Συνάρτηση για Ακύρωση Παραγγελίας & Rollback του Cashback
+  // Συνάρτηση για Ακύρωση Παραγγελίας & Rollback του Cashback μέσω ασφαλούς RPC
   const handleCancelOrder = async (orderId: number) => {
     const orderToCancel = orders.find(o => o.id === orderId);
 
@@ -157,21 +157,18 @@ export default function AdminDashboard() {
         const earnedCashback = Number((orderToCancel.total_price * (earnPct / 100)).toFixed(2));
         const usedDiscount = orderToCancel.discount_dkk || 0;
 
-        const { data: loyaltyData } = await supabase.from('customers_loyalty').select('*').eq('user_id', orderToCancel.user_id).single();
+        const { error: rpcError } = await supabase.rpc('rollback_order_loyalty', {
+          p_user_id: orderToCancel.user_id,
+          p_used_discount: usedDiscount,
+          p_earned_cashback: earnedCashback,
+          p_order_total: orderToCancel.total_price
+        });
 
-        if (loyaltyData) {
-          const currentBalance = Number(loyaltyData.wallet_balance || 0);
-          
-          const newBalance = currentBalance + usedDiscount - earnedCashback;
-          
-          await supabase.from('customers_loyalty').update({
-            wallet_balance: Number(newBalance.toFixed(2)),
-            total_orders: Math.max(0, (loyaltyData.total_orders || 1) - 1),
-            total_spent_dkk: Math.max(0, Number(loyaltyData.total_spent_dkk || 0) - orderToCancel.total_price)
-          }).eq('user_id', orderToCancel.user_id);
+        if (rpcError) {
+          console.error("Σφάλμα κατά το rollback του loyalty (RPC):", rpcError);
         }
       } catch (err) {
-        console.error("Σφάλμα κατά το rollback του loyalty:", err);
+        console.error("Σφάλμα κατά το rollback:", err);
       }
     }
   };
@@ -244,14 +241,12 @@ export default function AdminDashboard() {
         <div className="absolute inset-0 bg-[#0B1120]/85 -z-10"></div>
 
         <header className="bg-[#0F172A]/90 border-b border-white/10 p-4 sticky top-0 z-40 flex flex-col md:flex-row justify-between items-center gap-4 shadow-lg backdrop-blur-md transition-all">
-          {/* ΑΡΙΣΤΕΡΑ: Λογότυπο */}
           <div className="flex-shrink-0">
             <h1 className="text-xl font-black text-white italic tracking-tight">
               HELLAS AALBORG <span className="text-[#38BDF8]">ADMIN</span>
             </h1>
           </div>
           
-          {/* ΚΕΝΤΡΟ: Navigation Tabs */}
           <div className="flex bg-slate-900/80 rounded-xl p-1 border border-slate-700/50 shadow-inner">
             <button 
               onClick={() => setActiveTab('live')} 
@@ -273,10 +268,8 @@ export default function AdminDashboard() {
             </button>
           </div>
           
-          {/* ΔΕΞΙΑ: Action Buttons */}
           <div className="flex items-center gap-2 md:gap-3 flex-wrap justify-center">
             
-            {/* Το Διακοπτάκι (Store Pause) */}
             <button 
               onClick={toggleStoreStatus}
               className={`hidden lg:flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border shadow-sm ${
@@ -301,7 +294,7 @@ export default function AdminDashboard() {
               🔄
             </button>
             
-            <div className="h-6 w-px bg-slate-700 hidden sm:block mx-1"></div> {/* Κάθετη γραμμή διαχωρισμού */}
+            <div className="h-6 w-px bg-slate-700 hidden sm:block mx-1"></div>
 
             <button onClick={() => { setAudioUnlocked(false); setEnteredPin(''); sessionStorage.removeItem('admin_unlocked'); }} className="text-[10px] text-orange-400 hover:text-white bg-orange-500/10 hover:bg-orange-500/30 border border-orange-500/30 font-black uppercase px-3 py-2.5 rounded-xl transition-colors shadow-sm">
               ΚΛΕΙΔΩΜΑ
@@ -315,7 +308,6 @@ export default function AdminDashboard() {
           </div>
         </header>
 
-        {/* Mobile version του Διακόπτη για μικρές οθόνες */}
         <div className="lg:hidden p-4 bg-[#0F172A] border-b border-white/10 flex flex-col gap-2">
            <button 
               onClick={toggleStoreStatus}
