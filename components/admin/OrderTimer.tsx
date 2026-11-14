@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 interface OrderTimerProps {
   createdAt: string;
@@ -12,6 +12,9 @@ export default function OrderTimer({ createdAt, requestedTime, status }: OrderTi
   const [isOverdue, setIsOverdue] = useState(false);
   const [isPending, setIsPending] = useState(false);
 
+  // ΠΡΟΣΘΗΚΗ: Κρατάμε το σφάλμα (διαφορά χρόνου) στη μνήμη χωρίς να προκαλούμε re-renders
+  const offsetRef = useRef<number | null>(null);
+
   useEffect(() => {
     if (status === 'completed') {
       setTimeLeft('ΕΤΟΙΜΟ');
@@ -20,13 +23,25 @@ export default function OrderTimer({ createdAt, requestedTime, status }: OrderTi
       return;
     }
 
+    // ΠΡΟΣΘΗΚΗ: Υπολογισμός του Clock Drift μόνο την πρώτη φορά που φορτώνει
+    if (offsetRef.current === null) {
+      const initialDiff = Date.now() - new Date(createdAt).getTime();
+      // Αν η διαφορά είναι κάτω από 30 δευτερόλεπτα, φταίει η καθυστέρηση του δικτύου / ρολογιού.
+      // Αποθηκεύουμε το σφάλμα για να το αφαιρούμε συνεχώς.
+      offsetRef.current = (initialDiff > 0 && initialDiff < 30000) ? initialDiff : 0;
+    }
+
     const calculateTime = () => {
       const now = new Date();
+      // ΔΙΟΡΘΩΣΗ: Αφαιρούμε το σφάλμα για να συγχρονιστούμε με το Supabase
+      const adjustedNowMs = now.getTime() - (offsetRef.current || 0);
 
       if (status === 'pending') {
         setIsPending(true);
         const createdDate = new Date(createdAt);
-        const diffMs = now.getTime() - createdDate.getTime();
+        
+        let diffMs = adjustedNowMs - createdDate.getTime();
+        if (diffMs < 0) diffMs = 0; // Αποτροπή αρνητικού χρόνου (-00:01)
         
         const mins = Math.floor(diffMs / 60000);
         const secs = Math.floor((diffMs % 60000) / 1000);
@@ -59,7 +74,8 @@ export default function OrderTimer({ createdAt, requestedTime, status }: OrderTi
         }
       }
 
-      const diffMs = targetDate.getTime() - now.getTime();
+      // Χρησιμοποιούμε το διορθωμένο "Τώρα" (adjustedNowMs) και στην αντίστροφη μέτρηση
+      const diffMs = targetDate.getTime() - adjustedNowMs;
       
       if (diffMs <= 0) {
         setIsOverdue(true);
