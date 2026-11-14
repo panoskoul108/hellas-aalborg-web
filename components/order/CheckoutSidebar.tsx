@@ -9,7 +9,8 @@ export default function CheckoutSidebar({
   subtotal, finalTotal, loyaltyDiscount, setLoyaltyDiscount, storeSettings,
   storeOpen, generateTimeSlots, requestedTime, setRequestedTime, orderNote,
   setOrderNote, paymentMethod, setPaymentMethod, submitOrder, isSubmitting,
-  placedOrder, handleCustomerPickup, handleRepeatOrder, getLocaleDateString, menuItems
+  placedOrder, handleCustomerPickup, handleRepeatOrder, getLocaleDateString, menuItems,
+  onEditItem
 }: any) {
   if (!isCartOpen) return null;
 
@@ -90,8 +91,6 @@ export default function CheckoutSidebar({
                        lang === 'en' ? 'Sorry, we cannot fulfill this order at this time.' : 
                        'Συγγνώμη, δεν μπορούμε να εξυπηρετήσουμε αυτή την παραγγελία αυτή τη στιγμή.'}
                     </p>
-                    
-                    {/* ΔΙΟΡΘΩΣΗ: Προστέθηκε το localStorage.removeItem και το reload στο κουμπί κλεισίματος */}
                     <button 
                       onClick={() => { 
                         localStorage.removeItem('hellas_active_order'); 
@@ -149,7 +148,16 @@ export default function CheckoutSidebar({
               {cart.map((cartItem: any, idx: number) => (
                 <div key={idx} className="flex flex-col bg-slate-800/30 p-4 rounded-2xl border border-white/5">
                   <div className="flex justify-between items-center mb-3">
-                    <div className="flex-1 pr-3"><p className="font-bold text-white text-sm leading-tight mb-1">{cartItem.item[`title_${lang}`] || cartItem.item.name}</p><p className="text-sm font-bold text-[#38BDF8]">{getItemPrice(cartItem.item)} DKK</p></div>
+                    <div 
+                      className="flex-1 pr-3 cursor-pointer group"
+                      onClick={() => onEditItem && onEditItem(cartItem)} 
+                    >
+                      <p className="font-bold text-white text-sm leading-tight mb-1 group-hover:text-[#38BDF8] transition-colors">
+                        {cartItem.item[`title_${lang}`] || cartItem.item.name} 
+                        <span className="text-[10px] text-gray-500 font-normal ml-2 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">✎ Edit</span>
+                      </p>
+                      <p className="text-sm font-bold text-[#38BDF8]">{getItemPrice(cartItem.item)} DKK</p>
+                    </div>
                     <div className="flex items-center gap-3 bg-slate-900 rounded-lg p-1 border border-white/5">
                       <button onClick={() => updateQuantity(cartItem.cartId, -1)} className="w-8 h-8 flex items-center justify-center text-gray-300 hover:text-white hover:bg-slate-800 rounded-md font-bold transition-colors">-</button>
                       <span className="font-bold text-sm w-4 text-center">{cartItem.quantity}</span>
