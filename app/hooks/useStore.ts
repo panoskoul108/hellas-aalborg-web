@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../supabase'; // Βεβαιώσου ότι το path για το supabase είναι σωστό βάσει του φακέλου σου
+import { supabase } from '../supabase';
 
 export function useStore(ui: any) {
   const [storeOpen, setStoreOpen] = useState(true);
   const [todayCloseTime, setTodayCloseTime] = useState('22:00');
 
-  // Υπολογισμός των 15λεπτων για παραλαβή
   const generateTimeSlots = () => {
     const slots = [{ value: 'ASAP', label: ui.asap }];
     const now = new Date();
@@ -17,7 +16,7 @@ export function useStore(ui: any) {
     const closeDate = new Date(now);
     closeDate.setHours(closeH, closeM, 0, 0);
     
-    // Αν κλείνει μετά τα μεσάνυχτα
+    // Night shift λογική για τα Time Slots
     if (closeH < 12 && now.getHours() >= 12) {
       closeDate.setDate(closeDate.getDate() + 1);
     }
@@ -30,13 +29,24 @@ export function useStore(ui: any) {
     return slots;
   };
 
-  // Έλεγχος αν το κατάστημα είναι ανοιχτό
   useEffect(() => {
     const checkStoreStatus = async () => {
-      const jsDay = new Date().getDay();
+      const now = new Date();
+      const currentHour = now.getHours();
+      
+      let jsDay = now.getDay();
+      
+      // NIGHT SHIFT FIX: 
+      // Αν η ώρα είναι ανάμεσα στα μεσάνυχτα (00:00) και τις 06:00 το πρωί,
+      // πρακτικά ανήκουμε στην "βάρδια" της χθεσινής μέρας.
+      if (currentHour >= 0 && currentHour < 6) {
+        jsDay = jsDay - 1;
+        if (jsDay < 0) jsDay = 6; // Αν χθες ήταν Σάββατο, το JS day πάει 6
+      }
+      
+      // Μετατροπή JS day (0=Κυρ, 1=Δευτ) σε DB day (1=Δευτ, 7=Κυρ)
       const dbDay = jsDay === 0 ? 7 : jsDay; 
       
-      // ΠΡΟΣΘΗΚΗ: Διαβάζουμε το Ωράριο ΚΑΙ τις Ρυθμίσεις (Διακοπτάκι) ταυτόχρονα
       const [hoursRes, settingsRes] = await Promise.all([
         supabase.from('store_hours').select('*').eq('day_of_week', dbDay).single(),
         supabase.from('store_settings').select('accepting_orders').eq('id', 1).single()
@@ -51,7 +61,6 @@ export function useStore(ui: any) {
         let isTimeOpen = false;
 
         if (!hoursData.is_closed) {
-          const now = new Date();
           const currentTimeMins = now.getHours() * 60 + now.getMinutes();
           
           const [openH, openM] = hoursData.open_time.split(':').map(Number);
@@ -60,15 +69,24 @@ export function useStore(ui: any) {
           const openMins = openH * 60 + openM;
           let closeMins = closeH * 60 + closeM;
           
-          if (closeMins < openMins) closeMins += 24 * 60; 
+          // Αν το μαγαζί κλείνει μετά τα μεσάνυχτα (π.χ. 05:00), 
+          // προσθέτουμε 24 ώρες στο κλείσιμο για να δουλέψουν σωστά τα μαθηματικά
+          if (closeMins < openMins) {
+            closeMins += 24 * 60; 
+          }
           
           let currentAdjusted = currentTimeMins;
-          if (currentTimeMins < openMins && closeMins > 24 * 60) currentAdjusted += 24 * 60; 
+          
+          // Αν η τωρινή ώρα είναι περασμένα μεσάνυχτα (π.χ. 01:00) και το μαγαζί
+          // άνοιξε χθες (π.χ. 17:00), τότε προσθέτουμε και στο "Τώρα" 24 ώρες 
+          // για να δει ότι είναι μέσα στο σωστό εύρος.
+          if (currentTimeMins < openMins && closeMins > 24 * 60) {
+            currentAdjusted += 24 * 60; 
+          }
 
           isTimeOpen = (currentAdjusted >= openMins && currentAdjusted <= closeMins);
         }
 
-        // ΤΕΛΙΚΟΣ ΕΛΕΓΧΟΣ: Το μαγαζί θεωρείται ανοιχτό ΜΟΝΟ αν είναι εντός ωραρίου ΚΑΙ δεν έχει πατηθεί η παύση!
         const isAcceptingOrders = settingsData?.accepting_orders ?? true;
         setStoreOpen(isTimeOpen && isAcceptingOrders);
       }
@@ -77,11 +95,9 @@ export function useStore(ui: any) {
     checkStoreStatus();
     const interval = setInterval(checkStoreStatus, 15000);
 
-    // ΠΡΟΣΘΗΚΗ: Realtime Listener!
-    // Ακούει συνεχώς τη βάση δεδομένων. Όταν πατάς το κουμπί στο Admin, κλείνει το καλάθι των πελατών ακαριαία.
     const channel = supabase.channel('public:store_settings:listener')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'store_settings', filter: 'id=eq.1' }, () => {
-        checkStoreStatus(); // Κάνε ξανά τον έλεγχο αμέσως
+        checkStoreStatus(); 
       })
       .subscribe();
 
