@@ -27,6 +27,9 @@ export default function AdminDashboard() {
   const [enteredPin, setEnteredPin] = useState('');
   const [pinError, setPinError] = useState(false);
 
+  // ΠΡΟΣΘΗΚΗ: State για το διακοπτάκι του καταστήματος
+  const [isStoreOpen, setIsStoreOpen] = useState(true);
+
   const requestWakeLock = async () => {
     try {
       if ('wakeLock' in navigator) {
@@ -41,8 +44,14 @@ export default function AdminDashboard() {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) setUser(session.user);
+      
       const { data: pinData } = await supabase.from('pos_settings').select('pin_code').eq('id', 1).single();
       if (pinData) setExpectedPin(pinData.pin_code.trim()); 
+      
+      // ΠΡΟΣΘΗΚΗ: Διαβάζουμε το status του καταστήματος
+      const { data: storeSettings } = await supabase.from('store_settings').select('accepting_orders').eq('id', 1).single();
+      if (storeSettings) setIsStoreOpen(storeSettings.accepting_orders);
+
       fetchOrders();
     };
     checkAuth();
@@ -89,17 +98,15 @@ export default function AdminDashboard() {
     }
   };
 
-  // ΠΡΟΣΘΗΚΗ: Θυμάται ότι έχεις ξεκλειδώσει το ταμείο ακόμα και μετά από refresh
   useEffect(() => {
     if (sessionStorage.getItem('admin_unlocked') === 'true') {
       setAudioUnlocked(true);
     }
   }, []);
 
-  // ΑΛΛΑΓΗ: Αποθηκεύει το ξεκλείδωμα όταν βάζεις σωστό PIN
   const handlePinSubmit = () => {
     if (enteredPin === expectedPin) {
-      sessionStorage.setItem('admin_unlocked', 'true'); // Αποθήκευση!
+      sessionStorage.setItem('admin_unlocked', 'true');
       const audio = document.getElementById('order-alert-sound') as HTMLAudioElement;
       if (audio) {
         audio.muted = true;
@@ -107,6 +114,36 @@ export default function AdminDashboard() {
       } else { setAudioUnlocked(true); requestWakeLock(); }
     } else {
       setPinError(true); setEnteredPin(''); setTimeout(() => setPinError(false), 800);
+    }
+  };
+
+  // ΠΡΟΣΘΗΚΗ: Συνάρτηση για το Διακοπτάκι
+  const toggleStoreStatus = async () => {
+    const newStatus = !isStoreOpen;
+    setIsStoreOpen(newStatus); // Άμεση αλλαγή στο UI
+
+    const { error } = await supabase
+      .from('store_settings')
+      .update({ accepting_orders: newStatus })
+      .eq('id', 1);
+
+    if (error) {
+      alert("Σφάλμα κατά την αλλαγή κατάστασης: " + error.message);
+      setIsStoreOpen(!newStatus); // Επαναφορά αν χτυπήσει error
+    }
+  };
+
+  // ΠΡΟΣΘΗΚΗ: Συνάρτηση για Ακύρωση Παραγγελίας
+  const handleCancelOrder = async (orderId: number) => {
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: 'cancelled' })
+      .eq('id', orderId);
+
+    if (error) {
+      alert("Σφάλμα κατά την ακύρωση: " + error.message);
+    } else {
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' } : o));
     }
   };
 
@@ -186,7 +223,21 @@ export default function AdminDashboard() {
               <button onClick={() => setActiveTab('history')} className={`px-5 py-2 rounded-lg text-xs font-black uppercase transition-colors ${activeTab === 'history' ? 'bg-[#38BDF8] text-[#0B1120]' : 'text-gray-400 hover:text-white'}`}>ΙΣΤΟΡΙΚΟ & Z</button>
               <button onClick={() => setActiveTab('settings')} className={`px-5 py-2 rounded-lg text-xs font-black uppercase transition-colors ${activeTab === 'settings' ? 'bg-[#38BDF8] text-[#0B1120]' : 'text-gray-400 hover:text-white'}`}>ΡΥΘΜΙΣΕΙΣ</button>
             </div>
+            
+            {/* ΠΡΟΣΘΗΚΗ: Το Διακοπτάκι (Store Pause) */}
+            <button 
+              onClick={toggleStoreStatus}
+              className={`hidden md:flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all border shadow-lg ${
+                isStoreOpen 
+                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50 hover:bg-emerald-500/30' 
+                  : 'bg-red-500 text-white border-red-600 hover:bg-red-600 animate-pulse'
+              }`}
+            >
+              <div className={`w-3 h-3 rounded-full ${isStoreOpen ? 'bg-emerald-400' : 'bg-white'}`}></div>
+              {isStoreOpen ? 'ΠΑΡΑΓΓΕΛΙΕΣ ΑΝΟΙΧΤΕΣ' : 'ΠΑΡΑΓΓΕΛΙΕΣ ΚΛΕΙΣΤΕΣ'}
+            </button>
           </div>
+          
           <div className="flex items-center gap-4">
             <button onClick={playSound} className="hidden sm:block bg-gray-800 text-gray-300 border border-gray-600 px-3 py-2 rounded-xl text-xs font-bold hover:bg-gray-700 transition-colors">🔊 Δοκιμή Ήχου</button>
             <Link href="/admin/products" className="hidden sm:block bg-purple-600 hover:bg-purple-500 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase shadow-lg transition-colors">📋 ΔΙΑΧΕΙΡΙΣΗ ΚΑΤΑΛΟΓΟΥ</Link>
@@ -197,6 +248,21 @@ export default function AdminDashboard() {
             )}
           </div>
         </header>
+
+        {/* ΠΡΟΣΘΗΚΗ: Mobile version του Διακόπτη για μικρές οθόνες */}
+        <div className="md:hidden p-4 bg-[#0F172A] border-b border-white/10">
+           <button 
+              onClick={toggleStoreStatus}
+              className={`w-full flex justify-center items-center gap-2 px-4 py-3 rounded-xl text-sm font-black uppercase tracking-wider transition-all border shadow-lg ${
+                isStoreOpen 
+                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50 hover:bg-emerald-500/30' 
+                  : 'bg-red-500 text-white border-red-600 hover:bg-red-600 animate-pulse'
+              }`}
+            >
+              <div className={`w-3 h-3 rounded-full ${isStoreOpen ? 'bg-emerald-400' : 'bg-white'}`}></div>
+              {isStoreOpen ? 'ΠΑΡΑΓΓΕΛΙΕΣ ΑΝΟΙΧΤΕΣ' : 'ΠΑΡΑΓΓΕΛΙΕΣ ΚΛΕΙΣΤΕΣ (STORE PAUSE)'}
+            </button>
+        </div>
 
         {activeTab === 'live' ? (
           <main className="p-4 md:p-6 max-w-[1800px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
@@ -217,7 +283,8 @@ export default function AdminDashboard() {
                       <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Ληψη: {new Date(order.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}</span>
                       <OrderTimer createdAt={order.created_at} requestedTime={order.requested_time} status={order.status} />
                     </div>
-                    <OrderCard order={order} onAccept={(exactTime: string | null, mins: number) => handleAcceptOrder(order, exactTime, mins)} onView={() => setSelectedOrder(order)} />
+                    {/* ΠΡΟΣΘΗΚΗ: Περνάμε το onCancel στο OrderCard */}
+                    <OrderCard order={order} onCancel={handleCancelOrder} onAccept={(exactTime: string | null, mins: number) => handleAcceptOrder(order, exactTime, mins)} onView={() => setSelectedOrder(order)} />
                   </div>
                 ))}
               </div>
