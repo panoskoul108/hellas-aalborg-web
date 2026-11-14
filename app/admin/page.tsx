@@ -133,8 +133,10 @@ export default function AdminDashboard() {
     }
   };
 
-  // Συνάρτηση για Ακύρωση Παραγγελίας
+  // Συνάρτηση για Ακύρωση Παραγγελίας & Rollback του Cashback
   const handleCancelOrder = async (orderId: number) => {
+    const orderToCancel = orders.find(o => o.id === orderId);
+
     const { error } = await supabase
       .from('orders')
       .update({ status: 'cancelled' })
@@ -142,8 +144,35 @@ export default function AdminDashboard() {
 
     if (error) {
       alert("Σφάλμα κατά την ακύρωση: " + error.message);
-    } else {
-      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' } : o));
+      return;
+    } 
+    
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' } : o));
+
+    if (orderToCancel?.user_id) {
+      try {
+        const { data: settings } = await supabase.from('store_settings').select('loyalty_earn_percentage').eq('id', 1).single();
+        const earnPct = settings ? settings.loyalty_earn_percentage : 5;
+
+        const earnedCashback = Number((orderToCancel.total_price * (earnPct / 100)).toFixed(2));
+        const usedDiscount = orderToCancel.discount_dkk || 0;
+
+        const { data: loyaltyData } = await supabase.from('customers_loyalty').select('*').eq('user_id', orderToCancel.user_id).single();
+
+        if (loyaltyData) {
+          const currentBalance = Number(loyaltyData.wallet_balance || 0);
+          
+          const newBalance = currentBalance + usedDiscount - earnedCashback;
+          
+          await supabase.from('customers_loyalty').update({
+            wallet_balance: Number(newBalance.toFixed(2)),
+            total_orders: Math.max(0, (loyaltyData.total_orders || 1) - 1),
+            total_spent_dkk: Math.max(0, Number(loyaltyData.total_spent_dkk || 0) - orderToCancel.total_price)
+          }).eq('user_id', orderToCancel.user_id);
+        }
+      } catch (err) {
+        console.error("Σφάλμα κατά το rollback του loyalty:", err);
+      }
     }
   };
 
@@ -272,7 +301,7 @@ export default function AdminDashboard() {
               🔄
             </button>
             
-            <div className="h-6 w-px bg-slate-700 hidden sm:block mx-1"></div>
+            <div className="h-6 w-px bg-slate-700 hidden sm:block mx-1"></div> {/* Κάθετη γραμμή διαχωρισμού */}
 
             <button onClick={() => { setAudioUnlocked(false); setEnteredPin(''); sessionStorage.removeItem('admin_unlocked'); }} className="text-[10px] text-orange-400 hover:text-white bg-orange-500/10 hover:bg-orange-500/30 border border-orange-500/30 font-black uppercase px-3 py-2.5 rounded-xl transition-colors shadow-sm">
               ΚΛΕΙΔΩΜΑ
