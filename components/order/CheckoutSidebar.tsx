@@ -140,7 +140,12 @@ export default function CheckoutSidebar({
               <LoyaltyWallet userId={auth.user?.id} subtotal={subtotal} lang={lang} onApplyDiscount={setLoyaltyDiscount} settings={storeSettings} />
               <div><label className="text-xs text-gray-500 font-bold uppercase tracking-wider block mb-2">{ui.nameLabel}</label><input type="text" value={auth.customerName} onChange={e => auth.setCustomerName(e.target.value)} required className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 transition-colors" /></div>
               <div><label className="text-xs text-gray-500 font-bold uppercase tracking-wider block mb-2">{ui.phoneLabel}</label><input type="tel" value={auth.customerPhone} onChange={e => auth.setCustomerPhone(e.target.value)} required className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 transition-colors" /></div>
-              <div><label className="text-xs text-gray-500 font-bold uppercase tracking-wider block mb-2">{ui.timeLabel}</label><select value={requestedTime} onChange={e => setRequestedTime(e.target.value)} className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white font-medium text-sm outline-none focus:border-[#38BDF8]/50 transition-colors">{generateTimeSlots().map((slot: any, i: number) => <option key={i} value={slot.value}>{slot.label}</option>)}</select></div>
+              
+              {/* ΑΝΟΙΧΤΟ ΚΑΤΑΣΤΗΜΑ: Εμφάνιση Ώρας */}
+              {storeOpen && (
+                <div><label className="text-xs text-gray-500 font-bold uppercase tracking-wider block mb-2">{ui.timeLabel}</label><select value={requestedTime} onChange={e => setRequestedTime(e.target.value)} className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white font-medium text-sm outline-none focus:border-[#38BDF8]/50 transition-colors">{generateTimeSlots().map((slot: any, i: number) => <option key={i} value={slot.value}>{slot.label}</option>)}</select></div>
+              )}
+
               <div><label className="text-xs text-gray-500 font-bold uppercase tracking-wider block mb-2">{ui.orderNoteTitle}</label><textarea value={orderNote} onChange={e => setOrderNote(e.target.value)} placeholder={ui.orderNotePlh} rows={2} className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 resize-none transition-colors"></textarea></div>
               <div className="mt-2"><label className="text-xs text-gray-500 font-bold uppercase tracking-wider block mb-3">{ui.payLabel}</label>
                 <div className="grid grid-cols-2 gap-3">
@@ -157,8 +162,15 @@ export default function CheckoutSidebar({
             <div className="flex justify-between items-center mb-2"><span className="text-gray-400 text-sm">{ui.subtotal}</span><span className="text-white font-bold">{subtotal} kr.</span></div>
             {loyaltyDiscount > 0 && <div className="flex justify-between items-center mb-2 text-[#38BDF8]"><span className="text-sm">{ui.loyaltyDiscount}</span><span className="font-bold">-{loyaltyDiscount.toFixed(2)} kr.</span></div>}
             <div className="flex justify-between items-center mt-4 mb-6 border-t border-white/5 pt-4"><span className="text-white font-bold uppercase tracking-wide">{ui.totalPay}</span><span className="text-2xl font-bold text-[#38BDF8]">{finalTotal.toFixed(2)} kr.</span></div>
-            {!storeOpen && checkoutStep === 'cart' && requestedTime === 'ASAP' ? (
-              <button onClick={() => setCheckoutStep('checkout')} className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold uppercase tracking-wide py-4 rounded-xl transition-colors">{t.schedule}</button>
+            
+            {/* ΠΡΟΣΘΗΚΗ: ΚΛΕΙΔΩΜΑ ΚΑΛΑΘΙΟΥ ΟΤΑΝ ΤΟ ΜΑΓΑΖΙ ΕΙΝΑΙ ΚΛΕΙΣΤΟ (Store Pause) */}
+            {!storeOpen ? (
+              <div className="flex flex-col gap-2 animate-fade-in-up">
+                 <button disabled className="w-full bg-red-900/50 text-red-300 font-black uppercase tracking-widest py-4 rounded-xl border border-red-500/30 cursor-not-allowed">
+                   ΠΡΟΣΩΡΙΝΑ ΚΛΕΙΣΤΟ
+                 </button>
+                 <p className="text-xs text-red-400 font-bold text-center italic">Λόγω φόρτου εργασίας δεν δεχόμαστε νέες παραγγελίες αυτή τη στιγμή. Δοκιμάστε ξανά αργότερα!</p>
+              </div>
             ) : checkoutStep === 'cart' ? (
               <button onClick={() => auth.user ? setCheckoutStep('checkout') : setCheckoutStep('auth')} className="w-full bg-[#38BDF8] text-[#0B1120] font-bold uppercase tracking-wide py-4 rounded-xl hover:bg-sky-400 transition-colors">{ui.toCheckout}</button>
             ) : checkoutStep === 'auth' ? (
