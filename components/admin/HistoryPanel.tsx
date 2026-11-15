@@ -10,6 +10,9 @@ export default function HistoryPanel() {
   const [paymentFilter, setPaymentFilter] = useState("ALL"); 
   const [historySearch, setHistorySearch] = useState("");
   const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
+  
+  // ΝΕΟ STATE: Κρατάει την παραγγελία που έχουμε κάνει κλικ για να δούμε λεπτομέρειες
+  const [viewingOrder, setViewingOrder] = useState<any>(null);
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -86,7 +89,7 @@ export default function HistoryPanel() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 pb-20 mt-6">
+    <div className="max-w-7xl mx-auto space-y-6 pb-20 mt-6 relative">
       
       <div className="p-4 rounded-[2rem] shadow-sm flex flex-col md:flex-row gap-4 justify-between border bg-slate-800 border-slate-700 print:hidden">
         <div className="flex p-1 rounded-2xl gap-1 overflow-x-auto no-scrollbar bg-slate-900">
@@ -222,12 +225,13 @@ export default function HistoryPanel() {
                 <div
                   key={o.id}
                   className={`p-4 rounded-[2rem] flex justify-between items-center transition-all border-2 ${
-                    selectedOrderIds.includes(o.id) ? "border-[#38BDF8] bg-sky-900/30" : "border-slate-700 bg-slate-800 hover:border-slate-600"
+                    selectedOrderIds.includes(o.id) ? "border-[#38BDF8] bg-sky-900/30" : "border-slate-700 bg-slate-800 hover:border-slate-600 cursor-pointer"
                   }`}
                 >
-                  <div className="flex-1 flex justify-between items-center pr-4">
+                  {/* ΚΛΙΚ ΓΙΑ ΑΝΟΙΓΜΑ ΤΗΣ ΠΑΡΑΓΓΕΛΙΑΣ */}
+                  <div className="flex-1 flex justify-between items-center pr-4" onClick={() => setViewingOrder(o)}>
                     <div>
-                      <span className="font-black italic text-base text-[#38BDF8]">#{o.order_number || o.id.toString().slice(-4)}</span>
+                      <span className="font-black italic text-base text-[#38BDF8] hover:underline">#{o.order_number || o.id.toString().slice(-4)}</span>
                       <p className="text-[10px] font-bold text-gray-300 mt-0.5">{o.customer_name}</p>
                       <p className="text-[9px] font-bold text-gray-500 uppercase mt-1">
                         {new Date(o.created_at).toLocaleTimeString("da-DK", { hour: '2-digit', minute: '2-digit' })} • {o.payment_method}
@@ -236,8 +240,12 @@ export default function HistoryPanel() {
                     </div>
                     <span className="font-black text-lg tracking-tighter text-white">{Number(o.total_price).toFixed(2)} kr.</span>
                   </div>
+                  {/* CHECKBOX ΓΙΑ ΔΙΑΓΡΑΦΗ */}
                   <div
-                    onClick={() => setSelectedOrderIds((prev) => prev.includes(o.id) ? prev.filter((i) => i !== o.id) : [...prev, o.id])}
+                    onClick={(e) => {
+                      e.stopPropagation(); // Σταματάει το κλικ από το να ανοίξει το modal όταν απλά τικάρεις για διαγραφή
+                      setSelectedOrderIds((prev) => prev.includes(o.id) ? prev.filter((i) => i !== o.id) : [...prev, o.id]);
+                    }}
                     className={`w-8 h-8 rounded-full border-2 flex items-center justify-center cursor-pointer transition-colors ${
                       selectedOrderIds.includes(o.id) ? "bg-[#38BDF8] border-[#38BDF8] text-[#0B1120]" : "border-slate-600 text-transparent hover:border-gray-400"
                     }`}
@@ -252,6 +260,93 @@ export default function HistoryPanel() {
             </div>
           </div>
         </>
+      )}
+
+      {/* --------------------------------------------------- */}
+      {/* MODAL ΛΕΠΤΟΜΕΡΕΙΩΝ ΠΑΡΑΓΓΕΛΙΑΣ (VIEW ORDER)         */}
+      {/* --------------------------------------------------- */}
+      {viewingOrder && (
+        <div 
+          className="fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm print:hidden" 
+          onClick={() => setViewingOrder(null)}
+        >
+          <div 
+            className="bg-slate-800 border border-slate-600 w-full max-w-xl rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]" 
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-900">
+              <div>
+                <h2 className="text-2xl font-black text-white italic">#{viewingOrder.order_number || viewingOrder.id.toString().slice(-4)}</h2>
+                <span className="text-xs font-bold uppercase tracking-widest px-2 py-1 rounded-md mt-1 inline-block bg-slate-700 text-gray-300">
+                  {new Date(viewingOrder.created_at).toLocaleString("el-GR")}
+                </span>
+              </div>
+              <button onClick={() => setViewingOrder(null)} className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white transition-colors border border-slate-700 shadow-sm">
+                ✕
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1">
+              <div className="grid grid-cols-2 gap-4 mb-6 border-b border-slate-700 pb-6">
+                <div>
+                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Πελατης</p>
+                  <p className="text-lg font-black text-white">{viewingOrder.customer_name}</p>
+                  <p className="text-sm font-bold text-gray-400">{viewingOrder.customer_phone}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Κατασταση</p>
+                  <p className={`text-lg font-black ${viewingOrder.status === 'delivered' ? 'text-emerald-400' : 'text-gray-300'} uppercase`}>
+                    {viewingOrder.status}
+                  </p>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">
+                    Ζητηθηκε: {viewingOrder.requested_time ? viewingOrder.requested_time.slice(0,5) : 'ASAP'}
+                  </p>
+                </div>
+              </div>
+
+              <h4 className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-3">Προϊοντα</h4>
+              <ul className="space-y-4">
+                {(viewingOrder.items || []).map((it: any, i: number) => (
+                  <li key={i} className="flex flex-col bg-slate-900/50 p-4 rounded-xl border border-white/5 shadow-sm">
+                    <div className="flex justify-between font-bold text-lg text-white">
+                      <span><span className="text-[#38BDF8] mr-2">{it.quantity || 1}x</span>{it.title_da || it.title_el || it.name}</span>
+                      <span>{(it.unit_price_dkk * (it.quantity || 1)).toFixed(2)} kr.</span>
+                    </div>
+                    {it.selectedOptions?.length > 0 && (
+                      <span className="text-sm text-gray-400 mt-1">+ {it.selectedOptions.map((o:any) => o.name || o).join(', ')}</span>
+                    )}
+                    {it.note && (
+                      <span className="text-sm bg-yellow-900/40 text-yellow-500 border border-yellow-700/50 px-3 py-1.5 rounded-lg mt-2 inline-block w-fit font-bold italic">
+                        📝 {it.note}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              
+              {viewingOrder.notes && (
+                <div className="bg-indigo-900/30 border border-indigo-800/50 p-4 rounded-xl mt-6 shadow-sm">
+                  <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block mb-1">ΓΕΝΙΚΟ ΣΧΟΛΙΟ:</span>
+                  <p className="text-base text-indigo-100 font-bold italic">{viewingOrder.notes}</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="p-6 border-t border-slate-700 bg-slate-900 flex justify-between items-center">
+              <div>
+                <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Πληρωμή: {viewingOrder.payment_method}</p>
+                <p className="text-2xl font-black text-white">{Number(viewingOrder.total_price).toFixed(2)} kr.</p>
+              </div>
+              {/* Αν υπήρχε έκπτωση Loyalty, τη δείχνουμε διακριτικά δίπλα στο σύνολο */}
+              {viewingOrder.discount_dkk > 0 && (
+                <div className="text-right">
+                  <p className="text-[10px] text-[#38BDF8] font-black uppercase tracking-widest">Εκπτωση Loyalty</p>
+                  <p className="text-sm font-bold text-white">-{Number(viewingOrder.discount_dkk).toFixed(2)} kr.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* --------------------------------------------------- */}
