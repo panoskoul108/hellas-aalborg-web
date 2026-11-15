@@ -1,20 +1,21 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 
-export default function ProductModal({ activeProduct, lang, closeModal, addToCart, supabaseImageUrl }: any) {
+export default function ProductModal({ activeProduct, lang, closeModal, addToCart, editCartItem, editingCartItem, supabaseImageUrl }: any) {
   const [quantity, setQuantity] = useState(1);
   const [note, setNote] = useState('');
   const [selections, setSelections] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     if (activeProduct) {
-      setQuantity(activeProduct.quantity || 1);
+      // Αν ήμασταν σε Edit Mode, ο 'editingCartItem' θα έχει τη ποσότητα που είχαμε βάλει!
+      setQuantity(editingCartItem ? editingCartItem.quantity : (activeProduct.quantity || 1));
       setNote(activeProduct.note || '');
       setSelections(activeProduct.rawSelections || {}); 
     }
-  }, [activeProduct]);
+  }, [activeProduct, editingCartItem]);
 
-  const isEditing = !!activeProduct?.cartId;
+  const isEditing = !!editingCartItem?.cartId;
   const title = activeProduct[`title_${lang}`] || activeProduct.title_da || activeProduct.title_el || activeProduct.name;
   const desc = activeProduct[`desc_${lang}`] || activeProduct.desc_da;
   
@@ -44,7 +45,6 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
   
   const totalPrice = (basePrice + extraPrice) * quantity;
 
-  // Βελτιωμένη λογική επιλογής (Λαμβάνει υπόψη το maxVal)
   const handleSelect = (groupKey: string, optionName: string, isSingle: boolean, maxVal: number) => {
     setSelections(prev => {
       const currentSelections = prev[groupKey] || [];
@@ -86,7 +86,8 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
        }
     });
 
-    addToCart({ 
+    // Φτιάχνουμε το τελικό "πακέτο" του προϊόντος
+    const finalProduct = { 
       ...activeProduct, 
       original_price: basePrice,
       final_price: basePrice + extraPrice, 
@@ -94,7 +95,14 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
       selectedOptions: flatSelections, 
       rawSelections: selections, 
       note 
-    }, quantity);
+    };
+
+    // ΕΔΩ Η ΜΑΓΕΙΑ: Αν ήμασταν σε Edit Mode, καλούμε την `editCartItem` για να αντικαταστήσει το παλιό
+    if (isEditing && editCartItem) {
+      editCartItem(editingCartItem.cartId, finalProduct, quantity);
+    } else {
+      addToCart(finalProduct, quantity);
+    }
     
     closeModal();
   };
@@ -123,7 +131,6 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
                 const group = extras[groupKey];
                 const maxVal = Number(group.max) || 0;
                 
-                // ΕΞΥΠΝΟΣ ΕΛΕΓΧΟΣ: Ακυρώνει το "single" από το Supabase αν το max είναι >= 2
                 const isSingle = (group.type === 'single' && maxVal <= 1) || maxVal === 1;
                 const currentSelections = selections[groupKey] || [];
 
