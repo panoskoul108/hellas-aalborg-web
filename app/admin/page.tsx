@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase'; 
 import { PrintTicket } from './PrintTicket'; 
 import OrderTimer from '@/components/admin/OrderTimer'; 
@@ -14,12 +14,17 @@ export default function AdminDashboard() {
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // -- STATES ΓΙΑ ΤΟ PIN PAD ΚΑΙ ΗΧΟ --
-  const [prevCount, setPrevCount] = useState(0);
+  // -- STATES ΓΙΑ ΤΟ PIN PAD, ΗΧΟ ΚΑΙ ΥΠΕΝΘΥΜΙΣΕΙΣ --
+  const prevCountRef = useRef(0); // Κρατάει τον προηγούμενο αριθμό εκκρεμών
+  const remindedOrdersRef = useRef<Set<number>>(new Set()); // Κρατάει ποιες παραγγελίες χτύπησαν στο 10λεπτο
+  
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [expectedPin, setExpectedPin] = useState('1234'); 
   const [enteredPin, setEnteredPin] = useState('');
   const [pinError, setPinError] = useState(false);
+  
+  // Ειδικό state για την οπτική υπενθύμιση των 10 λεπτών
+  const [reminderAlert, setReminderAlert] = useState({ show: false, orderId: '', time: '' });
   
   // -- UI STATES --
   const [isPrinting, setIsPrinting] = useState(false);
@@ -78,12 +83,6 @@ export default function AdminDashboard() {
     return () => { clearInterval(interval); document.removeEventListener("visibilitychange", handleVisibilityChange); };
   }, [audioUnlocked]);
 
-  useEffect(() => {
-    const pendingCount = orders.filter(o => o.status === 'pending').length;
-    if (pendingCount > prevCount && audioUnlocked) playSound();
-    setPrevCount(pendingCount);
-  }, [orders, prevCount, audioUnlocked]);
-
   const playSound = () => {
     const audio = document.getElementById('order-alert-sound') as HTMLAudioElement;
     if (audio) {
@@ -91,6 +90,75 @@ export default function AdminDashboard() {
       audio.play().catch(e => console.log("Audio Blocked:", e));
     }
   };
+
+  // --- ΜΗΧΑΝΙΣΜΟΙ ΗΧΩΝ & ΥΠΕΝΘΥΜΙΣΕΩΝ ---
+
+  // 1. Άμεσος ήχος όταν σκάει ΝΕΑ παραγγελία
+  useEffect(() => {
+    const pendingCount = orders.filter(o => o.status === 'pending').length;
+    if (pendingCount > prevCountRef.current && audioUnlocked) {
+      playSound();
+    }
+    prevCountRef.current = pendingCount;
+  }, [orders, audioUnlocked]);
+
+  // 2. Επαναλαμβανόμενος ήχος ΚΑΘΕ 5 ΔΕΥΤΕΡΟΛΕΠΤΑ όσο υπάρχουν "Pending" παραγγελίες
+  useEffect(() => {
+    if (!audioUnlocked) return;
+    const pendingCount = orders.filter(o => o.status === 'pending').length;
+    
+    let interval: NodeJS.Timeout;
+    if (pendingCount > 0) {
+      interval = setInterval(() => {
+        playSound();
+      }, 5000); // 5 δευτερόλεπτα
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [orders, audioUnlocked]);
+
+  // 3. Έλεγχος & Υπενθύμιση παραγγελιών στο 10λεπτο
+  useEffect(() => {
+    if (!audioUnlocked) return;
+    
+    const interval = setInterval(() => {
+      const now = new Date();
+      const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
+
+      orders.forEach(order => {
+        if (order.status === 'preparing' && order.requested_time) {
+          const [reqH, reqM] = order.requested_time.split(':').map(Number);
+          let diff = (reqH * 60 + reqM) - currentTotalMinutes;
+          
+          if (diff < -720) diff += 1440; // Διόρθωση αν περάσαμε τα μεσάνυχτα
+          
+          // Αν η παραγγελία πρέπει να βγει σε 1 έως 10 λεπτά ΚΑΙ δεν έχει ήδη χτυπήσει
+          if (diff > 0 && diff <= 10 && !remindedOrdersRef.current.has(order.id)) {
+            // Διπλός Ήχος Προειδοποίησης
+            playSound();
+            setTimeout(() => playSound(), 1000);
+            
+            // Εμφάνιση οπτικού Alert
+            setReminderAlert({ 
+              show: true, 
+              orderId: order.order_number || order.id.toString().slice(-4), 
+              time: order.requested_time.slice(0, 5) 
+            });
+            
+            // Καταγραφή ότι χτύπησε για να μην χτυπάει συνέχεια
+            remindedOrdersRef.current.add(order.id);
+            
+            // Κλείσιμο του Alert μετά από 12 δευτερόλεπτα
+            setTimeout(() => setReminderAlert({ show: false, orderId: '', time: '' }), 12000);
+          }
+        }
+      });
+    }, 30000); // Ο έλεγχος γίνεται κάθε 30 δευτερόλεπτα για να μην ζορίζει το tablet
+
+    return () => clearInterval(interval);
+  }, [orders, audioUnlocked]);
 
   useEffect(() => {
     if (sessionStorage.getItem('admin_unlocked') === 'true') {
@@ -225,6 +293,17 @@ export default function AdminDashboard() {
     <>
       <audio id="order-alert-sound" src={NOTIFICATION_SOUND} preload="auto" />
 
+      {/* ΝΕΟ: ΟΠΤΙΚΟ BANNER ΥΠΕΝΘΥΜΙΣΗΣ (ΕΜΦΑΝΙΖΕΤΑΙ ΟΤΑΝ ΧΤΥΠΑΕΙ ΤΟ 10ΛΕΠΤΟ) */}
+      {reminderAlert.show && (
+        <div className="fixed top-20 md:top-10 left-1/2 -translate-x-1/2 bg-red-600 text-white px-8 py-5 rounded-3xl shadow-[0_20px_50px_rgba(220,38,38,0.7)] z-[9999] animate-bounce border-4 border-white flex flex-col items-center min-w-[320px]">
+          <span className="text-5xl mb-2">⚠️</span>
+          <span className="font-black text-xl md:text-2xl uppercase tracking-widest text-center">ΠΡΟΣΟΧΗ ΧΡΟΝΟΣ!</span>
+          <span className="font-bold text-lg md:text-xl mt-2 text-red-100 text-center">
+            Η παραγγελία <strong className="text-white text-2xl">#{reminderAlert.orderId}</strong> πρέπει να βγει στις <strong className="text-white text-2xl">{reminderAlert.time}</strong>
+          </span>
+        </div>
+      )}
+
       <div className={`min-h-screen font-sans bg-[#0B1120] text-gray-200 bg-[url('/bg.jpg')] bg-cover bg-fixed bg-center relative print:hidden ${isPrinting ? "hidden" : "block"}`}>
         <div className="absolute inset-0 bg-[#0B1120]/85 -z-10"></div>
 
@@ -271,7 +350,7 @@ export default function AdminDashboard() {
             </button>
 
             <Link href="/admin/products" className="hidden lg:flex items-center gap-1.5 bg-purple-600/20 text-purple-400 border border-purple-500/30 hover:bg-purple-600/30 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase shadow-sm transition-colors">
-               📋 ΚΑΤΑΛΟΓΟΣ
+                📋 ΚΑΤΑΛΟΓΟΣ
             </Link>
             
             <button onClick={playSound} className="hidden sm:flex items-center justify-center bg-slate-800 text-gray-300 border border-slate-600 w-10 h-10 rounded-xl hover:bg-slate-700 transition-colors shadow-sm" title="Δοκιμή Ήχου">
