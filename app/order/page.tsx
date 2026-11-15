@@ -536,6 +536,11 @@ export default function OrderPage() {
           setActiveProduct(cartItem.item);
           setIsCartOpen(false);
         }}
+        onAddNewItem={(item: any) => {
+          setEditingCartItem(null); // Δεν κάνουμε edit, είναι καινούργιο!
+          setActiveProduct(item); // Ανοίγει το παράθυρο
+          setIsCartOpen(false); // Κλείνει το καλάθι
+        }}
       />
 
     </div>
