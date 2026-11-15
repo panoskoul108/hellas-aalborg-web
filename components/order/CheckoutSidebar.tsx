@@ -55,7 +55,7 @@ export default function CheckoutSidebar({
             <div className="flex flex-col items-center justify-center py-10 h-full text-center animate-fade-in">
               <div className="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center text-[#38BDF8] mb-6"><Icons.Check /></div>
               <h2 className="text-2xl font-bold text-white mb-3 uppercase tracking-wide">{ui.thankYou}</h2><p className="text-gray-400 text-sm mb-10 px-4 leading-relaxed">{ui.reviewPrompt}</p>
-              <a href="https://reviewshellas.dk" target="_blank" rel="noopener noreferrer" className="w-full bg-[#38BDF8] text-[#0B1120] font-bold uppercase tracking-wide py-4 rounded-xl mb-4 block">{ui.leaveReview}</a>
+              <a href="https://qr.abcrfid.com/re?uid=0475AD2DBC2A81" target="_blank" rel="noopener noreferrer" className="w-full bg-[#38BDF8] text-[#0B1120] font-bold uppercase tracking-wide py-4 rounded-xl mb-4 block">{ui.leaveReview}</a>
               <button onClick={() => { setCheckoutStep('cart'); setIsCartOpen(false); }} className="w-full bg-slate-800 text-gray-300 font-bold uppercase tracking-wide py-4 rounded-xl hover:bg-slate-700 transition-colors">{ui.close}</button>
             </div>
           ) : checkoutStep === 'success' ? (
