@@ -17,10 +17,11 @@ export default function LoyaltyWallet({ userId, subtotal, lang, onApplyDiscount,
   const maxPct = settings?.loyalty_max_percentage || 50; 
   const earnPct = settings?.loyalty_earn_percentage || 5;
 
+  // ΒΕΛΤΙΩΣΗ: Προσθέσαμε το {E}% στο earnMsg για να δείχνει το δυναμικό ποσοστό
   const dict = {
-    da: { walletTitle: "Dit Digitale Pung", balanceMsg: "Din saldo:", useBtn: "Brug saldo", earnMsg: "Du tjener", limitMsg: "Du kan betale op til {X}% af din ordre med point." },
-    en: { walletTitle: "Your Digital Wallet", balanceMsg: "Your balance:", useBtn: "Use balance", earnMsg: "You will earn", limitMsg: "You can pay up to {X}% of your order with points." },
-    el: { walletTitle: "Το Ψηφιακό σας Πορτοφόλι", balanceMsg: "Το υπόλοιπό σας:", useBtn: "Χρήση υπολοίπου", earnMsg: "Θα κερδίσετε", limitMsg: "Μπορείτε να καλύψετε έως το {X}% της παραγγελίας με πόντους." }
+    da: { walletTitle: "Dit Digitale Pung", balanceMsg: "Din saldo:", useBtn: "Brug saldo", earnMsg: "Du tjener ({E}%)", limitMsg: "Du kan betale op til {X}% af din ordre med point." },
+    en: { walletTitle: "Your Digital Wallet", balanceMsg: "Your balance:", useBtn: "Use balance", earnMsg: "You will earn ({E}%)", limitMsg: "You can pay up to {X}% of your order with points." },
+    el: { walletTitle: "Το Ψηφιακό σας Πορτοφόλι", balanceMsg: "Το υπόλοιπό σας:", useBtn: "Χρήση υπολοίπου", earnMsg: "Κερδίζετε ({E}%)", limitMsg: "Μπορείτε να καλύψετε έως το {X}% της παραγγελίας με πόντους." }
   };
   const ui = dict[lang];
 
@@ -82,7 +83,8 @@ export default function LoyaltyWallet({ userId, subtotal, lang, onApplyDiscount,
       )}
 
       <div className="bg-[#38BDF8]/10 text-[#38BDF8] text-[10px] font-bold px-3 py-2 rounded-lg mt-3 flex justify-between items-center border border-[#38BDF8]/20">
-        <span className="uppercase tracking-widest">{ui.earnMsg}:</span>
+        {/* ΒΕΛΤΙΩΣΗ: Αντικαθιστούμε το {E} με το πραγματικό ποσοστό earnPct */}
+        <span className="uppercase tracking-widest">{ui.earnMsg.replace('{E}', earnPct.toString())}:</span>
         <span className="text-xs font-black">+{willEarn} kr.</span>
       </div>
     </div>
