@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { supabase } from '../supabase';
 import ProductModal from './ProductModal';
 import CheckoutSidebar from '../../components/order/CheckoutSidebar';
@@ -23,6 +24,7 @@ export default function OrderPage() {
   const auth = useAuth();
   const [loyaltyDiscount, setLoyaltyDiscount] = useState(0); 
   
+  // ΠΡΟΣΘΗΚΗ: Φέρνουμε και το editCartItem από το hook
   const { cart, addToCart, removeFromCart, updateQuantity, editCartItem, clearCart, subtotal, finalTotal, vatMoms, getItemPrice } = useCart(loyaltyDiscount);
 
   // --- LOCAL STATE ---
@@ -33,6 +35,8 @@ export default function OrderPage() {
   
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [activeProduct, setActiveProduct] = useState<any>(null);
+  
+  // ΠΡΟΣΘΗΚΗ: Κρατάει ποιο προϊόν του καλαθιού επεξεργαζόμαστε
   const [editingCartItem, setEditingCartItem] = useState<any>(null);
   
   const [checkoutStep, setCheckoutStep] = useState<'cart' | 'auth' | 'checkout' | 'success' | 'review' | 'profile'>('cart');
@@ -53,7 +57,7 @@ export default function OrderPage() {
   
   // States για το ωράριο και την προσωρινή παύση
   const [nextOpenTimeStr, setNextOpenTimeStr] = useState<string>("17:00");
-  const [isScheduledOpen, setIsScheduledOpen] = useState<boolean>(false); // ΝΕΟ: Ελέγχει αν είναι κανονικά ανοιχτά βάσει ωραρίου
+  const [isScheduledOpen, setIsScheduledOpen] = useState<boolean>(false);
 
   // --- EFFECTS ---
   useEffect(() => {
@@ -87,14 +91,13 @@ export default function OrderPage() {
              const closeDate = new Date();
              closeDate.setHours(closeH, closeM, 0, 0);
 
-             // Ελέγχουμε αν η τωρινή ώρα είναι ΜΕΣΑ στο ωράριο λειτουργίας
              if (now >= openDate && now <= closeDate) {
                  currentlyOpenBasedOnSchedule = true;
              }
              
              if (now < openDate) {
                  setNextOpenTimeStr(todaySchedule.open_time.slice(0, 5));
-             } else if (!currentlyOpenBasedOnSchedule) { // Έκλεισε για σήμερα
+             } else if (!currentlyOpenBasedOnSchedule) { 
                   let nextDay = currentDBDay + 1 > 7 ? 1 : currentDBDay + 1;
                   const tomorrowSchedule = hoursRes.data.find((d: any) => d.day_of_week === nextDay);
                   if (tomorrowSchedule && !tomorrowSchedule.is_closed) setNextOpenTimeStr(tomorrowSchedule.open_time.slice(0, 5));
@@ -146,7 +149,7 @@ export default function OrderPage() {
   const localUi = {
     da: { 
       search: "Søg i menuen...", closed: "Lukket", opensAt: `Åbner kl. ${nextOpenTimeStr}`, 
-      paused: "Lukket midlertidigt", // ΝΕΟ ΛΕΚΤΙΚΟ ΠΑΥΣΗΣ
+      paused: "Lukket midlertidigt",
       smiley: "Smiley rapport", details: "Restaurant info", schedule: "Planlæg ordre", 
       viewOrder: "Se bestilling", legalName: "Juridisk navn", cvr: "CVR-nummer", 
       address: "Adresse", maps: "Vis på kort", hours: "Åbningstider", 
@@ -155,7 +158,7 @@ export default function OrderPage() {
     },
     en: { 
       search: "Search menu...", closed: "Closed", opensAt: `Opens at ${nextOpenTimeStr}`, 
-      paused: "Paused for now", // ΝΕΟ ΛΕΚΤΙΚΟ ΠΑΥΣΗΣ
+      paused: "Paused for now",
       smiley: "Smiley report", details: "Restaurant info", schedule: "Schedule order", 
       viewOrder: "View order", legalName: "Legal Name", cvr: "Registered number", 
       address: "Registered address", maps: "View on Maps", hours: "Opening hours", 
@@ -164,7 +167,7 @@ export default function OrderPage() {
     },
     el: { 
       search: "Αναζήτηση μενού...", closed: "Κλειστά", opensAt: `Ανοίγει στις ${nextOpenTimeStr}`, 
-      paused: "Προσωρινά Κλειστά", // ΝΕΟ ΛΕΚΤΙΚΟ ΠΑΥΣΗΣ
+      paused: "Προσωρινά Κλειστά",
       smiley: "Αναφορά Smiley", details: "Πληροφορίες", schedule: "Προγραμματισμός", 
       viewOrder: "Καλάθι", legalName: "Νομική Επωνυμία", cvr: "Αριθμός Μητρώου (CVR)", 
       address: "Διεύθυνση", maps: "Προβολή στο Χάρτη", hours: "Ωράριο Λειτουργίας", 
@@ -345,12 +348,10 @@ export default function OrderPage() {
             ) : (
               <span className="flex items-center gap-1.5 text-red-400 font-bold">
                 <span className="w-2 h-2 rounded-full bg-red-400"></span>
-                {/* ΝΕΑ ΛΟΓΙΚΗ ΓΙΑ ΤΟ ΛΕΚΤΙΚΟ ΠΑΥΣΗΣ Ή ΚΛΕΙΣΙΜΑΤΟΣ */}
                 {isScheduledOpen ? t.paused : t.closed}
               </span>
             )}
             
-            {/* Δείχνουμε το "Åbner kl..." ΜΟΝΟ αν το μαγαζί είναι κανονικά κλειστό λόγω ωραρίου, ΟΧΙ αν είναι σε παύση */}
             {!storeOpen && !isScheduledOpen && <span className="text-gray-600">•</span>}
             {!storeOpen && !isScheduledOpen && <span>{t.opensAt}</span>}
           </div>
@@ -596,9 +597,9 @@ export default function OrderPage() {
           setIsCartOpen(false);
         }}
         onAddNewItem={(item: any) => {
-          setEditingCartItem(null); // Δεν κάνουμε edit, είναι καινούργιο!
-          setActiveProduct(item); // Ανοίγει το παράθυρο
-          setIsCartOpen(false); // Κλείνει το καλάθι
+          setEditingCartItem(null); 
+          setActiveProduct(item); 
+          setIsCartOpen(false); 
         }}
       />
 
