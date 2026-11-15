@@ -8,7 +8,6 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
 
   useEffect(() => {
     if (activeProduct) {
-      // Αν ήμασταν σε Edit Mode, ο 'editingCartItem' θα έχει τη ποσότητα που είχαμε βάλει!
       setQuantity(editingCartItem ? editingCartItem.quantity : (activeProduct.quantity || 1));
       setNote(activeProduct.note || '');
       setSelections(activeProduct.rawSelections || {}); 
@@ -45,10 +44,21 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
   
   const totalPrice = (basePrice + extraPrice) * quantity;
 
-  const handleSelect = (groupKey: string, optionName: string, isSingle: boolean, maxVal: number) => {
+  // ΝΕΑ ΑΛΕΞΙΣΦΑΙΡΗ ΣΥΝΑΡΤΗΣΗ: Ελέγχει όλους τους πιθανούς τρόπους που μπορεί να αποθηκεύτηκε το "Υποχρεωτικό"
+  const checkIsRequired = (group: any) => {
+    if (!group) return false;
+    // Ελέγχει αν γράφτηκε ως "single", "Single", " single " κ.λπ.
+    if (group.type && String(group.type).trim().toLowerCase() === 'single') return true;
+    // Ελέγχει αν γράφτηκε ως required: true 
+    if (group.required === true || String(group.required).trim().toLowerCase() === 'true') return true;
+    if (group.isRequired === true || String(group.isRequired).trim().toLowerCase() === 'true') return true;
+    return false;
+  };
+
+  const handleSelect = (groupKey: string, optionName: string, isRadio: boolean, maxVal: number) => {
     setSelections(prev => {
       const currentSelections = prev[groupKey] || [];
-      if (isSingle) return { ...prev, [groupKey]: [optionName] };
+      if (isRadio) return { ...prev, [groupKey]: [optionName] };
       else {
         if (currentSelections.includes(optionName)) return { ...prev, [groupKey]: currentSelections.filter(n => n !== optionName) };
         else {
@@ -62,11 +72,12 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
   const handleAdd = () => {
     for (const groupKey of Object.keys(extras)) {
       const group = extras[groupKey];
-      const maxVal = Number(group.max) || 0;
-      const isSingle = (group.type === 'single' && maxVal <= 1) || maxVal === 1;
+      
+      // Χρησιμοποιούμε τη νέα συνάρτηση για να δούμε αν είναι υποχρεωτικό
+      const isRequired = checkIsRequired(group); 
 
-      if (isSingle && (!selections[groupKey] || selections[groupKey].length === 0)) {
-        alert(lang === 'da' ? `Vælg venligst: ${getGroupTitle(group, groupKey)}` : lang === 'en' ? `Please select: ${getGroupTitle(group, groupKey)}` : `Παρακαλώ επιλέξτε: ${getGroupTitle(group, groupKey)}`);
+      if (isRequired && (!selections[groupKey] || selections[groupKey].length === 0)) {
+        alert(lang === 'da' ? `Vælg mindst én: ${getGroupTitle(group, groupKey)}` : lang === 'en' ? `Please select at least one: ${getGroupTitle(group, groupKey)}` : `Παρακαλώ επιλέξτε τουλάχιστον 1: ${getGroupTitle(group, groupKey)}`);
         return;
       }
     }
@@ -86,7 +97,6 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
        }
     });
 
-    // Φτιάχνουμε το τελικό "πακέτο" του προϊόντος
     const finalProduct = { 
       ...activeProduct, 
       original_price: basePrice,
@@ -97,7 +107,6 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
       note 
     };
 
-    // ΕΔΩ Η ΜΑΓΕΙΑ: Αν ήμασταν σε Edit Mode, καλούμε την `editCartItem` για να αντικαταστήσει το παλιό
     if (isEditing && editCartItem) {
       editCartItem(editingCartItem.cartId, finalProduct, quantity);
     } else {
@@ -114,7 +123,8 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
       <div className="bg-[#0F172A] w-full h-[95vh] md:h-auto md:max-w-xl rounded-t-3xl md:rounded-3xl overflow-hidden flex flex-col shadow-2xl md:max-h-[90vh] md:border border-white/10" onClick={e => e.stopPropagation()}>
         
         <div className="relative h-48 sm:h-56 shrink-0 bg-slate-800">
-          <button onClick={closeModal} className="absolute top-8 right-4 md:top-4 md:right-4 w-10 h-10 bg-black/50 text-white rounded-full flex items-center justify-center font-black text-xl hover:bg-black/70 transition-colors shadow-md z-10">✕</button>          {activeProduct?.image_path ? (
+          <button onClick={closeModal} className="absolute top-8 right-4 md:top-4 md:right-4 w-10 h-10 bg-black/50 text-white rounded-full flex items-center justify-center font-black text-xl hover:bg-black/70 transition-colors shadow-md z-10">✕</button>
+          {activeProduct?.image_path ? (
             <img src={`${supabaseImageUrl}${activeProduct.image_path}`} alt={title} className="w-full h-full object-cover" />
           ) : <div className="w-full h-full flex items-center justify-center text-5xl">🍽️</div>}
           <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A] to-transparent"></div>
@@ -131,33 +141,42 @@ export default function ProductModal({ activeProduct, lang, closeModal, addToCar
                 const group = extras[groupKey];
                 const maxVal = Number(group.max) || 0;
                 
-                const isSingle = (group.type === 'single' && maxVal <= 1) || maxVal === 1;
+                // Ελέγχουμε με τη νέα συνάρτηση
+                const isRequired = checkIsRequired(group);
+                const isRadio = isRequired && maxVal <= 1;
                 const currentSelections = selections[groupKey] || [];
 
                 return (
                   <div key={groupKey} className="bg-slate-900/60 p-4 rounded-2xl border border-white/5 shadow-inner">
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="font-bold text-white text-sm uppercase tracking-wide">{getGroupTitle(group, groupKey)}</h3>
-                      <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-md ${isSingle ? 'bg-[#38BDF8]/20 text-[#38BDF8]' : 'bg-gray-800 text-gray-400'}`}>
-                        {isSingle ? (lang === 'da' ? 'OBLIGATORISK (Vælg 1)' : lang === 'en' ? 'REQUIRED (Select 1)' : 'ΥΠΟΧΡΕΩΤΙΚΟ (Επιλέξτε 1)') : maxVal > 0 ? (lang === 'da' ? `MAX ${maxVal} VALG` : lang === 'en' ? `UP TO ${maxVal} OPTIONS` : `ΕΩΣ ${maxVal} ΕΠΙΛΟΓΕΣ`) : (lang === 'da' ? 'VALGFRIT' : lang === 'en' ? 'OPTIONAL' : 'ΠΡΟΑΙΡΕΤΙΚΟ')}
+                      
+                      <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-md ${isRequired ? 'bg-[#38BDF8]/20 text-[#38BDF8]' : 'bg-gray-800 text-gray-400'}`}>
+                        {isRequired 
+                          ? (maxVal > 1 
+                              ? (lang === 'da' ? `OBLIGATORISK (MAX ${maxVal})` : lang === 'en' ? `REQUIRED (MAX ${maxVal})` : `ΥΠΟΧΡΕΩΤΙΚΟ (ΕΩΣ ${maxVal})`) 
+                              : (lang === 'da' ? 'OBLIGATORISK (Vælg 1)' : lang === 'en' ? 'REQUIRED (Select 1)' : 'ΥΠΟΧΡΕΩΤΙΚΟ (Επιλέξτε 1)'))
+                          : (maxVal > 0 
+                              ? (lang === 'da' ? `VALGFRIT (MAX ${maxVal})` : lang === 'en' ? `OPTIONAL (MAX ${maxVal})` : `ΠΡΟΑΙΡΕΤΙΚΟ (ΕΩΣ ${maxVal})`) 
+                              : (lang === 'da' ? 'VALGFRIT' : lang === 'en' ? 'OPTIONAL' : 'ΠΡΟΑΙΡΕΤΙΚΟ'))}
                       </span>
                     </div>
 
                     <div className="flex flex-col gap-2.5">
                       {(Array.isArray(group.options) ? group.options : []).map((opt: any, idx: number) => {
                         const isSelected = currentSelections.includes(opt.name);
-                        const isDisabled = !isSingle && !isSelected && maxVal > 0 && currentSelections.length >= maxVal;
+                        const isDisabled = !isRadio && !isSelected && maxVal > 0 && currentSelections.length >= maxVal;
 
                         return (
                           <label key={idx} className={`flex items-center justify-between p-4 rounded-xl border transition-colors cursor-pointer ${isSelected ? 'border-[#38BDF8] bg-[#38BDF8]/10' : 'border-white/5 bg-slate-800/80 hover:bg-slate-800'} ${isDisabled ? 'opacity-40 cursor-not-allowed' : ''}`}>
                             <div className="flex items-center gap-3">
-                              <div className={`w-5 h-5 shrink-0 flex items-center justify-center border-2 transition-colors ${isSingle ? 'rounded-full' : 'rounded-md'} ${isSelected ? 'border-[#38BDF8] bg-[#38BDF8]' : 'border-gray-500'}`}>
-                                {isSelected && <span className={`bg-[#0F172A] ${isSingle ? 'w-2 h-2 rounded-full' : 'w-3 h-3'}`} style={!isSingle ? { clipPath: 'polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%)', backgroundColor: '#0F172A'} : {}}></span>}
+                              <div className={`w-5 h-5 shrink-0 flex items-center justify-center border-2 transition-colors ${isRadio ? 'rounded-full' : 'rounded-md'} ${isSelected ? 'border-[#38BDF8] bg-[#38BDF8]' : 'border-gray-500'}`}>
+                                {isSelected && <span className={`bg-[#0F172A] ${isRadio ? 'w-2 h-2 rounded-full' : 'w-3 h-3'}`} style={!isRadio ? { clipPath: 'polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%)', backgroundColor: '#0F172A'} : {}}></span>}
                               </div>
                               <span className={`text-sm font-bold ${isSelected ? 'text-white' : 'text-gray-300'}`}>{getOptLabel(opt)}</span>
                             </div>
                             <span className="text-xs font-black text-gray-400">{Number(opt.price) > 0 ? `+${opt.price} kr.` : ''}</span>
-                            <input type={isSingle ? "radio" : "checkbox"} name={groupKey} checked={isSelected} disabled={isDisabled} onChange={() => handleSelect(groupKey, opt.name, isSingle, maxVal)} className="hidden" />
+                            <input type={isRadio ? "radio" : "checkbox"} name={groupKey} checked={isSelected} disabled={isDisabled} onChange={() => handleSelect(groupKey, opt.name, isRadio, maxVal)} className="hidden" />
                           </label>
                         );
                       })}
