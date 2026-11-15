@@ -23,7 +23,6 @@ export default function OrderPage() {
   const auth = useAuth();
   const [loyaltyDiscount, setLoyaltyDiscount] = useState(0); 
   
-  // ΠΡΟΣΘΗΚΗ: Φέρνουμε και το editCartItem από το hook
   const { cart, addToCart, removeFromCart, updateQuantity, editCartItem, clearCart, subtotal, finalTotal, vatMoms, getItemPrice } = useCart(loyaltyDiscount);
 
   // --- LOCAL STATE ---
@@ -34,8 +33,6 @@ export default function OrderPage() {
   
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [activeProduct, setActiveProduct] = useState<any>(null);
-  
-  // ΠΡΟΣΘΗΚΗ: Κρατάει ποιο προϊόν του καλαθιού επεξεργαζόμαστε
   const [editingCartItem, setEditingCartItem] = useState<any>(null);
   
   const [checkoutStep, setCheckoutStep] = useState<'cart' | 'auth' | 'checkout' | 'success' | 'review' | 'profile'>('cart');
@@ -53,7 +50,10 @@ export default function OrderPage() {
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // States για το ωράριο και την προσωρινή παύση
   const [nextOpenTimeStr, setNextOpenTimeStr] = useState<string>("17:00");
+  const [isScheduledOpen, setIsScheduledOpen] = useState<boolean>(false); // ΝΕΟ: Ελέγχει αν είναι κανονικά ανοιχτά βάσει ωραρίου
 
   // --- EFFECTS ---
   useEffect(() => {
@@ -66,6 +66,7 @@ export default function OrderPage() {
       
       if (menuRes.data) setMenuItems(menuRes.data);
       if (settingsRes.data) setStoreSettings(settingsRes.data);
+      
       if (hoursRes.data && hoursRes.data.length > 0) {
         setStoreSchedule(hoursRes.data);
         const mapDayOfWeek = (jsDay: number) => jsDay === 0 ? 7 : jsDay; 
@@ -74,12 +75,26 @@ export default function OrderPage() {
         const currentDBDay = mapDayOfWeek(currentJS);
         const todaySchedule = hoursRes.data.find((d: any) => d.day_of_week === currentDBDay);
         
+        let currentlyOpenBasedOnSchedule = false;
+
         if (todaySchedule && !todaySchedule.is_closed) {
              const [openH, openM] = todaySchedule.open_time.split(':').map(Number);
+             const [closeH, closeM] = todaySchedule.close_time.split(':').map(Number);
+             
              const openDate = new Date();
              openDate.setHours(openH, openM, 0, 0);
-             if (now < openDate) setNextOpenTimeStr(todaySchedule.open_time.slice(0, 5));
-             else {
+             
+             const closeDate = new Date();
+             closeDate.setHours(closeH, closeM, 0, 0);
+
+             // Ελέγχουμε αν η τωρινή ώρα είναι ΜΕΣΑ στο ωράριο λειτουργίας
+             if (now >= openDate && now <= closeDate) {
+                 currentlyOpenBasedOnSchedule = true;
+             }
+             
+             if (now < openDate) {
+                 setNextOpenTimeStr(todaySchedule.open_time.slice(0, 5));
+             } else if (!currentlyOpenBasedOnSchedule) { // Έκλεισε για σήμερα
                   let nextDay = currentDBDay + 1 > 7 ? 1 : currentDBDay + 1;
                   const tomorrowSchedule = hoursRes.data.find((d: any) => d.day_of_week === nextDay);
                   if (tomorrowSchedule && !tomorrowSchedule.is_closed) setNextOpenTimeStr(tomorrowSchedule.open_time.slice(0, 5));
@@ -95,6 +110,8 @@ export default function OrderPage() {
              }
              if (nextDaySchedule && !nextDaySchedule.is_closed) setNextOpenTimeStr(nextDaySchedule.open_time.slice(0, 5));
         }
+        
+        setIsScheduledOpen(currentlyOpenBasedOnSchedule);
       }
       setIsLoading(false);
     };
@@ -127,9 +144,33 @@ export default function OrderPage() {
 
   // --- LOCAL DICT ---
   const localUi = {
-    da: { search: "Søg i menuen...", closed: "Lukket", opensAt: `Åbner kl. ${nextOpenTimeStr}`, smiley: "Smiley rapport", details: "Restaurant info", schedule: "Planlæg ordre", viewOrder: "Se bestilling", legalName: "Juridisk navn", cvr: "CVR-nummer", address: "Adresse", maps: "Vis på kort", hours: "Åbningstider", promoBadge: "Opret konto & Få 35 kr.", repeatOrder: "Gentag", card: "Kort", cash: "Kontant", pickupConfirm: "Bekræft afhentning", dobPlaceholder: "Fødselsdato (dd/mm/åååå)" },
-    en: { search: "Search menu...", closed: "Closed", opensAt: `Opens at ${nextOpenTimeStr}`, smiley: "Smiley report", details: "Restaurant info", schedule: "Schedule order", viewOrder: "View order", legalName: "Legal Name", cvr: "Registered number", address: "Registered address", maps: "View on Maps", hours: "Opening hours", promoBadge: "Sign up & Get 35 kr.", repeatOrder: "Repeat", card: "Card", cash: "Cash", pickupConfirm: "Pickup Confirmation", dobPlaceholder: "Birthdate (dd/mm/yyyy)" },
-    el: { search: "Αναζήτηση μενού...", closed: "Κλειστά", opensAt: `Ανοίγει στις ${nextOpenTimeStr}`, smiley: "Αναφορά Smiley", details: "Πληροφορίες", schedule: "Προγραμματισμός", viewOrder: "Καλάθι", legalName: "Νομική Επωνυμία", cvr: "Αριθμός Μητρώου (CVR)", address: "Διεύθυνση", maps: "Προβολή στο Χάρτη", hours: "Ωράριο Λειτουργίας", promoBadge: "35 kr. Δώρο Εγγραφής", repeatOrder: "Επανάληψη", card: "Κάρτα", cash: "Μετρητά", pickupConfirm: "Επιβεβαίωση Παραλαβής", dobPlaceholder: "Ημ. Γέννησης (ηη/μμ/εεεε)" }
+    da: { 
+      search: "Søg i menuen...", closed: "Lukket", opensAt: `Åbner kl. ${nextOpenTimeStr}`, 
+      paused: "Lukket midlertidigt", // ΝΕΟ ΛΕΚΤΙΚΟ ΠΑΥΣΗΣ
+      smiley: "Smiley rapport", details: "Restaurant info", schedule: "Planlæg ordre", 
+      viewOrder: "Se bestilling", legalName: "Juridisk navn", cvr: "CVR-nummer", 
+      address: "Adresse", maps: "Vis på kort", hours: "Åbningstider", 
+      promoBadge: "Opret konto & Få 35 kr.", repeatOrder: "Gentag", card: "Kort", 
+      cash: "Kontant", pickupConfirm: "Bekræft afhentning", dobPlaceholder: "Fødselsdato (dd/mm/åååå)" 
+    },
+    en: { 
+      search: "Search menu...", closed: "Closed", opensAt: `Opens at ${nextOpenTimeStr}`, 
+      paused: "Paused for now", // ΝΕΟ ΛΕΚΤΙΚΟ ΠΑΥΣΗΣ
+      smiley: "Smiley report", details: "Restaurant info", schedule: "Schedule order", 
+      viewOrder: "View order", legalName: "Legal Name", cvr: "Registered number", 
+      address: "Registered address", maps: "View on Maps", hours: "Opening hours", 
+      promoBadge: "Sign up & Get 35 kr.", repeatOrder: "Repeat", card: "Card", 
+      cash: "Cash", pickupConfirm: "Pickup Confirmation", dobPlaceholder: "Birthdate (dd/mm/yyyy)" 
+    },
+    el: { 
+      search: "Αναζήτηση μενού...", closed: "Κλειστά", opensAt: `Ανοίγει στις ${nextOpenTimeStr}`, 
+      paused: "Προσωρινά Κλειστά", // ΝΕΟ ΛΕΚΤΙΚΟ ΠΑΥΣΗΣ
+      smiley: "Αναφορά Smiley", details: "Πληροφορίες", schedule: "Προγραμματισμός", 
+      viewOrder: "Καλάθι", legalName: "Νομική Επωνυμία", cvr: "Αριθμός Μητρώου (CVR)", 
+      address: "Διεύθυνση", maps: "Προβολή στο Χάρτη", hours: "Ωράριο Λειτουργίας", 
+      promoBadge: "35 kr. Δώρο Εγγραφής", repeatOrder: "Επανάληψη", card: "Κάρτα", 
+      cash: "Μετρητά", pickupConfirm: "Επιβεβαίωση Παραλαβής", dobPlaceholder: "Ημ. Γέννησης (ηη/μμ/εεεε)" 
+    }
   };
   const t = localUi[lang];
 
@@ -155,22 +196,12 @@ export default function OrderPage() {
     setCheckoutStep('cart');
   };
 
-  // --- ΠΡΟΣΘΗΚΗ: ΕΞΥΠΝΟ ΚΛΙΚ ΓΙΑ ΑΝΑΨΥΚΤΙΚΑ / ΜΠΥΡΕΣ ---
   const handleProductClick = (item: any, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-
-    // Ελέγχουμε αν είναι Αναψυκτικό (DRINKS) ή Μπύρα (BEERS)
     if (item.category === 'DRINKS' || item.category === 'BEERS') {
-      // Το προσθέτουμε κατευθείαν στο καλάθι!
-      const cartItem = {
-        ...item,
-        final_price: getItemPrice(item), 
-        selectedOptions: [], // Χωρίς έξτρα
-        note: "" // Χωρίς σχόλια
-      };
+      const cartItem = { ...item, final_price: getItemPrice(item), selectedOptions: [], note: "" };
       addToCart(cartItem, 1);
     } else {
-      // Για όλα τα υπόλοιπα ανοίγουμε το παράθυρο κανονικά
       setActiveProduct(item);
     }
   };
@@ -280,7 +311,9 @@ export default function OrderPage() {
       {/* 1. ΣΤΑΘΕΡΟ HEADER */}
       <header className="bg-[#0B1120]/80 backdrop-blur-xl p-4 flex justify-between items-center z-50 sticky top-0 border-b border-white/5 shadow-sm transition-all duration-300">
         <div className="flex items-center gap-3">
-          <Image src="/logo.png" alt="Logo" width={38} height={38} className="object-contain" />
+          <Link href="/">
+            <Image src="/logo.png" alt="Logo" width={38} height={38} className="object-contain cursor-pointer hover:scale-105 transition-transform" />
+          </Link>
         </div>
         
         <div className="flex items-center gap-3 md:gap-5">
@@ -310,10 +343,16 @@ export default function OrderPage() {
             {storeOpen ? (
               <span className="flex items-center gap-1.5 text-emerald-400 font-bold"><span className="w-2 h-2 rounded-full bg-emerald-400"></span>Open</span>
             ) : (
-              <span className="flex items-center gap-1.5 text-red-400 font-bold"><span className="w-2 h-2 rounded-full bg-red-400"></span>{t.closed}</span>
+              <span className="flex items-center gap-1.5 text-red-400 font-bold">
+                <span className="w-2 h-2 rounded-full bg-red-400"></span>
+                {/* ΝΕΑ ΛΟΓΙΚΗ ΓΙΑ ΤΟ ΛΕΚΤΙΚΟ ΠΑΥΣΗΣ Ή ΚΛΕΙΣΙΜΑΤΟΣ */}
+                {isScheduledOpen ? t.paused : t.closed}
+              </span>
             )}
-            {!storeOpen && <span className="text-gray-600">•</span>}
-            {!storeOpen && <span>{t.opensAt}</span>}
+            
+            {/* Δείχνουμε το "Åbner kl..." ΜΟΝΟ αν το μαγαζί είναι κανονικά κλειστό λόγω ωραρίου, ΟΧΙ αν είναι σε παύση */}
+            {!storeOpen && !isScheduledOpen && <span className="text-gray-600">•</span>}
+            {!storeOpen && !isScheduledOpen && <span>{t.opensAt}</span>}
           </div>
 
           <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-gray-300 mb-8">
