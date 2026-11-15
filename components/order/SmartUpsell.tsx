@@ -9,41 +9,46 @@ interface SmartUpsellProps {
 }
 
 export default function SmartUpsell({ cart, menuItems, lang, onAdd }: SmartUpsellProps) {
-  const [suggestion, setSuggestion] = useState<any>(null);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const supabaseImageUrl = "https://keolpijcsvwsrzkjqtkc.supabase.co/storage/v1/object/public/menu-images/";
 
   useEffect(() => {
-    // Αν δεν υπάρχουν προϊόντα στο μενού ή το καλάθι είναι άδειο, κρύψου!
+    // Αν δεν υπάρχουν προϊόντα στο μενού ή το καλάθι είναι άδειο, δεν δείχνουμε τίποτα
     if (!menuItems || menuItems.length === 0 || cart.length === 0) {
-      setSuggestion(null);
+      setSuggestions([]);
       return;
     }
     
     const cartItemIds = cart.map(c => c.item.id);
     
-    // Λέξεις-κλειδιά που ψάχνουμε για να του προτείνουμε (αναψυκτικά, πατάτες, κλπ)
-    const upsellKeywords = ['coca', 'cola', 'sodavand', 'fanta', 'sprite', 'pepsi', 'vand', 'pommes', 'frites', 'tzatziki', 'πατάτες'];
+    // Λέξεις-κλειδιά και κατηγορίες που ψάχνουμε για Upsell
+    const upsellKeywords = ['coca', 'cola', 'sodavand', 'fanta', 'sprite', 'pepsi', 'vand', 'pommes', 'frites', 'tzatziki', 'πατάτες', 'halloumi', 'pita'];
     
-    // Ψάχνουμε στο μενού προϊόντα που έχουν αυτές τις λέξεις ΚΑΙ ΔΕΝ είναι ήδη στο καλάθι
+    // Βρίσκουμε όλα τα προϊόντα που ταιριάζουν ΚΑΙ ΔΕΝ είναι ήδη στο καλάθι
     const potentialUpsells = menuItems.filter(item => {
       if (cartItemIds.includes(item.id)) return false; 
       const name = (item.title_da || item.title_el || item.name || '').toLowerCase();
-      return upsellKeywords.some(kw => name.includes(kw));
+      const category = (item.category || '').toUpperCase().trim();
+      
+      // Βάζουμε στα upsell είτε αναψυκτικά, είτε προϊόντα που περιέχουν τα keywords
+      return upsellKeywords.some(kw => name.includes(kw)) || category === 'DRINKS' || category === 'BEERS' || category === 'DRIKKEVARER';
     });
 
     if (potentialUpsells.length > 0) {
-      // Επιλέγουμε ένα τυχαία για να έχει ποικιλία κάθε φορά που ανοίγει το καλάθι!
-      const randomItem = potentialUpsells[Math.floor(Math.random() * potentialUpsells.length)];
-      setSuggestion(randomItem);
+      // Ανακατεύουμε (shuffle) τον πίνακα για να βγάζει διαφορετικά κάθε φορά
+      const shuffled = potentialUpsells.sort(() => 0.5 - Math.random());
+      // Κρατάμε τα 6 πρώτα για να γεμίσει το καρουζέλ
+      setSuggestions(shuffled.slice(0, 6));
     } else {
-      setSuggestion(null);
+      setSuggestions([]);
     }
   }, [cart, menuItems]);
 
-  if (!suggestion) return null;
+  if (suggestions.length === 0) return null;
 
   const dict = {
-    da: { title: "Noget koldt at drikke eller tilbehør?", add: "Tilføj" },
-    en: { title: "Something cold to drink or a side?", add: "Add" },
+    da: { title: "Noget ekstra?", add: "Tilføj" },
+    en: { title: "Something extra?", add: "Add" },
     el: { title: "Μήπως ξεχάσατε κάτι;", add: "Προσθήκη" }
   };
   const ui = dict[lang];
@@ -51,18 +56,69 @@ export default function SmartUpsell({ cart, menuItems, lang, onAdd }: SmartUpsel
   const getTitle = (item: any) => item[`title_${lang}`] || item.title_da || item.title_el || item.name;
   const getPrice = (item: any) => Number(item.final_price || item.price_takeaway || item.price || 0);
 
+  // Ελέγχει αν το προϊόν πρέπει να μπει κατευθείαν στο καλάθι
+  const handleItemClick = (item: any) => {
+    const category = (item.category || '').toUpperCase().trim();
+    if (category === 'DRINKS' || category === 'BEERS' || category === 'DRIKKEVARER') {
+      // Τα αναψυκτικά δεν έχουν επιλογές, οπότε τα φτιάχνουμε και τα στέλνουμε κατευθείαν
+      const itemToDropInCart = {
+        ...item,
+        final_price: getPrice(item),
+        selectedOptions: [],
+        note: ""
+      };
+      // Εδώ στέλνουμε ένα έτοιμο αντικείμενο. Επειδή το CheckoutSidebar περιμένει το original item,
+      // για να κάνουμε bypass το modal, στέλνουμε μια δομή που το onAddNewItem θα αναγνωρίσει:
+      onAdd({ _directAdd: true, item: itemToDropInCart }); 
+    } else {
+      // Για πίτες, dips, πατάτες κλπ, ανοίγει το Modal κανονικά
+      onAdd(item);
+    }
+  };
+
   return (
-    <div className="bg-indigo-900/40 border border-indigo-500/50 rounded-2xl p-4 mt-2 flex items-center justify-between shadow-lg animate-fade-in-up">
-      <div className="pr-3 flex-1">
-        <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">💡 {ui.title}</h4>
-        <p className="font-bold text-white text-sm leading-tight">{getTitle(suggestion)}</p>
+    <div className="mt-4 animate-fade-in-up">
+      <h4 className="text-[10px] font-black text-[#38BDF8] uppercase tracking-widest mb-3 pl-1 flex items-center gap-2">
+        💡 {ui.title}
+      </h4>
+      
+      {/* Το Carousel με οριζόντιο Scroll */}
+      <div className="flex overflow-x-auto gap-3 pb-4 snap-x snap-mandatory no-scrollbar -mx-5 px-5">
+        {suggestions.map((item) => (
+          <div 
+            key={item.id} 
+            onClick={() => handleItemClick(item)}
+            className="flex-none w-[140px] bg-slate-800/40 border border-white/10 rounded-2xl p-3 flex flex-col items-center justify-between shadow-lg snap-start cursor-pointer hover:bg-slate-800 transition-colors group"
+          >
+            <div className="w-20 h-20 bg-slate-900 rounded-full mb-3 overflow-hidden border-2 border-slate-700 group-hover:border-[#38BDF8] transition-colors shrink-0">
+              {item.image_path ? (
+                <img src={`${supabaseImageUrl}${item.image_path}`} alt="product" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-xl">🍟</div>
+              )}
+            </div>
+            
+            <p className="font-bold text-white text-[11px] leading-tight text-center line-clamp-2 h-8 mb-2">
+              {getTitle(item)}
+            </p>
+            
+            <div className="w-full bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-black text-[10px] py-2 rounded-xl text-center uppercase tracking-wider transition-transform active:scale-95 shadow-sm">
+              ➕ {getPrice(item)} kr.
+            </div>
+          </div>
+        ))}
       </div>
-      <button 
-        onClick={() => onAdd(suggestion)} 
-        className="bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-black text-xs px-4 py-2.5 rounded-xl transition-transform active:scale-95 shadow-md whitespace-nowrap flex items-center gap-1"
-      >
-        ➕ {getPrice(suggestion)} kr.
-      </button>
+      
+      {/* Απόκρυψη Scrollbar CSS */}
+      <style dangerouslySetInnerHTML={{__html: `
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}} />
     </div>
   );
 }
