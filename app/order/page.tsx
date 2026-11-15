@@ -211,9 +211,11 @@ export default function OrderPage() {
     setCheckoutStep('cart');
   };
 
+  // ΕΛΕΓΧΟΣ: Προστέθηκαν τα DIPS στην άμεση προσθήκη
   const handleProductClick = (item: any, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    if (item.category === 'DRINKS' || item.category === 'BEERS') {
+    const category = (item.category || '').toUpperCase().trim();
+    if (category === 'DRINKS' || category === 'BEERS' || category === 'DRIKKEVARER' || category === 'DIPS') {
       const cartItem = { ...item, final_price: getItemPrice(item), selectedOptions: [], note: "" };
       addToCart(cartItem, 1);
     } else {
