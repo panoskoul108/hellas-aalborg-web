@@ -23,7 +23,6 @@ const translations = {
     cateringDesc: 'Vi bringer den autentiske græske smag til dit arrangement. Vi håndterer store ordrer med særlige priser og gratis levering til din dør.',
     cateringBtn: 'Ring for Tilbud',
     days: ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'],
-    // ΝΕΑ ΛΕΚΤΙΚΑ
     badgeLine1: 'LAVERE PRISER END WOLT',
     badgeLine2: '+ CASHBACK 💸',
     orderTakeawayHero: 'Bestil Takeaway',
@@ -160,7 +159,6 @@ export default function Home() {
             <option value="en">🇬🇧 EN</option>
             <option value="el">🇬🇷 EL</option>
           </select>
-          {/* Κουμπιά για Desktop (αφού δεν έχει footer) */}
           <div className="hidden md:flex gap-2">
             <a href="/order" className="bg-[#38BDF8] text-[#0B1120] px-5 py-2.5 rounded-full font-bold shadow-[0_0_15px_rgba(56,189,248,0.3)] hover:shadow-[0_0_20px_rgba(56,189,248,0.5)] transition-all hover:-translate-y-0.5">
               {t.orderTakeaway}
@@ -389,7 +387,7 @@ export default function Home() {
             {t.badgeLine1}<br/>{t.badgeLine2}
           </span>
           <a href="/order" className="w-full bg-[#38BDF8] text-[#0B1120] text-center font-black py-3.5 rounded-2xl flex justify-center items-center gap-2 active:scale-95 transition-transform text-sm uppercase tracking-wide">
-            🥡 {t.orderTakeawayHero}
+            🛍️ {t.orderTakeawayHero}
           </a>
         </div>
         <a href="https://wolt.com/da/dnk/aalborg/restaurant/hellas-food1" target="_blank" rel="noopener noreferrer" className="w-full bg-slate-800/60 text-[#00c2e8] border border-[#00c2e8]/30 text-center font-bold py-2.5 rounded-2xl flex justify-center items-center gap-2 active:scale-95 transition-transform text-xs">
