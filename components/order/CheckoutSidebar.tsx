@@ -149,13 +149,17 @@ export default function CheckoutSidebar({
                 <div key={idx} className="flex flex-col bg-slate-800/30 p-4 rounded-2xl border border-white/5">
                   <div className="flex justify-between items-center mb-3">
                     <div 
-                      className="flex-1 pr-3 cursor-pointer group"
+                      className="flex-1 pr-3 cursor-pointer group flex flex-col items-start"
                       onClick={() => onEditItem && onEditItem(cartItem)} 
                     >
-                      <p className="font-bold text-white text-sm leading-tight mb-1 group-hover:text-[#38BDF8] transition-colors">
-                        {cartItem.item[`title_${lang}`] || cartItem.item.name} 
-                        <span className="text-[10px] text-gray-500 font-normal ml-2 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">✎ Edit</span>
-                      </p>
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <p className="font-bold text-white text-sm leading-tight group-hover:text-[#38BDF8] transition-colors">
+                          {cartItem.item[`title_${lang}`] || cartItem.item.name}
+                        </p>
+                        <span className="text-[10px] font-black uppercase tracking-wider text-[#38BDF8] bg-[#38BDF8]/10 px-2 py-0.5 rounded border border-[#38BDF8]/30 group-hover:bg-[#38BDF8] group-hover:text-[#0B1120] transition-colors shadow-sm">
+                          ✎ {lang === 'da' ? 'Ret' : lang === 'en' ? 'Edit' : 'Επεξεργασία'}
+                        </span>
+                      </div>
                       <p className="text-sm font-bold text-[#38BDF8]">{getItemPrice(cartItem.item)} DKK</p>
                     </div>
                     <div className="flex items-center gap-3 bg-slate-900 rounded-lg p-1 border border-white/5">
