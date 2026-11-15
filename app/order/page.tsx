@@ -155,6 +155,26 @@ export default function OrderPage() {
     setCheckoutStep('cart');
   };
 
+  // --- ΠΡΟΣΘΗΚΗ: ΕΞΥΠΝΟ ΚΛΙΚ ΓΙΑ ΑΝΑΨΥΚΤΙΚΑ / ΜΠΥΡΕΣ ---
+  const handleProductClick = (item: any, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+
+    // Ελέγχουμε αν είναι Αναψυκτικό (DRINKS) ή Μπύρα (BEERS)
+    if (item.category === 'DRINKS' || item.category === 'BEERS') {
+      // Το προσθέτουμε κατευθείαν στο καλάθι!
+      const cartItem = {
+        ...item,
+        final_price: getItemPrice(item), 
+        selectedOptions: [], // Χωρίς έξτρα
+        note: "" // Χωρίς σχόλια
+      };
+      addToCart(cartItem, 1);
+    } else {
+      // Για όλα τα υπόλοιπα ανοίγουμε το παράθυρο κανονικά
+      setActiveProduct(item);
+    }
+  };
+
   const submitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!storeOpen && requestedTime === 'ASAP') return alert(ui.closedStore);
@@ -361,7 +381,7 @@ export default function OrderPage() {
               <h3 className="font-bold text-lg text-white mb-2">Search Results</h3>
               {displayedItems.length === 0 ? <p className="text-gray-500 text-sm">No items found.</p> : null}
               {displayedItems.map(item => (
-                <div key={item.id} onClick={() => setActiveProduct(item)} className="group bg-slate-800/30 backdrop-blur-md p-4 rounded-2xl flex justify-between gap-4 border border-white/5 cursor-pointer hover:bg-slate-800/50 hover:border-white/10 transition-all">
+                <div key={item.id} onClick={() => handleProductClick(item)} className="group bg-slate-800/30 backdrop-blur-md p-4 rounded-2xl flex justify-between gap-4 border border-white/5 cursor-pointer hover:bg-slate-800/50 hover:border-white/10 transition-all">
                   <div className="flex-1 flex flex-col justify-center py-1">
                     <h3 className="font-bold text-base text-white mb-1.5 leading-tight">{item[`title_${lang}`] || item.name}</h3>
                     <p className="text-sm text-gray-400 line-clamp-2 mb-3 leading-relaxed">{item[`desc_${lang}`] || ''}</p>
@@ -373,7 +393,7 @@ export default function OrderPage() {
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-600"><Icons.Search /></div>
                     )}
-                    <button onClick={(e) => { e.stopPropagation(); setActiveProduct(item); }} className="absolute -bottom-2 -right-2 w-10 h-10 bg-[#38BDF8] text-[#0B1120] rounded-full flex items-center justify-center shadow-lg border-4 border-[#0F172A] active:scale-95 transition-transform hover:bg-sky-400">
+                    <button onClick={(e) => handleProductClick(item, e)} className="absolute -bottom-2 -right-2 w-10 h-10 bg-[#38BDF8] text-[#0B1120] rounded-full flex items-center justify-center shadow-lg border-4 border-[#0F172A] active:scale-95 transition-transform hover:bg-sky-400">
                       <Icons.Plus />
                     </button>
                   </div>
@@ -392,7 +412,7 @@ export default function OrderPage() {
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {items.map(item => (
-                        <div key={item.id} onClick={() => setActiveProduct(item)} className="group bg-slate-800/30 backdrop-blur-md p-4 rounded-2xl flex justify-between gap-4 border border-white/5 cursor-pointer hover:bg-slate-800/50 hover:border-white/10 transition-all">
+                        <div key={item.id} onClick={() => handleProductClick(item)} className="group bg-slate-800/30 backdrop-blur-md p-4 rounded-2xl flex justify-between gap-4 border border-white/5 cursor-pointer hover:bg-slate-800/50 hover:border-white/10 transition-all">
                           
                           <div className="flex-1 flex flex-col justify-center py-1">
                             <h3 className="font-bold text-base text-white mb-1.5 leading-tight">{item[`title_${lang}`] || item.name}</h3>
@@ -406,7 +426,7 @@ export default function OrderPage() {
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-gray-600"><Icons.Search /></div>
                             )}
-                            <button onClick={(e) => { e.stopPropagation(); setActiveProduct(item); }} className="absolute -bottom-2 -right-2 w-10 h-10 bg-[#38BDF8] text-[#0B1120] rounded-full flex items-center justify-center shadow-lg border-4 border-[#0F172A] active:scale-95 transition-transform hover:bg-sky-400">
+                            <button onClick={(e) => handleProductClick(item, e)} className="absolute -bottom-2 -right-2 w-10 h-10 bg-[#38BDF8] text-[#0B1120] rounded-full flex items-center justify-center shadow-lg border-4 border-[#0F172A] active:scale-95 transition-transform hover:bg-sky-400">
                               <Icons.Plus />
                             </button>
                           </div>
