@@ -22,7 +22,14 @@ const translations = {
     cateringTitle: 'Græsk Catering & Events',
     cateringDesc: 'Vi bringer den autentiske græske smag til dit arrangement. Vi håndterer store ordrer med særlige priser og gratis levering til din dør.',
     cateringBtn: 'Ring for Tilbud',
-    days: ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'] // <-- ΝΕΟ: ΜΕΤΑΦΡΑΣΗ ΗΜΕΡΩΝ
+    days: ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'],
+    // ΝΕΑ ΛΕΚΤΙΚΑ ΓΙΑ TAKEAWAY ΑΝΑΔΕΙΞΗ
+    badgeLowerPrices: 'LAVERE PRISER! 💸',
+    orderTakeawayHero: 'Bestil Takeaway',
+    orderWoltHero: 'Delivery via Wolt',
+    benefitText: '💡 Med Takeaway får du ',
+    benefitHighlight: 'billigere priser',
+    benefitTextEnd: ' og samler point!'
   },
   en: {
     menu: 'Menu', location: 'Find Us', orderWolt: 'Order Wolt', tag: 'Taste of Greece',
@@ -42,7 +49,13 @@ const translations = {
     cateringTitle: 'Greek Catering & Events',
     cateringDesc: 'Bring authentic Greek flavors to your event. We accommodate large orders with special pricing and complimentary delivery to your venue.',
     cateringBtn: 'Call for a Quote',
-    days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+    badgeLowerPrices: 'LOWER PRICES! 💸',
+    orderTakeawayHero: 'Order Takeaway',
+    orderWoltHero: 'Delivery via Wolt',
+    benefitText: '💡 With Takeaway you get ',
+    benefitHighlight: 'cheaper prices',
+    benefitTextEnd: ' and collect points!'
   },
   el: {
     menu: 'Μενού', location: 'Βρείτε μας', orderWolt: 'Μέσω Wolt', tag: 'Η Γεύση της Ελλάδας',
@@ -62,7 +75,13 @@ const translations = {
     cateringTitle: 'Ελληνικό Catering & Εκδηλώσεις',
     cateringDesc: 'Φέρνουμε την αυθεντική ελληνική γεύση στην εκδήλωσή σας. Αναλαμβάνουμε μεγάλες παραγγελίες με ειδικές προνομιακές τιμές και δωρεάν διανομή.',
     cateringBtn: 'Καλέστε μας',
-    days: ['Δευτέρα', 'Τρίτη', 'Τετάρτη', 'Πέμπτη', 'Παρασκευή', 'Σάββατο', 'Κυριακή']
+    days: ['Δευτέρα', 'Τρίτη', 'Τετάρτη', 'Πέμπτη', 'Παρασκευή', 'Σάββατο', 'Κυριακή'],
+    badgeLowerPrices: 'ΧΑΜΗΛΟΤΕΡΕΣ ΤΙΜΕΣ! 💸',
+    orderTakeawayHero: 'Παραγγελία Takeaway',
+    orderWoltHero: 'Delivery μέσω Wolt',
+    benefitText: '💡 Στο Takeaway απολαμβάνεις ',
+    benefitHighlight: 'φθηνότερες τιμές',
+    benefitTextEnd: ' και μαζεύεις πόντους!'
   }
 };
 
@@ -122,7 +141,7 @@ export default function Home() {
   
   const t = translations[lang as keyof typeof translations];
   return (
-    <div className="min-h-screen font-sans bg-[#0B1120] text-gray-200 flex flex-col selection:bg-[#38BDF8] selection:text-[#0B1120]">
+    <div className="min-h-screen font-sans bg-[#0B1120] text-gray-200 flex flex-col selection:bg-[#38BDF8] selection:text-[#0B1120] pb-32 md:pb-0">
       
       <nav className={`flex items-center justify-between px-6 py-4 sticky top-0 z-50 transition-all duration-300 ${
         isScrolled ? 'bg-[#0B1120]/80 backdrop-blur-xl border-b border-white/5 shadow-lg' : 'bg-transparent'
@@ -152,25 +171,43 @@ export default function Home() {
         </div>
       </nav>
 
-      <header className="relative min-h-[75vh] md:min-h-screen flex items-center justify-center text-center overflow-hidden border-b border-white/5 -mt-[98px] pt-[98px] pb-24">
+      <header className="relative min-h-[85vh] md:min-h-screen flex items-center justify-center text-center overflow-hidden border-b border-white/5 -mt-[98px] pt-[98px] pb-24">
         {heroImages.map((img, index) => (
           <div key={index} className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100 z-0' : 'opacity-0 -z-10'}`}>
             <Image src={img.src} alt="Hellas Aalborg Vibe" fill priority={index === 0} className={`object-cover ${img.focus} transition-transform duration-[7000ms] ease-out ${index === currentSlide ? 'scale-[1.03] md:scale-105' : 'scale-100'}`} />
           </div>
         ))}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0B1120]/80 via-[#0B1120]/50 to-[#0B1120] z-0"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0B1120]/85 via-[#0B1120]/60 to-[#0B1120] z-0"></div>
         
-        <div className="relative z-10 px-4 flex flex-col items-center justify-center w-full h-full mt-10 md:mt-0"> 
+        <div className="relative z-10 px-4 flex flex-col items-center justify-center w-full h-full mt-6 md:mt-0"> 
           <span className="text-[#38BDF8] font-bold tracking-[0.25em] uppercase mb-6 md:mb-8 text-[10px] md:text-xs bg-[#0F172A]/50 backdrop-blur-md px-4 py-1.5 md:px-5 md:py-1.5 rounded-full border border-[#38BDF8]/20 shadow-lg">
             {t.tag}
           </span>
           <h1 className="text-5xl md:text-7xl lg:text-8xl font-extrabold text-white mb-4 md:mb-6 drop-shadow-2xl leading-tight tracking-tight">
             {t.title1} <br className="hidden md:block" /> <span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-200 to-gray-500 font-light italic">{t.title2}</span>
           </h1>
-          <p className="text-lg md:text-xl text-gray-300 mb-10 md:mb-14 max-w-2xl font-light drop-shadow-md px-4">{t.desc}</p>
-          <a href="#menu" className="bg-white hover:bg-gray-100 text-[#0B1120] font-bold py-3.5 px-8 md:py-4 md:px-10 rounded-full shadow-[0_0_30px_rgba(255,255,255,0.2)] transition-all transform hover:-translate-y-1 text-sm md:text-base">
-            {t.btnTakeaway}
-          </a>
+          <p className="text-lg md:text-xl text-gray-300 mb-8 md:mb-10 max-w-2xl font-light drop-shadow-md px-4">{t.desc}</p>
+          
+          {/* ΝΕΑ ΚΟΥΜΠΙΑ HERO SECTION */}
+          <div className="flex flex-col items-center gap-4 mt-2 w-full max-w-sm mx-auto">
+            <div className="relative w-full">
+              <span className="absolute -top-3 -right-2 bg-emerald-500 text-white text-[10px] md:text-xs font-black uppercase px-3 py-1.5 rounded-full shadow-lg rotate-3 border-2 border-[#0B1120] z-10 animate-pulse">
+                {t.badgeLowerPrices}
+              </span>
+              <a href="/order" className="w-full bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-black px-6 py-3.5 rounded-2xl flex items-center justify-center gap-3 shadow-[0_0_25px_rgba(56,189,248,0.3)] transition-transform active:scale-95 text-base md:text-lg uppercase tracking-wider">
+                 🥡 {t.orderTakeawayHero}
+              </a>
+            </div>
+            <a href="https://wolt.com/da/dnk/aalborg/restaurant/hellas-food1" target="_blank" rel="noopener noreferrer" className="w-full bg-slate-800/60 hover:bg-slate-700 text-[#00c2e8] border border-[#00c2e8]/30 font-bold px-6 py-3 rounded-2xl flex items-center justify-center gap-2 transition-all backdrop-blur-sm">
+               🛵 {t.orderWoltHero}
+            </a>
+            <p className="text-gray-300 text-xs md:text-sm text-center font-medium drop-shadow-md mt-2">
+               {t.benefitText} <strong className="text-emerald-400">{t.benefitHighlight}</strong> {t.benefitTextEnd}
+            </p>
+            <a href="#menu" className="mt-4 text-sm text-gray-400 hover:text-white underline underline-offset-4 transition-colors">
+              {t.btnTakeaway}
+            </a>
+          </div>
         </div>
         
         <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-3 z-20">
@@ -191,12 +228,16 @@ export default function Home() {
           <p className="text-gray-400 text-lg md:text-xl leading-relaxed font-light">{t.aboutDesc}</p>
         </div>
       </section>
+
       <section id="menu" className="py-16 px-4 md:px-8 max-w-7xl mx-auto flex-grow relative z-10">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight">{t.menuTitle}</h2>
           <p className="text-gray-400 text-lg max-w-2xl mx-auto mb-10">{t.menuDesc}</p>
           
-          <div className="inline-flex items-center bg-[#1E293B]/60 backdrop-blur-md p-1.5 rounded-full border border-white/5 shadow-inner">
+          <div className="inline-flex items-center bg-[#1E293B]/60 backdrop-blur-md p-1.5 rounded-full border border-white/5 shadow-inner relative">
+            <span className="absolute -top-3 left-2 md:left-8 bg-emerald-500 text-white text-[9px] md:text-[10px] font-black uppercase px-2 py-1 rounded-full shadow-lg rotate-[-5deg] border border-[#0B1120] z-10">
+              {t.badgeLowerPrices}
+            </span>
             <button onClick={() => setMenuType('takeaway')} className={`px-8 py-3 rounded-full font-bold transition-all duration-300 ${menuType === 'takeaway' ? 'bg-white text-[#0B1120] shadow-md' : 'text-gray-400 hover:text-white'}`}>
               {t.tabTakeaway}
             </button>
@@ -266,20 +307,25 @@ export default function Home() {
           </div>
         )}
 
-        <div className="text-center mt-16"><p className="text-gray-500 text-sm font-medium"><span className="text-[#38BDF8]">ℹ️</span> {t.allergies}</p></div>
-        
-        <div className="text-center mt-12 animate-fade-in-up pb-10 flex justify-center">
-          {menuType === 'wolt' ? (
-            <a href="https://wolt.com/da/dnk/aalborg/restaurant/hellas-food1" target="_blank" rel="noopener noreferrer" className="inline-block bg-gradient-to-r from-[#009de0] to-[#007fb5] text-white font-bold py-4 px-14 rounded-full shadow-[0_0_25px_rgba(0,157,224,0.4)] transition-all transform hover:scale-105 hover:shadow-[0_0_35px_rgba(0,157,224,0.6)]">
-              {t.orderWolt}
+        {/* ΝΕΑ ΚΟΥΜΠΙΑ ΚΑΤΩ ΑΠΟ ΤΟ ΜΕΝΟΥ */}
+        <div className="flex flex-col items-center gap-4 mt-16 pb-10 w-full max-w-sm mx-auto animate-fade-in-up">
+          <div className="relative w-full">
+            <span className="absolute -top-3 -right-2 bg-emerald-500 text-white text-[10px] md:text-xs font-black uppercase px-3 py-1.5 rounded-full shadow-lg rotate-3 border-2 border-[#0B1120] z-10 animate-pulse">
+              {t.badgeLowerPrices}
+            </span>
+            <a href="/order" className="w-full bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-black px-6 py-4 rounded-2xl flex items-center justify-center gap-3 shadow-[0_0_25px_rgba(56,189,248,0.3)] transition-transform active:scale-95 text-base md:text-lg uppercase tracking-wider">
+               🥡 {t.orderTakeawayHero}
             </a>
-          ) : (
-            <a href="/order" className="inline-flex items-center gap-3 bg-white text-[#0B1120] font-bold py-4 px-14 rounded-full shadow-[0_0_25px_rgba(255,255,255,0.15)] transition-all transform hover:scale-105 hover:shadow-[0_0_35px_rgba(255,255,255,0.25)]">
-              🛍️ {t.orderTakeaway}
-            </a>
-          )}
+          </div>
+          <a href="https://wolt.com/da/dnk/aalborg/restaurant/hellas-food1" target="_blank" rel="noopener noreferrer" className="w-full bg-slate-800/60 hover:bg-slate-700 text-[#00c2e8] border border-[#00c2e8]/30 font-bold px-6 py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all">
+             🛵 {t.orderWoltHero}
+          </a>
+          <p className="text-gray-400 text-xs md:text-sm text-center font-medium mt-1">
+             {t.benefitText} <strong className="text-emerald-400">{t.benefitHighlight}</strong> {t.benefitTextEnd}
+          </p>
         </div>
       </section>
+
       <section className="py-16 md:py-24 bg-[#0F172A]/50 relative border-t border-white/5">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#38BDF8]/5 via-transparent to-transparent opacity-50 pointer-events-none"></div>
         <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
@@ -339,7 +385,6 @@ export default function Home() {
           <div>
             <h4 className="text-lg font-bold text-white mb-8 tracking-wide">{t.hoursTitle}</h4>
             <ul className="space-y-4 text-sm">
-              {/* ΔΙΟΡΘΩΣΗ: ΧΡΗΣΗ ΜΕΤΑΦΡΑΣΜΕΝΩΝ ΗΜΕΡΩΝ */}
               {storeHours.length > 0 ? storeHours.map(day => (
                 <li key={day.day_of_week} className="flex justify-between border-b border-white/5 pb-3">
                   <span className="text-gray-400">{t.days[day.day_of_week - 1]}</span>
@@ -373,9 +418,14 @@ export default function Home() {
         </div>
       </footer>
 
-      <div className="md:hidden fixed bottom-0 left-0 w-full bg-[#0B1120]/90 backdrop-blur-xl border-t border-white/10 px-4 py-3 z-40 flex justify-between gap-3 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
-        <a href="/order" className="flex-1 bg-white text-[#0B1120] text-center font-bold py-3 rounded-2xl flex justify-center items-center gap-2 active:scale-95 transition-transform">🛍️ {t.orderTakeaway}</a>
-        <a href="https://wolt.com/da/dnk/aalborg/restaurant/hellas-food1" target="_blank" rel="noopener noreferrer" className="flex-1 bg-gradient-to-r from-[#009de0] to-[#007fb5] text-white text-center font-bold py-3 rounded-2xl flex justify-center items-center gap-2 active:scale-95 transition-transform">🛵 {t.orderWolt}</a>
+      {/* ΝΕΟ MOBILE ΣΤΑΘΕΡΟ ΜΕΝΟΥ (WOLT ΜΙΚΡΟ & TAKEAWAY ΜΕΓΑΛΟ) */}
+      <div className="md:hidden fixed bottom-0 left-0 w-full bg-[#0B1120]/95 backdrop-blur-xl border-t border-white/10 px-4 py-3 z-40 flex flex-col gap-2 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+        <a href="/order" className="w-full bg-[#38BDF8] text-[#0B1120] text-center font-black py-3.5 rounded-2xl flex justify-center items-center gap-2 active:scale-95 transition-transform text-sm uppercase tracking-wide">
+          🥡 {t.orderTakeawayHero}
+        </a>
+        <a href="https://wolt.com/da/dnk/aalborg/restaurant/hellas-food1" target="_blank" rel="noopener noreferrer" className="w-full bg-slate-800/60 text-[#00c2e8] border border-[#00c2e8]/30 text-center font-bold py-2.5 rounded-2xl flex justify-center items-center gap-2 active:scale-95 transition-transform text-xs">
+          🛵 {t.orderWoltHero}
+        </a>
       </div>
 
       {/* ΑΝΑΔΥΟΜΕΝΟ ΠΑΡΑΘΥΡΟ ΠΙΑΤΟΥ (MODAL) */}
