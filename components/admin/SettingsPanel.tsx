@@ -39,7 +39,7 @@ export default function SettingsPanel() {
     setSettings((prev: any) => ({ ...prev, [field]: value }));
   };
 
-  const saveSettings = async () => {
+const saveSettings = async () => {
     setIsSavingSettings(true);
     
     // ΠΡΟΣΘΗΚΗ: Βάλαμε το .select() στο τέλος της εντολής upsert
@@ -52,16 +52,19 @@ export default function SettingsPanel() {
     setIsSavingSettings(false);
 
     // ΕΛΕΓΧΟΣ ΣΙΩΠΗΛΗΣ ΑΠΟΤΥΧΙΑΣ: 
-    // Αν υπάρχει error ή αν το data είναι άδειο, σημαίνει ότι το RLS μας έκοψε.
     if (error || !data || data.length === 0) {
       alert('⚠️ Η αποθήκευση απορρίφθηκε! (Ίσως έληξε η σύνδεσή σας στο Supabase. Παρακαλώ κάντε Έξοδο και ξανά Είσοδο).');
-      
-      // Προαιρετικά: Ξαναφορτώνουμε τα δεδομένα από τη βάση για να επαναφέρουμε τις μπάρες στην πραγματική τους θέση
       fetchData(); 
     } else {
       alert('Οι ρυθμίσεις του προγράμματος επιβράβευσης αποθηκεύτηκαν!');
     }
   };
+
+  if (loading) return <div className="text-center text-[#38BDF8] animate-pulse py-10 font-bold">Φόρτωση Ρυθμίσεων...</div>;
+
+  // ΕΔΩ ΕΛΕΙΠΕ ΤΟ "return (" ΠΟΥ ΑΝΟΙΓΕΙ ΤΟ UI
+  return (
+    <div className="flex flex-col gap-8 max-w-4xl mx-auto">
       
       {/* 1. ΩΡΑΡΙΟ & ΕΚΤΑΚΤΟ ΚΛΕΙΣΙΜΟ */}
       <div className="bg-[#0F172A]/80 border border-white/10 p-6 md:p-10 rounded-[2.5rem] shadow-2xl backdrop-blur-md">
