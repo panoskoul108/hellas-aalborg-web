@@ -10,7 +10,7 @@ export default function CheckoutSidebar({
   storeOpen, generateTimeSlots, requestedTime, setRequestedTime, orderNote,
   setOrderNote, paymentMethod, setPaymentMethod, submitOrder, isSubmitting,
   placedOrder, handleCustomerPickup, handleRepeatOrder, getLocaleDateString, menuItems,
-  onEditItem
+  onEditItem, onAddNewItem // <--- ΠΡΟΣΤΕΘΗΚΕ ΤΟ onAddNewItem
 }: any) {
   if (!isCartOpen) return null;
 
@@ -175,7 +175,22 @@ export default function CheckoutSidebar({
                   {cartItem.item.note && <p className="text-xs text-gray-400 italic mt-2">Note: {cartItem.item.note}</p>}
                 </div>
               ))}
-              <div className="mt-4"><SmartUpsell cart={cart} menuItems={menuItems} lang={lang} onAdd={(item: any) => addToCart(item, 1)} /></div>
+              {/* ΔΙΟΡΘΩΣΗ: Όταν πατάμε ένα upsell item, ανοίγουμε το ProductModal αντί να το πετάμε κατευθείαν στο καλάθι! */}
+              <div className="mt-4">
+                <SmartUpsell 
+                  cart={cart} 
+                  menuItems={menuItems} 
+                  lang={lang} 
+                  onAdd={(item: any) => {
+                    if (onAddNewItem) {
+                      onAddNewItem(item);
+                    } else {
+                      setActiveProduct(item);
+                      setIsCartOpen(false);
+                    }
+                  }} 
+                />
+              </div>
             </div>
           ) : (
             <form id="checkoutForm" onSubmit={submitOrder} className="flex flex-col gap-6">
