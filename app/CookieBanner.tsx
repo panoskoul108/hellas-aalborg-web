@@ -25,7 +25,7 @@ export default function CookieBanner() {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 w-full bg-gray-900 text-white p-4 sm:p-6 z-[9999] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-[0_-10px_30px_rgba(0,0,0,0.3)] animate-slide-up">
+    <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-8 md:bottom-8 md:max-w-sm bg-slate-900 border border-slate-700 p-5 rounded-2xl shadow-2xl z-[100]">
       <div className="text-xs sm:text-sm font-medium opacity-90 leading-relaxed max-w-4xl">
         Vi bruger udelukkende nødvendige cookies (lokal lagring) for at få din takeaway-bestilling og kurv til at fungere. Vi bruger ikke tracking eller marketing-cookies.{' '}
         <Link href="/privacy" className="underline text-sky-400 font-bold hover:text-sky-300">
