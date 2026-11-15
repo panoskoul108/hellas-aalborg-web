@@ -13,31 +13,24 @@ export default function SmartUpsell({ cart, menuItems, lang, onAdd }: SmartUpsel
   const supabaseImageUrl = "https://keolpijcsvwsrzkjqtkc.supabase.co/storage/v1/object/public/menu-images/";
 
   useEffect(() => {
-    // Αν δεν υπάρχουν προϊόντα στο μενού ή το καλάθι είναι άδειο, δεν δείχνουμε τίποτα
     if (!menuItems || menuItems.length === 0 || cart.length === 0) {
       setSuggestions([]);
       return;
     }
     
     const cartItemIds = cart.map(c => c.item.id);
-    
-    // Λέξεις-κλειδιά και κατηγορίες που ψάχνουμε για Upsell
     const upsellKeywords = ['coca', 'cola', 'sodavand', 'fanta', 'sprite', 'pepsi', 'vand', 'pommes', 'frites', 'tzatziki', 'πατάτες', 'halloumi', 'pita'];
     
-    // Βρίσκουμε όλα τα προϊόντα που ταιριάζουν ΚΑΙ ΔΕΝ είναι ήδη στο καλάθι
     const potentialUpsells = menuItems.filter(item => {
       if (cartItemIds.includes(item.id)) return false; 
       const name = (item.title_da || item.title_el || item.name || '').toLowerCase();
       const category = (item.category || '').toUpperCase().trim();
       
-      // Βάζουμε στα upsell είτε αναψυκτικά, είτε προϊόντα που περιέχουν τα keywords
-      return upsellKeywords.some(kw => name.includes(kw)) || category === 'DRINKS' || category === 'BEERS' || category === 'DRIKKEVARER';
+      return upsellKeywords.some(kw => name.includes(kw)) || category === 'DRINKS' || category === 'BEERS' || category === 'DRIKKEVARER' || category === 'DIPS';
     });
 
     if (potentialUpsells.length > 0) {
-      // Ανακατεύουμε (shuffle) τον πίνακα για να βγάζει διαφορετικά κάθε φορά
       const shuffled = potentialUpsells.sort(() => 0.5 - Math.random());
-      // Κρατάμε τα 6 πρώτα για να γεμίσει το καρουζέλ
       setSuggestions(shuffled.slice(0, 6));
     } else {
       setSuggestions([]);
@@ -56,22 +49,18 @@ export default function SmartUpsell({ cart, menuItems, lang, onAdd }: SmartUpsel
   const getTitle = (item: any) => item[`title_${lang}`] || item.title_da || item.title_el || item.name;
   const getPrice = (item: any) => Number(item.final_price || item.price_takeaway || item.price || 0);
 
-  // Ελέγχει αν το προϊόν πρέπει να μπει κατευθείαν στο καλάθι
   const handleItemClick = (item: any) => {
     const category = (item.category || '').toUpperCase().trim();
-    if (category === 'DRINKS' || category === 'BEERS' || category === 'DRIKKEVARER') {
-      // Τα αναψυκτικά δεν έχουν επιλογές, οπότε τα φτιάχνουμε και τα στέλνουμε κατευθείαν
+    // ΠΡΟΣΤΕΘΗΚΕ Η ΚΑΤΗΓΟΡΙΑ 'DIPS' ΣΤΟ ΑΜΕΣΟ ΚΛΙΚ
+    if (category === 'DRINKS' || category === 'BEERS' || category === 'DRIKKEVARER' || category === 'DIPS') {
       const itemToDropInCart = {
         ...item,
         final_price: getPrice(item),
         selectedOptions: [],
         note: ""
       };
-      // Εδώ στέλνουμε ένα έτοιμο αντικείμενο. Επειδή το CheckoutSidebar περιμένει το original item,
-      // για να κάνουμε bypass το modal, στέλνουμε μια δομή που το onAddNewItem θα αναγνωρίσει:
       onAdd({ _directAdd: true, item: itemToDropInCart }); 
     } else {
-      // Για πίτες, dips, πατάτες κλπ, ανοίγει το Modal κανονικά
       onAdd(item);
     }
   };
@@ -82,7 +71,6 @@ export default function SmartUpsell({ cart, menuItems, lang, onAdd }: SmartUpsel
         💡 {ui.title}
       </h4>
       
-      {/* Το Carousel με οριζόντιο Scroll */}
       <div className="flex overflow-x-auto gap-3 pb-4 snap-x snap-mandatory no-scrollbar -mx-5 px-5">
         {suggestions.map((item) => (
           <div 
@@ -109,15 +97,9 @@ export default function SmartUpsell({ cart, menuItems, lang, onAdd }: SmartUpsel
         ))}
       </div>
       
-      {/* Απόκρυψη Scrollbar CSS */}
       <style dangerouslySetInnerHTML={{__html: `
-        .no-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .no-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}} />
     </div>
   );
