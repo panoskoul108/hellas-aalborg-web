@@ -22,7 +22,9 @@ export default function OrderPage() {
   const { storeOpen, generateTimeSlots } = useStore(ui);
   const auth = useAuth();
   const [loyaltyDiscount, setLoyaltyDiscount] = useState(0); 
-  const { cart, addToCart, removeFromCart, updateQuantity, clearCart, subtotal, finalTotal, vatMoms, getItemPrice } = useCart(loyaltyDiscount);
+  
+  // ΠΡΟΣΘΗΚΗ: Φέρνουμε και το editCartItem από το hook
+  const { cart, addToCart, removeFromCart, updateQuantity, editCartItem, clearCart, subtotal, finalTotal, vatMoms, getItemPrice } = useCart(loyaltyDiscount);
 
   // --- LOCAL STATE ---
   const [storeSettings, setStoreSettings] = useState({ loyalty_max_percentage: 50, loyalty_earn_percentage: 5 });
@@ -32,6 +34,10 @@ export default function OrderPage() {
   
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [activeProduct, setActiveProduct] = useState<any>(null);
+  
+  // ΠΡΟΣΘΗΚΗ: Κρατάει ποιο προϊόν του καλαθιού επεξεργαζόμαστε
+  const [editingCartItem, setEditingCartItem] = useState<any>(null);
+  
   const [checkoutStep, setCheckoutStep] = useState<'cart' | 'auth' | 'checkout' | 'success' | 'review' | 'profile'>('cart');
   
   const [paymentMethod, setPaymentMethod] = useState('card');
@@ -203,10 +209,7 @@ export default function OrderPage() {
       'DIPS': { da: 'Dips', en: 'Dips', el: 'Έξτρα' } 
     };
     
-    // Αφαιρούμε τα κενά από την αρχή και το τέλος και κάνουμε το κείμενο κεφαλαία
     const normalizedCat = cat.toUpperCase().trim();
-    
-    // Αν υπάρχει στο λεξικό, φέρε τη μετάφραση. Αλλιώς άφησέ το όπως είναι στη βάση!
     return catDict[normalizedCat] && catDict[normalizedCat][currentLang] 
       ? catDict[normalizedCat][currentLang] 
       : cat;
@@ -227,7 +230,6 @@ export default function OrderPage() {
   const hasRecommended = menuItems.some(p => p.popular);
   const rawCategories = [...new Set(menuItems.map(p => p.category))].filter(Boolean) as string[];
   
-  // --- ΕΔΩ ΟΡΙΖΕΙΣ ΤΗ ΣΕΙΡΑ ΤΩΝ ΚΑΤΗΓΟΡΙΩΝ ΣΟΥ ---
   const desiredOrder = [
     'KOMBO TILBUD',
     'GYROS PITA',
@@ -240,12 +242,10 @@ export default function OrderPage() {
     'DRIKKEVARER'
   ];
 
-  // Ταξινομεί τις κατηγορίες με βάση τη λίστα desiredOrder
   const uniqueCategories = rawCategories.sort((a, b) => {
     const idxA = desiredOrder.indexOf(a.toUpperCase().trim());
     const idxB = desiredOrder.indexOf(b.toUpperCase().trim());
     
-    // Αν ξεχάσεις να βάλεις μια κατηγορία στη λίστα, θα εμφανιστεί απλά στο τέλος
     if (idxA === -1) return 1; 
     if (idxB === -1) return -1;
     return idxA - idxB;
@@ -482,10 +482,20 @@ export default function OrderPage() {
         </div>
       )}
 
-      {/* PRODUCT MODAL */}
-      {activeProduct && <ProductModal activeProduct={activeProduct} lang={lang} closeModal={() => setActiveProduct(null)} addToCart={addToCart} supabaseImageUrl={supabaseImageUrl} />}
+      {/* ΠΡΟΣΘΗΚΗ: PRODUCT MODAL με edit data */}
+      {activeProduct && (
+        <ProductModal 
+          activeProduct={activeProduct} 
+          lang={lang} 
+          closeModal={() => { setActiveProduct(null); setEditingCartItem(null); }} 
+          addToCart={addToCart} 
+          editCartItem={editCartItem} 
+          editingCartItem={editingCartItem} 
+          supabaseImageUrl={supabaseImageUrl} 
+        />
+      )}
 
-      {/* CHECKOUT SIDEBAR ΕΞΩΤΕΡΙΚΟ COMPONENT */}
+      {/* ΠΡΟΣΘΗΚΗ: CHECKOUT SIDEBAR με onEditItem prop */}
       <CheckoutSidebar
         isCartOpen={isCartOpen}
         setIsCartOpen={setIsCartOpen}
@@ -521,6 +531,11 @@ export default function OrderPage() {
         handleRepeatOrder={handleRepeatOrder}
         getLocaleDateString={getLocaleDateString}
         menuItems={menuItems}
+        onEditItem={(cartItem: any) => {
+          setEditingCartItem(cartItem);
+          setActiveProduct(cartItem.item);
+          setIsCartOpen(false);
+        }}
       />
 
     </div>
