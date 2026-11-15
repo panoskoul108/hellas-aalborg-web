@@ -131,38 +131,27 @@ export default function AdminDashboard() {
           const [reqH, reqM] = order.requested_time.split(':').map(Number);
           let diff = (reqH * 60 + reqM) - currentTotalMinutes;
           
-          if (diff < -720) diff += 1440; // Διόρθωση αν περάσαμε τα μεσάνυχτα
+          if (diff < -720) diff += 1440; 
           
-          // Πόσα λεπτά έχουν περάσει από τη στιγμή που ο πελάτης έκανε την παραγγελία;
           const minutesSinceCreation = (now.getTime() - new Date(order.created_at).getTime()) / 60000;
-          
-          // Θεωρούμε "Προγραμματισμένη" την παραγγελία που έχει μείνει στο σύστημα για 20+ λεπτά.
-          // Αυτό αποκλείει αυτόματα τις ASAP (που ετοιμάζονται σε 10-15 λεπτά από τη στιγμή που μπήκαν).
           const isScheduled = minutesSinceCreation >= 20;
           
-          // Αν η παραγγελία πρέπει να βγει σε 1 έως 10 λεπτά, ΔΕΝ έχει χτυπήσει ήδη, ΚΑΙ ΕΙΝΑΙ ΠΡΟΓΡΑΜΜΑΤΙΣΜΕΝΗ
           if (diff > 0 && diff <= 10 && !remindedOrdersRef.current.has(order.id) && isScheduled) {
-            
-            // Διπλός Ήχος Προειδοποίησης
             playSound();
             setTimeout(() => playSound(), 1000);
             
-            // Εμφάνιση οπτικού Alert
             setReminderAlert({ 
               show: true, 
               orderId: order.order_number || order.id.toString().slice(-4), 
               time: order.requested_time.slice(0, 5) 
             });
             
-            // Καταγραφή ότι χτύπησε για να μην χτυπάει συνέχεια
             remindedOrdersRef.current.add(order.id);
-            
-            // Κλείσιμο του Alert μετά από 12 δευτερόλεπτα
             setTimeout(() => setReminderAlert({ show: false, orderId: '', time: '' }), 12000);
           }
         }
       });
-    }, 30000); // Ο έλεγχος γίνεται κάθε 30 δευτερόλεπτα
+    }, 30000);
 
     return () => clearInterval(interval);
   }, [orders, audioUnlocked]);
@@ -292,15 +281,39 @@ export default function AdminDashboard() {
     );
   }
 
+  // ΔΙΑΧΩΡΙΣΜΟΣ ΚΑΙ ΤΑΞΙΝΟΜΗΣΗ ΠΑΡΑΓΓΕΛΙΩΝ
+  
+  // 1. Οι Νέες παραμένουν με σειρά άφιξης (πιο πρόσφατη πάνω)
   const pendingOrders = orders.filter(o => o.status === 'pending');
-  const preparingOrders = orders.filter(o => o.status === 'preparing');
+  
+  // 2. ΝΕΟ: Οι "Σε Προετοιμασία" ταξινομούνται με βάση τον απομένοντα χρόνο (πιο σύντομος χρόνος πάνω)
+  const preparingOrders = orders
+    .filter(o => o.status === 'preparing')
+    .sort((a, b) => {
+      if (!a.requested_time) return 1;
+      if (!b.requested_time) return -1;
+      
+      const now = new Date();
+      const currentTotalMins = now.getHours() * 60 + now.getMinutes();
+      
+      const getDiff = (timeStr: string) => {
+        const [h, m] = timeStr.split(':').map(Number);
+        let diff = (h * 60 + m) - currentTotalMins;
+        if (diff < -720) diff += 1440; // Σε περίπτωση που αλλάξαμε μέρα (π.χ. 23:55 -> 00:05)
+        return diff;
+      };
+      
+      return getDiff(a.requested_time) - getDiff(b.requested_time);
+    });
+
+  // 3. Οι Ολοκληρωμένες παραμένουν με σειρά ολοκλήρωσης/άφιξης
   const completedOrders = orders.filter(o => o.status === 'completed' && o.is_delivered !== true && (new Date().getTime() - new Date(o.created_at).getTime() < 24 * 60 * 60 * 1000));
 
   return (
     <>
       <audio id="order-alert-sound" src={NOTIFICATION_SOUND} preload="auto" />
 
-      {/* ΟΠΤΙΚΟ BANNER ΥΠΕΝΘΥΜΙΣΗΣ (ΕΜΦΑΝΙΖΕΤΑΙ ΟΤΑΝ ΧΤΥΠΑΕΙ ΤΟ 10ΛΕΠΤΟ) */}
+      {/* ΟΠΤΙΚΟ BANNER ΥΠΕΝΘΥΜΙΣΗΣ */}
       {reminderAlert.show && (
         <div className="fixed top-20 md:top-10 left-1/2 -translate-x-1/2 bg-red-600 text-white px-8 py-5 rounded-3xl shadow-[0_20px_50px_rgba(220,38,38,0.7)] z-[9999] animate-bounce border-4 border-white flex flex-col items-center min-w-[320px]">
           <span className="text-5xl mb-2">⚠️</span>
@@ -338,7 +351,7 @@ export default function AdminDashboard() {
               onClick={() => setActiveTab('settings')} 
               className={`px-4 md:px-6 py-2 rounded-lg text-xs font-black uppercase transition-all duration-300 ${activeTab === 'settings' ? 'bg-[#38BDF8] text-[#0B1120] shadow-md' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
             >
-              ΡΥΘΜΙΣΕΙ
+              ΡΥΘΜΙΣΕΙΣ
             </button>
           </div>
           
@@ -395,6 +408,8 @@ export default function AdminDashboard() {
 
         {activeTab === 'live' ? (
           <main className="p-4 md:p-6 max-w-[1800px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
+            
+            {/* ΝΕΕΣ */}
             <div className="bg-[#0F172A]/80 border border-[#38BDF8]/30 rounded-[2rem] p-5 shadow-2xl min-h-[80vh] backdrop-blur-sm">
               <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
                 <h2 className="font-black text-lg uppercase text-[#38BDF8] tracking-widest flex items-center gap-2">
@@ -418,6 +433,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+            {/* ΣΕ ΠΡΟΕΤΟΙΜΑΣΙΑ */}
             <div className="bg-[#0F172A]/70 border border-orange-500/30 rounded-[2rem] p-5 shadow-xl min-h-[80vh] backdrop-blur-sm">
               <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
                 <h2 className="font-black text-lg uppercase text-orange-400 tracking-widest">Σε Προετοιμασία</h2>
@@ -436,6 +452,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+            {/* ΟΛΟΚΛΗΡΩΜΕΝΕΣ */}
             <div className="bg-slate-900/50 border border-white/5 rounded-[2rem] p-5 opacity-90 hover:opacity-100 transition-opacity min-h-[80vh] backdrop-blur-sm">
               <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
                 <h2 className="font-black text-lg uppercase text-gray-400 tracking-widest">Ολοκληρωμένες</h2>
