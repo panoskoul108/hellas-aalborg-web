@@ -24,7 +24,6 @@ export default function OrderPage() {
   const auth = useAuth();
   const [loyaltyDiscount, setLoyaltyDiscount] = useState(0); 
   
-  // ΠΡΟΣΘΗΚΗ: Φέρνουμε και το editCartItem από το hook
   const { cart, addToCart, removeFromCart, updateQuantity, editCartItem, clearCart, subtotal, finalTotal, vatMoms, getItemPrice } = useCart(loyaltyDiscount);
 
   // --- LOCAL STATE ---
@@ -35,8 +34,6 @@ export default function OrderPage() {
   
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [activeProduct, setActiveProduct] = useState<any>(null);
-  
-  // ΠΡΟΣΘΗΚΗ: Κρατάει ποιο προϊόν του καλαθιού επεξεργαζόμαστε
   const [editingCartItem, setEditingCartItem] = useState<any>(null);
   
   const [checkoutStep, setCheckoutStep] = useState<'cart' | 'auth' | 'checkout' | 'success' | 'review' | 'profile'>('cart');
@@ -58,6 +55,9 @@ export default function OrderPage() {
   // States για το ωράριο και την προσωρινή παύση
   const [nextOpenTimeStr, setNextOpenTimeStr] = useState<string>("17:00");
   const [isScheduledOpen, setIsScheduledOpen] = useState<boolean>(false);
+
+  // ΝΕΟ STATE: Ελέγχει πότε θα εμφανιστεί το Alert ότι η παραγγελία είναι έτοιμη
+  const [showReadyAlert, setShowReadyAlert] = useState(false);
 
   // --- EFFECTS ---
   useEffect(() => {
@@ -144,6 +144,18 @@ export default function OrderPage() {
       }).subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [placedOrder?.id]);
+
+  // ΝΕΟ EFFECT: Ακούει το status της παραγγελίας για να βγάλει την ειδοποίηση "ΕΤΟΙΜΟ!"
+  useEffect(() => {
+    if (placedOrder && placedOrder.status === 'completed' && !placedOrder.is_delivered) {
+      // 1. Παίζει τον ήχο
+      const audio = new Audio('/notification.mp3.wav');
+      audio.play().catch(e => console.log("Ο browser μπλόκαρε τον ήχο: ", e));
+      
+      // 2. Εμφανίζει το συννεφάκι/modal
+      setShowReadyAlert(true);
+    }
+  }, [placedOrder?.status, placedOrder?.is_delivered]);
 
   // --- LOCAL DICT ---
   const localUi = {
@@ -542,7 +554,7 @@ export default function OrderPage() {
         </div>
       )}
 
-      {/* ΠΡΟΣΘΗΚΗ: PRODUCT MODAL με edit data */}
+      {/* ΠΡΟΣΘΗΚΗ: PRODUCT MODAL */}
       {activeProduct && (
         <ProductModal 
           activeProduct={activeProduct} 
@@ -555,7 +567,7 @@ export default function OrderPage() {
         />
       )}
 
-      {/* ΠΡΟΣΘΗΚΗ: CHECKOUT SIDEBAR με onEditItem prop */}
+      {/* ΠΡΟΣΘΗΚΗ: CHECKOUT SIDEBAR */}
       <CheckoutSidebar
         isCartOpen={isCartOpen}
         setIsCartOpen={setIsCartOpen}
@@ -602,6 +614,28 @@ export default function OrderPage() {
           setIsCartOpen(false); 
         }}
       />
+
+      {/* ΝΕΟ: ΕΙΔΟΠΟΙΗΣΗ ΟΤΙ Η ΠΑΡΑΓΓΕΛΙΑ ΕΙΝΑΙ ΕΤΟΙΜΗ */}
+      {showReadyAlert && placedOrder && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[9999] flex items-center justify-center p-6 animate-fade-in">
+          <div className="bg-emerald-600 text-white p-8 rounded-[2.5rem] shadow-[0_20px_50px_rgba(16,185,129,0.5)] w-full max-w-sm text-center border-4 border-emerald-400 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white/20 via-transparent to-transparent pointer-events-none"></div>
+            <span className="text-6xl mb-4 block drop-shadow-lg animate-bounce">🛍️</span>
+            <h2 className="text-3xl font-black uppercase tracking-widest mb-2 drop-shadow-md">
+              {lang === 'da' ? 'Mad Er Klar!' : lang === 'en' ? 'Order Ready!' : 'ΕΤΟΙΜΟ!'}
+            </h2>
+            <p className="text-emerald-100 font-bold text-lg mb-8 drop-shadow-sm">
+              {lang === 'da' ? 'Din ordre er klar til afhentning.' : lang === 'en' ? 'Your order is ready for pickup.' : 'Η παραγγελία σας είναι έτοιμη για παραλαβή.'}
+            </p>
+            <button 
+              onClick={() => setShowReadyAlert(false)}
+              className="bg-white text-emerald-700 w-full py-4 rounded-2xl font-black uppercase tracking-widest shadow-lg active:scale-95 transition-transform"
+            >
+              {lang === 'da' ? 'Jeg er på vej' : lang === 'en' ? 'I am on my way' : 'ΕΡΧΟΜΑΙ'}
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );
