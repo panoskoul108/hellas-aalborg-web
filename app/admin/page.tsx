@@ -11,16 +11,8 @@ import Link from 'next/link';
 const NOTIFICATION_SOUND = "/notification.mp3.wav"; 
 
 export default function AdminDashboard() {
-  // --- ΒΑΣΙΚΑ STATES ---
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
-  // -- STATES ΓΙΑ ΤΟ NEO LOGIN (EMAIL/PASS) --
-  const [user, setUser] = useState<any>(null);
-  const [adminEmail, setAdminEmail] = useState('');
-  const [adminPassword, setAdminPassword] = useState('');
-  const [loginError, setLoginError] = useState('');
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
   
   // -- STATES ΓΙΑ ΤΟ PIN PAD ΚΑΙ ΗΧΟ --
   const [prevCount, setPrevCount] = useState(0);
@@ -34,8 +26,6 @@ export default function AdminDashboard() {
   const [activePrintOrder, setActivePrintOrder] = useState<any>(null);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'live' | 'history' | 'settings'>('live');
-
-  // State για το διακοπτάκι του καταστήματος
   const [isStoreOpen, setIsStoreOpen] = useState(true);
 
   const requestWakeLock = async () => {
@@ -49,27 +39,16 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    const checkAuth = async () => {
-      // 1. Ελέγχουμε αν υπάρχει ενεργό session
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      // 2. Ελέγχουμε αν ο χρήστης είναι ο σωστός Admin
-      if (session && session.user.email === 'nordicmythos@gmail.com') {
-        setUser(session.user);
-      } else {
-        setUser(null);
-      }
-      
+    const initDash = async () => {
       const { data: pinData } = await supabase.from('pos_settings').select('pin_code').eq('id', 1).single();
       if (pinData) setExpectedPin(pinData.pin_code.trim()); 
       
-      // Διαβάζουμε το status του καταστήματος
       const { data: storeSettings } = await supabase.from('store_settings').select('accepting_orders').eq('id', 1).single();
       if (storeSettings) setIsStoreOpen(storeSettings.accepting_orders);
 
       fetchOrders();
     };
-    checkAuth();
+    initDash();
   }, []);
 
   const fetchOrders = async () => {
@@ -119,31 +98,6 @@ export default function AdminDashboard() {
     }
   }, []);
 
-  // -- ΛΕΙΤΟΥΡΓΙΑ: LOGIN ΜΕ EMAIL / ΚΩΔΙΚΟ --
-  const handleAdminLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError('');
-    setIsLoggingIn(true);
-    
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: adminEmail,
-      password: adminPassword,
-    });
-    
-    if (error) {
-      setLoginError("Λάθος στοιχεία σύνδεσης. Δοκιμάστε ξανά.");
-    } else if (data.session) {
-      if (data.session.user.email === 'nordicmythos@gmail.com') {
-        setUser(data.session.user);
-        fetchOrders(); // Τώρα που έχει δικαιώματα, ξαναφορτώνει τις παραγγελίες
-      } else {
-        setLoginError("Δεν έχετε δικαιώματα διαχειριστή.");
-        await supabase.auth.signOut();
-      }
-    }
-    setIsLoggingIn(false);
-  };
-
   const handlePinSubmit = () => {
     if (enteredPin === expectedPin) {
       sessionStorage.setItem('admin_unlocked', 'true');
@@ -157,23 +111,22 @@ export default function AdminDashboard() {
     }
   };
 
-  // Συνάρτηση για το Διακοπτάκι
   const toggleStoreStatus = async () => {
     const newStatus = !isStoreOpen;
     setIsStoreOpen(newStatus); 
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('store_settings')
       .update({ accepting_orders: newStatus })
-      .eq('id', 1);
+      .eq('id', 1)
+      .select();
 
-    if (error) {
-      alert("Σφάλμα κατά την αλλαγή κατάστασης: " + error.message);
+    if (error || !data || data.length === 0) {
+      alert("Σφάλμα κατά την αλλαγή κατάστασης. Παρακαλώ ανανεώστε τη σελίδα.");
       setIsStoreOpen(!newStatus); 
     }
   };
 
-  // Συνάρτηση για Ακύρωση Παραγγελίας & Rollback του Cashback μέσω ασφαλούς RPC
   const handleCancelOrder = async (orderId: number) => {
     const orderToCancel = orders.find(o => o.id === orderId);
 
@@ -193,20 +146,15 @@ export default function AdminDashboard() {
       try {
         const { data: settings } = await supabase.from('store_settings').select('loyalty_earn_percentage').eq('id', 1).single();
         const earnPct = settings ? settings.loyalty_earn_percentage : 5;
-
         const earnedCashback = Number((orderToCancel.total_price * (earnPct / 100)).toFixed(2));
         const usedDiscount = orderToCancel.discount_dkk || 0;
 
-        const { error: rpcError } = await supabase.rpc('rollback_order_loyalty', {
+        await supabase.rpc('rollback_order_loyalty', {
           p_user_id: orderToCancel.user_id,
           p_used_discount: usedDiscount,
           p_earned_cashback: earnedCashback,
           p_order_total: orderToCancel.total_price
         });
-
-        if (rpcError) {
-          console.error("Σφάλμα κατά το rollback του loyalty (RPC):", rpcError);
-        }
       } catch (err) {
         console.error("Σφάλμα κατά το rollback:", err);
       }
@@ -243,44 +191,8 @@ export default function AdminDashboard() {
     await supabase.from('orders').update({ is_delivered: true }).eq('id', orderId);
   };
 
-  // ==============================================
-  // RENDER 1: LOADING
-  // ==============================================
   if (isLoading) return <div className="min-h-screen bg-[#0B1120] flex items-center justify-center text-[#38BDF8] font-bold text-xl animate-pulse">Φόρτωση Ταμείου...</div>;
 
-  // ==============================================
-  // RENDER 2: SUPABASE LOGIN (ΕΜΦΑΝΙΖΕΤΑΙ ΜΟΝΟ ΑΝ ΔΕΝ ΥΠΑΡΧΕΙ SESSION)
-  // ==============================================
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-[#0B1120] flex flex-col items-center justify-center p-6 text-center bg-[url('/bg.jpg')] bg-cover bg-fixed bg-center relative">
-        <div className="absolute inset-0 bg-[#0B1120]/90 -z-10 backdrop-blur-sm"></div>
-        <h1 className="text-3xl font-black text-white uppercase tracking-widest mb-2 shadow-black drop-shadow-md">HELLAS AALBORG</h1>
-        <p className="text-[#38BDF8] font-black uppercase tracking-widest text-xs mb-8">ΣΥΝΔΕΣΗ ΔΙΑΧΕΙΡΙΣΤΗ</p>
-        
-        <div className="bg-slate-800/80 p-8 rounded-[2.5rem] shadow-2xl border border-slate-600/50 w-full max-w-sm backdrop-blur-md">
-          <form onSubmit={handleAdminLogin} className="flex flex-col gap-5 text-left">
-            {loginError && <div className="bg-red-500/10 text-red-400 p-3 rounded-xl text-sm font-bold text-center border border-red-500/30">{loginError}</div>}
-            <div>
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Email</label>
-              <input type="email" value={adminEmail} onChange={e => setAdminEmail(e.target.value)} required className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 transition-colors" />
-            </div>
-            <div>
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Κωδικός</label>
-              <input type="password" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} required className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 transition-colors" />
-            </div>
-            <button type="submit" disabled={isLoggingIn} className="w-full bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-black py-4 rounded-xl shadow-lg mt-2 uppercase tracking-widest transition-colors disabled:opacity-50">
-              {isLoggingIn ? 'ΣΥΝΔΕΣΗ...' : 'ΕΙΣΟΔΟΣ'}
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
-  // ==============================================
-  // RENDER 3: PIN PAD (ΠΡΟΣΤΑΣΙΑ ΟΘΟΝΗΣ)
-  // ==============================================
   if (!audioUnlocked) {
     return (
       <div className="min-h-screen bg-[#0B1120] flex flex-col items-center justify-center p-6 text-center bg-[url('/bg.jpg')] bg-cover bg-fixed bg-center relative">
@@ -300,20 +212,11 @@ export default function AdminDashboard() {
             <button onClick={() => { if(enteredPin.length < 8) setEnteredPin(prev => prev + '0'); }} className="bg-slate-700 hover:bg-slate-600 text-white text-2xl font-black rounded-2xl aspect-square active:scale-90 transition-all shadow-md border border-slate-600">0</button>
             <button onClick={handlePinSubmit} className="bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] text-2xl font-black rounded-2xl aspect-square active:scale-90 transition-all shadow-md border border-sky-400">✓</button>
           </div>
-          
-          <div className="mt-8 border-t border-slate-700/50 pt-6">
-            <button onClick={() => supabase.auth.signOut().then(() => { setUser(null); setAudioUnlocked(false); setEnteredPin(''); sessionStorage.removeItem('admin_unlocked'); })} className="w-full text-xs text-gray-500 hover:text-red-400 font-bold uppercase tracking-widest transition-colors">
-              Πληρης Εξοδος (Logout)
-            </button>
-          </div>
         </div>
       </div>
     );
   }
 
-  // ==============================================
-  // RENDER 4: ADMIN DASHBOARD (LIVE)
-  // ==============================================
   const pendingOrders = orders.filter(o => o.status === 'pending');
   const preparingOrders = orders.filter(o => o.status === 'preparing');
   const completedOrders = orders.filter(o => o.status === 'completed' && o.is_delivered !== true && (new Date().getTime() - new Date(o.created_at).getTime() < 24 * 60 * 60 * 1000));
@@ -381,14 +284,8 @@ export default function AdminDashboard() {
             
             <div className="h-6 w-px bg-slate-700 hidden sm:block mx-1"></div>
 
-            {/* Το Κλείδωμα σε πάει στο PIN Pad */}
-            <button onClick={() => { setAudioUnlocked(false); setEnteredPin(''); sessionStorage.removeItem('admin_unlocked'); }} className="text-[10px] text-orange-400 hover:text-white bg-orange-500/10 hover:bg-orange-500/30 border border-orange-500/30 font-black uppercase px-3 py-2.5 rounded-xl transition-colors shadow-sm">
+            <button onClick={() => { setAudioUnlocked(false); setEnteredPin(''); sessionStorage.removeItem('admin_unlocked'); }} className="text-[10px] text-orange-400 hover:text-white bg-orange-500/10 hover:bg-orange-500/30 border border-orange-500/30 font-black uppercase px-6 py-2.5 rounded-xl transition-colors shadow-sm">
               ΚΛΕΙΔΩΜΑ
-            </button>
-            
-            {/* Η Έξοδος σε κάνει Full Logout από το Supabase */}
-            <button onClick={() => supabase.auth.signOut().then(() => { setUser(null); setAudioUnlocked(false); setEnteredPin(''); sessionStorage.removeItem('admin_unlocked'); })} className="text-[10px] text-red-400 hover:text-white bg-red-500/10 hover:bg-red-500/30 border border-red-500/30 font-black uppercase px-3 py-2.5 rounded-xl transition-colors shadow-sm">
-              ΕΞΟΔΟΣ
             </button>
           </div>
         </header>
