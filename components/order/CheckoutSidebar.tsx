@@ -1,3 +1,4 @@
+'use client';
 import React from 'react';
 import LoyaltyWallet from './LoyaltyWallet'; 
 import SmartUpsell from './SmartUpsell';
@@ -10,7 +11,7 @@ export default function CheckoutSidebar({
   storeOpen, generateTimeSlots, requestedTime, setRequestedTime, orderNote,
   setOrderNote, paymentMethod, setPaymentMethod, submitOrder, isSubmitting,
   placedOrder, handleCustomerPickup, handleRepeatOrder, getLocaleDateString, menuItems,
-  onEditItem, onAddNewItem // <--- ΠΡΟΣΤΕΘΗΚΕ ΤΟ onAddNewItem
+  onEditItem, onAddNewItem
 }: any) {
   if (!isCartOpen) return null;
 
@@ -175,14 +176,16 @@ export default function CheckoutSidebar({
                   {cartItem.item.note && <p className="text-xs text-gray-400 italic mt-2">Note: {cartItem.item.note}</p>}
                 </div>
               ))}
-              {/* ΔΙΟΡΘΩΣΗ: Όταν πατάμε ένα upsell item, ανοίγουμε το ProductModal αντί να το πετάμε κατευθείαν στο καλάθι! */}
+              
               <div className="mt-4">
                 <SmartUpsell 
                   cart={cart} 
                   menuItems={menuItems} 
                   lang={lang} 
                   onAdd={(item: any) => {
-                    if (onAddNewItem) {
+                    if (item._directAdd) {
+                      addToCart(item.item, 1);
+                    } else if (onAddNewItem) {
                       onAddNewItem(item);
                     } else {
                       setActiveProduct(item);
