@@ -14,15 +14,35 @@ export default function CheckoutSidebar({
   onEditItem, onAddNewItem
 }: any) {
   
-  // ΝΕΟ STATE: Ελέγχει αν η φόρμα (email/pass) είναι ανοιχτή ή κλειστή
   const [showAuthForm, setShowAuthForm] = useState(false);
+  
+  // ΝΕΟ STATE: Για το Anti-Spam (Αντίστροφη Μέτρηση)
+  const [cooldown, setCooldown] = useState(0);
 
-  // Αν κλείσει το καλάθι ή πάμε σε άλλο βήμα, κλείνουμε τη φόρμα για την επόμενη φορά
   useEffect(() => {
     if (checkoutStep === 'auth') {
       setShowAuthForm(false);
     }
   }, [checkoutStep]);
+
+  // ΝΕΟ EFFECT: Υπολογίζει το cooldown 3 λεπτών από την τελευταία παραγγελία
+  useEffect(() => {
+    const checkCooldown = () => {
+      const lastTime = localStorage.getItem("servato_time");
+      if (lastTime) {
+        const elapsed = Date.now() - parseInt(lastTime, 10);
+        const remaining = 180000 - elapsed; // 3 λεπτά (180.000 ms)
+        if (remaining > 0) {
+          setCooldown(Math.ceil(remaining / 1000));
+        } else {
+          setCooldown(0);
+        }
+      }
+    };
+    checkCooldown();
+    const interval = setInterval(checkCooldown, 1000);
+    return () => clearInterval(interval);
+  }, [isCartOpen, checkoutStep]);
 
   if (!isCartOpen) return null;
 
@@ -120,12 +140,8 @@ export default function CheckoutSidebar({
               </div>
             </div>
             
-          // -------------------------------------------------------------
-          // ΝΕΑ ΛΟΓΙΚΗ ΓΙΑ ΤΗ ΣΕΛΙΔΑ "AUTH" (ΑΝΟΙΓΜΑ ΦΟΡΜΑΣ ΜΕ ΚΟΥΜΠΙ)
-          // -------------------------------------------------------------
           ) : checkoutStep === 'auth' ? (
             <div className="flex flex-col gap-6 animate-fade-in py-2">
-              {/* Promo Banner */}
               <div className="bg-[#38BDF8]/10 border border-[#38BDF8]/20 rounded-2xl p-5 flex items-center gap-4">
                 <div className="w-10 h-10 rounded-full bg-[#38BDF8]/20 text-[#38BDF8] flex items-center justify-center shrink-0"><Icons.Gift /></div>
                 <div>
@@ -135,7 +151,6 @@ export default function CheckoutSidebar({
               </div>
 
               {!showAuthForm ? (
-                // 1. ΑΡΧΙΚΗ ΟΘΟΝΗ ΜΕ ΤΑ ΔΥΟ ΚΟΥΜΠΙΑ (ΟΧΙ ΦΟΡΜΑ)
                 <div className="flex flex-col gap-4 mt-2 animate-fade-in">
                   <button 
                     onClick={() => setShowAuthForm(true)} 
@@ -161,7 +176,6 @@ export default function CheckoutSidebar({
                   </div>
                 </div>
               ) : (
-                // 2. ΟΤΑΝ ΠΑΤΗΣΕΙ ΤΟ ΚΟΥΜΠΙ, ΑΝΟΙΓΕΙ Η ΦΟΡΜΑ
                 <div className="flex flex-col gap-4 animate-fade-in">
                   <div className="bg-slate-800/30 p-6 rounded-2xl border border-white/5 relative">
                     <button 
@@ -212,7 +226,22 @@ export default function CheckoutSidebar({
           ) : checkoutStep === 'cart' ? (
             <div className="flex flex-col gap-4">
               
-              {/* ΤΟ ΚΑΡΟΥΖΕΛ ΜΠΑΙΝΕΙ ΠΡΩΤΟ-ΠΡΩΤΟ ΠΑΝΩ ΑΠΟ ΤΑ ΠΡΟΪΟΝΤΑ */}
+              {/* ΝΕΟ: WOLT BANNER (Πάνω από τα προϊόντα) */}
+              <div className="mb-2 flex flex-col sm:flex-row items-center justify-between gap-2 p-3 rounded-2xl bg-sky-900/20 border border-sky-800/50 -mt-2">
+                <span className="font-black text-[10px] text-sky-400 tracking-wider flex items-center gap-1.5 uppercase">
+                  🛍️ {lang === 'da' ? 'KUN AFHENTNING I BUTIK' : lang === 'en' ? 'STORE PICKUP ONLY' : 'ΜΟΝΟ ΠΑΡΑΛΑΒΗ ΑΠΟ ΚΑΤΑΣΤΗΜΑ'}
+                </span>
+                <a
+                  href="https://www.wolt.com/el/dnk/aalborg/restaurant/hellas-aalborg"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[11px] font-black text-[#38BDF8] hover:underline flex items-center gap-1"
+                >
+                  {lang === 'da' ? 'Ønsker du levering? Bestil via Wolt' : lang === 'en' ? 'Want delivery? Order via Wolt' : 'Θέλετε Delivery; Παραγγείλτε μέσω Wolt'} 🛵
+                </a>
+              </div>
+
+              {/* ΤΟ ΚΑΡΟΥΖΕΛ UPSLL */}
               <div className="mb-2 -mt-2">
                 <SmartUpsell 
                   cart={cart} 
@@ -231,7 +260,7 @@ export default function CheckoutSidebar({
                 />
               </div>
 
-              {/* ΛΙΣΤΑ ΠΡΟΪΟΝΤΩΝ (Από κάτω) */}
+              {/* ΛΙΣΤΑ ΠΡΟΪΟΝΤΩΝ */}
               {cart.map((cartItem: any, idx: number) => (
                 <div key={idx} className="flex flex-col bg-slate-800/30 p-4 rounded-2xl border border-white/5">
                   <div className="flex justify-between items-center mb-3">
@@ -311,9 +340,32 @@ export default function CheckoutSidebar({
             ) : (
               <div className="flex gap-3">
                 <button type="button" onClick={() => setCheckoutStep('cart')} className="px-5 py-3.5 rounded-xl bg-slate-800 text-white font-bold uppercase tracking-wide hover:bg-slate-700 transition-colors">{ui.back}</button>
-                <button type="submit" form="checkoutForm" disabled={isSubmitting} className="flex-1 bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-bold py-3.5 rounded-xl disabled:opacity-50 uppercase tracking-wide transition-colors">{isSubmitting ? ui.sending : ui.confirm}</button>
+                <button 
+                  type="submit" 
+                  form="checkoutForm" 
+                  disabled={isSubmitting || cooldown > 0} 
+                  className="flex-1 bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-bold py-3.5 rounded-xl disabled:opacity-50 uppercase tracking-wide transition-colors"
+                >
+                  {/* ΝΕΟ: Έλεγχος COOLDOWN στο κουμπί */}
+                  {cooldown > 0 
+                    ? (lang === 'da' ? `VENT ${cooldown}s` : lang === 'en' ? `WAIT ${cooldown}s` : `ΑΝΑΜΟΝΗ ${cooldown}s`) 
+                    : isSubmitting ? ui.sending : ui.confirm}
+                </button>
               </div>
             )}
+
+            {/* ΝΕΟ: LINK ΠΟΛΙΤΙΚΗΣ ΑΠΟΡΡΗΤΟΥ */}
+            <div className="text-center mt-3">
+              <a
+                href="/privacy.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[9px] font-bold uppercase tracking-widest text-gray-500 hover:text-gray-300 transition-colors"
+              >
+                Privacy Policy & Terms (Nordic-mythos 1 ApS)
+              </a>
+            </div>
+
           </div>
         )}
       </div>
