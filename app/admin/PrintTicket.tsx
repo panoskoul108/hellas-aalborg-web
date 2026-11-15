@@ -16,63 +16,95 @@ export const PrintTicket = ({ order, storeName, onPrintDone }: any) => {
   if (!order) return null;
 
   return (
-    <div className="w-[80mm] bg-white text-black p-4 text-sm font-mono font-bold print:block">
-      {/* HEADER */}
-      <div className="text-center text-xl font-black mb-1">{storeName}</div>
-      <div className="text-center text-xs mb-4 border-b-2 border-black pb-2">
-        Takeaway Order #{order.order_number || order.id.toString().slice(-4)}<br/>
-        {new Date(order.created_at).toLocaleString('el-GR')}
-      </div>
-      
-      {/* ΠΕΛΑΤΗΣ */}
-      <div className="mb-4 text-sm">
-        <div className="uppercase">Name: {order.customer_name}</div>
-        <div className="uppercase">Tel: {order.customer_phone}</div>
-        <div className="mt-2 text-lg font-black uppercase border border-black p-1 text-center">
-          TIME: {order.requested_time}
-        </div>
-      </div>
+    <>
+      <style dangerouslySetInnerHTML={{__html: `
+        @media print {
+          @page { 
+            size: 80mm auto; /* Αναγκάζει το tablet να δει το χαρτί ως 80mm */
+            margin: 0;       /* Καταργεί τα προεπιλεγμένα περιθώρια του tablet */
+          }
+          body { 
+            margin: 0; 
+            padding: 0; 
+            background: white; 
+            /* Αποκρύπτει τα πάντα εκτός από το print-container */
+            visibility: hidden; 
+          }
+          .print-receipt-container { 
+            visibility: visible;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 80mm !important; 
+            max-width: 80mm !important;
+            padding: 2mm !important; /* Ελάχιστο κενό για να μην κόβονται τα γράμματα στις άκρες */
+            color: black !important;
+          }
+        }
+      `}} />
 
-      {/* ΠΡΟΪΟΝΤΑ (ΟΛΑ ΜΑΖΙ) */}
-      <div className="border-t-2 border-b-2 border-black py-3 mb-4">
-        {order.items?.map((it: any, i: number) => (
-          <div key={i} className="mb-3">
-            <div className="flex justify-between font-black text-base">
-              <span className="uppercase">{it.quantity}x {it.title_da || it.title_el || it.name}</span>
-              <span>{(it.unit_price_dkk * it.quantity).toFixed(0)} kr.</span>
-            </div>
-            {/* Extras / Υλικά */}
-            {it.selectedOptions?.length > 0 && (
-              <div className="text-[11px] pl-4 mt-0.5 uppercase">
-                + {it.selectedOptions.join(', ')}
-              </div>
-            )}
-            {/* Σχόλιο Προϊόντος */}
-            {it.note && (
-              <div className="text-[11px] pl-4 mt-0.5 italic">
-                * Note: {it.note}
-              </div>
-            )}
+      {/* 
+        Σημείωση: H κλάση 'print-receipt-container' είναι κρίσιμη για να 
+        εφαρμοστούν σωστά τα @media print styles. 
+      */}
+      <div className="print-receipt-container bg-white text-black text-sm font-mono font-bold w-full max-w-[80mm] mx-auto p-2">
+        {/* HEADER */}
+        <div className="text-center text-3xl font-black mb-2 leading-none">{storeName}</div>
+        <div className="text-center text-lg mb-4 border-b-2 border-black pb-2 leading-tight">
+          Takeaway Order #{order.order_number || order.id.toString().slice(-4)}<br/>
+          {new Date(order.created_at).toLocaleString('el-GR')}
+        </div>
+        
+        {/* ΠΕΛΑΤΗΣ */}
+        <div className="mb-4 text-xl leading-tight">
+          <div className="uppercase">Name: {order.customer_name}</div>
+          <div className="uppercase">Tel: {order.customer_phone}</div>
+          <div className="mt-2 text-3xl font-black uppercase border-2 border-black p-2 text-center tracking-wider">
+            TIME: {order.requested_time}
           </div>
-        ))}
-      </div>
-
-      {/* ΣΥΝΟΛΑ */}
-      <div className="flex justify-between text-lg font-black mt-2">
-        <span className="uppercase">TOTAL ({order.payment_method === 'ΚΑΡΤΑ' ? 'CARD' : 'CASH'}):</span>
-        <span>{order.total_price} DKK</span>
-      </div>
-      
-      {/* ΓΕΝΙΚΟ ΣΧΟΛΙΟ ΠΑΡΑΓΓΕΛΙΑΣ */}
-      {order.notes && (
-        <div className="mt-4 p-2 border-2 border-black text-sm font-black uppercase">
-          GENERAL NOTE:<br/>{order.notes}
         </div>
-      )}
-      
-      <div className="text-center text-[10px] mt-6 mb-8">
-        Thank you for your order!
+
+        {/* ΠΡΟΪΟΝΤΑ (ΟΛΑ ΜΑΖΙ) */}
+        <div className="border-t-4 border-b-4 border-black py-4 mb-4">
+          {order.items?.map((it: any, i: number) => (
+            <div key={i} className="mb-4 last:mb-0">
+              <div className="flex justify-between font-black text-2xl leading-tight">
+                <span className="uppercase pr-2">{it.quantity}x {it.title_da || it.title_el || it.name}</span>
+                <span className="whitespace-nowrap">{(it.unit_price_dkk * it.quantity).toFixed(0)} kr.</span>
+              </div>
+              {/* Extras / Υλικά */}
+              {it.selectedOptions?.length > 0 && (
+                <div className="text-lg pl-4 mt-1 uppercase leading-tight font-bold">
+                  + {it.selectedOptions.join(', ')}
+                </div>
+              )}
+              {/* Σχόλιο Προϊόντος */}
+              {it.note && (
+                <div className="text-lg pl-4 mt-1 italic uppercase font-black">
+                  *** Note: {it.note} ***
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* ΣΥΝΟΛΑ */}
+        <div className="flex justify-between text-2xl font-black mt-2 mb-4">
+          <span className="uppercase">TOTAL ({order.payment_method === 'ΚΑΡΤΑ' ? 'CARD' : 'CASH'}):</span>
+          <span>{order.total_price} DKK</span>
+        </div>
+        
+        {/* ΓΕΝΙΚΟ ΣΧΟΛΙΟ ΠΑΡΑΓΓΕΛΙΑΣ */}
+        {order.notes && (
+          <div className="mt-4 p-3 border-4 border-black text-xl font-black uppercase leading-tight">
+            GENERAL NOTE:<br/>{order.notes}
+          </div>
+        )}
+        
+        <div className="text-center text-lg mt-8 mb-12 font-bold">
+          Thank you for your order!
+        </div>
       </div>
-    </div>
+    </>
   );
 };
