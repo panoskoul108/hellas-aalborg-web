@@ -15,15 +15,14 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   
   // -- STATES ΓΙΑ ΤΟ PIN PAD, ΗΧΟ ΚΑΙ ΥΠΕΝΘΥΜΙΣΕΙΣ --
-  const prevCountRef = useRef(0); // Κρατάει τον προηγούμενο αριθμό εκκρεμών
-  const remindedOrdersRef = useRef<Set<number>>(new Set()); // Κρατάει ποιες παραγγελίες χτύπησαν στο 10λεπτο
+  const prevCountRef = useRef(0); 
+  const remindedOrdersRef = useRef<Set<number>>(new Set()); 
   
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [expectedPin, setExpectedPin] = useState('1234'); 
   const [enteredPin, setEnteredPin] = useState('');
   const [pinError, setPinError] = useState(false);
   
-  // Ειδικό state για την οπτική υπενθύμιση των 10 λεπτών
   const [reminderAlert, setReminderAlert] = useState({ show: false, orderId: '', time: '' });
   
   // -- UI STATES --
@@ -102,7 +101,7 @@ export default function AdminDashboard() {
     prevCountRef.current = pendingCount;
   }, [orders, audioUnlocked]);
 
-  // 2. Επαναλαμβανόμενος ήχος ΚΑΘΕ 5 ΔΕΥΤΕΡΟΛΕΠΤΑ όσο υπάρχουν "Pending" παραγγελίες
+  // 2. Επαναλαμβανόμενος ήχος ΚΑΘΕ 5 ΔΕΥΤΕΡΟΛΕΠΤΑ όσο υπάρχουν "Pending"
   useEffect(() => {
     if (!audioUnlocked) return;
     const pendingCount = orders.filter(o => o.status === 'pending').length;
@@ -119,7 +118,7 @@ export default function AdminDashboard() {
     };
   }, [orders, audioUnlocked]);
 
-  // 3. Έλεγχος & Υπενθύμιση παραγγελιών στο 10λεπτο
+  // 3. Έλεγχος & Υπενθύμιση παραγγελιών στο 10λεπτο (ΜΟΝΟ ΠΡΟΓΡΑΜΜΑΤΙΣΜΕΝΕΣ)
   useEffect(() => {
     if (!audioUnlocked) return;
     
@@ -134,8 +133,16 @@ export default function AdminDashboard() {
           
           if (diff < -720) diff += 1440; // Διόρθωση αν περάσαμε τα μεσάνυχτα
           
-          // Αν η παραγγελία πρέπει να βγει σε 1 έως 10 λεπτά ΚΑΙ δεν έχει ήδη χτυπήσει
-          if (diff > 0 && diff <= 10 && !remindedOrdersRef.current.has(order.id)) {
+          // Πόσα λεπτά έχουν περάσει από τη στιγμή που ο πελάτης έκανε την παραγγελία;
+          const minutesSinceCreation = (now.getTime() - new Date(order.created_at).getTime()) / 60000;
+          
+          // Θεωρούμε "Προγραμματισμένη" την παραγγελία που έχει μείνει στο σύστημα για 20+ λεπτά.
+          // Αυτό αποκλείει αυτόματα τις ASAP (που ετοιμάζονται σε 10-15 λεπτά από τη στιγμή που μπήκαν).
+          const isScheduled = minutesSinceCreation >= 20;
+          
+          // Αν η παραγγελία πρέπει να βγει σε 1 έως 10 λεπτά, ΔΕΝ έχει χτυπήσει ήδη, ΚΑΙ ΕΙΝΑΙ ΠΡΟΓΡΑΜΜΑΤΙΣΜΕΝΗ
+          if (diff > 0 && diff <= 10 && !remindedOrdersRef.current.has(order.id) && isScheduled) {
+            
             // Διπλός Ήχος Προειδοποίησης
             playSound();
             setTimeout(() => playSound(), 1000);
@@ -155,7 +162,7 @@ export default function AdminDashboard() {
           }
         }
       });
-    }, 30000); // Ο έλεγχος γίνεται κάθε 30 δευτερόλεπτα για να μην ζορίζει το tablet
+    }, 30000); // Ο έλεγχος γίνεται κάθε 30 δευτερόλεπτα
 
     return () => clearInterval(interval);
   }, [orders, audioUnlocked]);
@@ -293,7 +300,7 @@ export default function AdminDashboard() {
     <>
       <audio id="order-alert-sound" src={NOTIFICATION_SOUND} preload="auto" />
 
-      {/* ΝΕΟ: ΟΠΤΙΚΟ BANNER ΥΠΕΝΘΥΜΙΣΗΣ (ΕΜΦΑΝΙΖΕΤΑΙ ΟΤΑΝ ΧΤΥΠΑΕΙ ΤΟ 10ΛΕΠΤΟ) */}
+      {/* ΟΠΤΙΚΟ BANNER ΥΠΕΝΘΥΜΙΣΗΣ (ΕΜΦΑΝΙΖΕΤΑΙ ΟΤΑΝ ΧΤΥΠΑΕΙ ΤΟ 10ΛΕΠΤΟ) */}
       {reminderAlert.show && (
         <div className="fixed top-20 md:top-10 left-1/2 -translate-x-1/2 bg-red-600 text-white px-8 py-5 rounded-3xl shadow-[0_20px_50px_rgba(220,38,38,0.7)] z-[9999] animate-bounce border-4 border-white flex flex-col items-center min-w-[320px]">
           <span className="text-5xl mb-2">⚠️</span>
@@ -331,7 +338,7 @@ export default function AdminDashboard() {
               onClick={() => setActiveTab('settings')} 
               className={`px-4 md:px-6 py-2 rounded-lg text-xs font-black uppercase transition-all duration-300 ${activeTab === 'settings' ? 'bg-[#38BDF8] text-[#0B1120] shadow-md' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
             >
-              ΡΥΘΜΙΣΕΙΣ
+              ΡΥΘΜΙΣΕΙ
             </button>
           </div>
           
