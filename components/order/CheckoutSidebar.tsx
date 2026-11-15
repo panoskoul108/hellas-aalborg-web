@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import LoyaltyWallet from './LoyaltyWallet'; 
 import SmartUpsell from './SmartUpsell';
 import { Icons } from '../Icons';
@@ -13,6 +13,17 @@ export default function CheckoutSidebar({
   placedOrder, handleCustomerPickup, handleRepeatOrder, getLocaleDateString, menuItems,
   onEditItem, onAddNewItem
 }: any) {
+  
+  // ΝΕΟ STATE: Ελέγχει αν η φόρμα (email/pass) είναι ανοιχτή ή κλειστή
+  const [showAuthForm, setShowAuthForm] = useState(false);
+
+  // Αν κλείσει το καλάθι ή πάμε σε άλλο βήμα, κλείνουμε τη φόρμα για την επόμενη φορά
+  useEffect(() => {
+    if (checkoutStep === 'auth') {
+      setShowAuthForm(false);
+    }
+  }, [checkoutStep]);
+
   if (!isCartOpen) return null;
 
   return (
@@ -108,8 +119,13 @@ export default function CheckoutSidebar({
                 )}
               </div>
             </div>
+            
+          // -------------------------------------------------------------
+          // ΝΕΑ ΛΟΓΙΚΗ ΓΙΑ ΤΗ ΣΕΛΙΔΑ "AUTH" (ΑΝΟΙΓΜΑ ΦΟΡΜΑΣ ΜΕ ΚΟΥΜΠΙ)
+          // -------------------------------------------------------------
           ) : checkoutStep === 'auth' ? (
             <div className="flex flex-col gap-6 animate-fade-in py-2">
+              {/* Promo Banner */}
               <div className="bg-[#38BDF8]/10 border border-[#38BDF8]/20 rounded-2xl p-5 flex items-center gap-4">
                 <div className="w-10 h-10 rounded-full bg-[#38BDF8]/20 text-[#38BDF8] flex items-center justify-center shrink-0"><Icons.Gift /></div>
                 <div>
@@ -117,34 +133,80 @@ export default function CheckoutSidebar({
                   <p className="text-xs text-gray-400 leading-relaxed">{lang === 'da' ? 'Saml point og spar på dine næste ordrer.' : lang === 'en' ? 'Collect points and save on your next orders.' : 'Μάζεψε πόντους και κέρδισε έκπτωση στις επόμενες παραγγελίες σου.'}</p>
                 </div>
               </div>
-              <div className="text-center mt-2 mb-2">
-                <h3 className="text-xl font-bold text-white uppercase tracking-wide">{ui.guestCheckout}</h3>
-                <p className="text-gray-400 text-sm mt-2">{ui.guestDesc}</p>
-              </div>
-              <button onClick={() => setCheckoutStep('checkout')} className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-4 rounded-xl border border-white/5 uppercase tracking-wide transition-colors">{ui.guestCheckout}</button>
-              <div className="flex items-center gap-4 my-2 opacity-50">
-                <hr className="flex-1 border-slate-600" />
-                <span className="text-xs text-slate-400 font-bold uppercase">{ui.or}</span>
-                <hr className="flex-1 border-slate-600" />
-              </div>
-              <div className="bg-slate-800/30 p-6 rounded-2xl border border-white/5">
-                <h3 className="text-base font-bold text-white text-center mb-6 uppercase tracking-wide">{auth.authMode === 'signup' ? ui.regTitle : ui.loginTitle}</h3>
-                <form onSubmit={(e) => auth.handleAuth(e, () => setCheckoutStep('checkout'))} className="flex flex-col gap-4">
-                  {auth.authError && <div className="bg-red-500/10 text-red-400 p-3 rounded-lg text-sm font-medium text-center border border-red-500/20">{auth.authError}</div>}
-                  {auth.authMode === 'signup' && (
-                    <div className="flex flex-col gap-4 animate-fade-in">
-                      <input type="text" placeholder={ui.nameLabel} value={auth.regName} onChange={e => auth.setRegName(e.target.value)} required className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 transition-colors" />
-                      <input type="tel" placeholder={ui.phoneLabel} value={auth.regPhone} onChange={e => auth.setRegPhone(e.target.value)} required className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 transition-colors" />
-                      <input type="text" onFocus={(e) => e.target.type = 'date'} onBlur={(e) => { if (!e.target.value) e.target.type = 'text'; }} placeholder={t.dobPlaceholder} value={auth.regDob} onChange={e => auth.setRegDob(e.target.value)} className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 transition-colors" />
-                    </div>
-                  )}
-                  <input type="email" placeholder={ui.emailPlh} value={auth.email} onChange={e => auth.setEmail(e.target.value)} required className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 transition-colors" />
-                  <input type="password" placeholder={ui.passPlh} value={auth.password} onChange={e => auth.setPassword(e.target.value)} required className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 transition-colors" />
-                  <button type="submit" className="w-full bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-bold py-4 rounded-xl mt-2 uppercase tracking-wide transition-colors">{auth.authMode === 'signup' ? ui.regTitle : ui.loginTitle}</button>
-                </form>
-                <button type="button" onClick={() => { auth.setAuthMode(auth.authMode === 'signup' ? 'login' : 'signup'); auth.setAuthError(''); }} className="w-full text-sm text-gray-400 hover:text-white mt-6 font-medium transition-colors">{auth.authMode === 'signup' ? ui.hasAcc : ui.noAcc}</button>
-              </div>
+
+              {!showAuthForm ? (
+                // 1. ΑΡΧΙΚΗ ΟΘΟΝΗ ΜΕ ΤΑ ΔΥΟ ΚΟΥΜΠΙΑ (ΟΧΙ ΦΟΡΜΑ)
+                <div className="flex flex-col gap-4 mt-2 animate-fade-in">
+                  <button 
+                    onClick={() => setShowAuthForm(true)} 
+                    className="w-full bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-black py-4 rounded-xl uppercase tracking-wide transition-transform active:scale-95 shadow-md"
+                  >
+                    {lang === 'da' ? 'Opret konto / Log ind' : lang === 'en' ? 'Create Account / Login' : 'Εγγραφη / Εισοδος'}
+                  </button>
+
+                  <div className="flex items-center gap-4 my-2 opacity-50">
+                    <hr className="flex-1 border-slate-600" />
+                    <span className="text-xs text-slate-400 font-bold uppercase">{ui.or}</span>
+                    <hr className="flex-1 border-slate-600" />
+                  </div>
+
+                  <div className="text-center">
+                    <button 
+                      onClick={() => setCheckoutStep('checkout')} 
+                      className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-4 rounded-xl border border-white/5 uppercase tracking-wide transition-colors"
+                    >
+                      {ui.guestCheckout}
+                    </button>
+                    <p className="text-gray-400 text-xs mt-4">{ui.guestDesc}</p>
+                  </div>
+                </div>
+              ) : (
+                // 2. ΟΤΑΝ ΠΑΤΗΣΕΙ ΤΟ ΚΟΥΜΠΙ, ΑΝΟΙΓΕΙ Η ΦΟΡΜΑ
+                <div className="flex flex-col gap-4 animate-fade-in">
+                  <div className="bg-slate-800/30 p-6 rounded-2xl border border-white/5 relative">
+                    <button 
+                      onClick={() => setShowAuthForm(false)} 
+                      className="absolute top-4 right-4 text-gray-400 hover:text-white p-1"
+                    >
+                      <Icons.Close />
+                    </button>
+                    
+                    <h3 className="text-base font-bold text-white text-center mb-6 uppercase tracking-wide">{auth.authMode === 'signup' ? ui.regTitle : ui.loginTitle}</h3>
+                    
+                    <form onSubmit={(e) => auth.handleAuth(e, () => setCheckoutStep('checkout'))} className="flex flex-col gap-4">
+                      {auth.authError && <div className="bg-red-500/10 text-red-400 p-3 rounded-lg text-sm font-medium text-center border border-red-500/20">{auth.authError}</div>}
+                      
+                      {auth.authMode === 'signup' && (
+                        <div className="flex flex-col gap-4 animate-fade-in">
+                          <input type="text" placeholder={ui.nameLabel} value={auth.regName} onChange={e => auth.setRegName(e.target.value)} required className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 transition-colors" />
+                          <input type="tel" placeholder={ui.phoneLabel} value={auth.regPhone} onChange={e => auth.setRegPhone(e.target.value)} required className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 transition-colors" />
+                          <input type="text" onFocus={(e) => e.target.type = 'date'} onBlur={(e) => { if (!e.target.value) e.target.type = 'text'; }} placeholder={t.dobPlaceholder} value={auth.regDob} onChange={e => auth.setRegDob(e.target.value)} className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 transition-colors" />
+                        </div>
+                      )}
+                      <input type="email" placeholder={ui.emailPlh} value={auth.email} onChange={e => auth.setEmail(e.target.value)} required className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 transition-colors" />
+                      <input type="password" placeholder={ui.passPlh} value={auth.password} onChange={e => auth.setPassword(e.target.value)} required className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 transition-colors" />
+                      <button type="submit" className="w-full bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-bold py-4 rounded-xl mt-2 uppercase tracking-wide transition-colors">{auth.authMode === 'signup' ? ui.regTitle : ui.loginTitle}</button>
+                    </form>
+                    
+                    <button type="button" onClick={() => { auth.setAuthMode(auth.authMode === 'signup' ? 'login' : 'signup'); auth.setAuthError(''); }} className="w-full text-sm text-[#38BDF8] hover:text-sky-300 mt-6 font-bold transition-colors">{auth.authMode === 'signup' ? ui.hasAcc : ui.noAcc}</button>
+                  </div>
+
+                  <div className="flex items-center gap-4 my-2 opacity-50">
+                    <hr className="flex-1 border-slate-600" />
+                    <span className="text-xs text-slate-400 font-bold uppercase">{ui.or}</span>
+                    <hr className="flex-1 border-slate-600" />
+                  </div>
+
+                  <button 
+                    onClick={() => setCheckoutStep('checkout')} 
+                    className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-4 rounded-xl border border-white/5 uppercase tracking-wide transition-colors"
+                  >
+                    {ui.guestCheckout}
+                  </button>
+                </div>
+              )}
             </div>
+            
           ) : cart.length === 0 ? (
             <div className="text-center text-gray-500 mt-24 flex flex-col items-center"><div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center text-gray-400 mb-4"><Icons.Cart /></div><p className="font-medium text-lg">{ui.emptyCart}</p></div>
           ) : checkoutStep === 'cart' ? (
