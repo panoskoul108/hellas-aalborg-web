@@ -16,11 +16,17 @@ export function useAuth() {
   const [customerPhone, setCustomerPhone] = useState('');
   const [userOrderHistory, setUserOrderHistory] = useState<any[]>([]);
 
-  const fetchUserProfile = async (userId: string) => {
-    const { data } = await supabase.from('customers_loyalty').select('*').eq('user_id', userId).single();
-    if (data) {
-      setCustomerName(data.full_name || '');
+  // ΒΕΛΤΙΩΣΗ: Περνάμε όλο το user object για να έχουμε fallback αν λείπει από το loyalty
+  const fetchUserProfile = async (currentUser: any) => {
+    const { data } = await supabase.from('customers_loyalty').select('*').eq('user_id', currentUser.id).single();
+    if (data && data.full_name) {
+      setCustomerName(data.full_name);
       setCustomerPhone(data.phone || '');
+    } else {
+      // Fallback στα user metadata σε περίπτωση που δεν βρέθηκε εγγραφή στο customers_loyalty
+      const meta = currentUser.user_metadata;
+      setCustomerName(meta?.full_name || meta?.name || currentUser.email?.split('@')[0] || '');
+      setCustomerPhone(meta?.phone || meta?.phone_number || '');
     }
   };
 
@@ -29,7 +35,7 @@ export function useAuth() {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         setUser(session.user);
-        fetchUserProfile(session.user.id); 
+        fetchUserProfile(session.user); 
       }
     };
     initSession();
@@ -37,7 +43,7 @@ export function useAuth() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user || null);
       if (session?.user) {
-        fetchUserProfile(session.user.id);
+        fetchUserProfile(session.user);
       } else {
         setCustomerName('');
         setCustomerPhone('');
@@ -63,14 +69,19 @@ export function useAuth() {
           date_of_birth: regDob || null, 
           wallet_balance: 35 
         });
-        setCustomerName(regName); setCustomerPhone(regPhone); 
+        setCustomerName(regName); 
+        setCustomerPhone(regPhone); 
         onSuccess();
       }
     } else {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setAuthError('Wrong email or password.');
-      else { 
+      else if (data.user) { 
         setUser(data.user); 
+        
+        // ΒΕΛΤΙΩΣΗ: Περιμένουμε να φορτώσουν τα στοιχεία ΠΡΙΝ προχωρήσουμε την οθόνη!
+        await fetchUserProfile(data.user);
+        
         onSuccess();
       }
     }
