@@ -4,7 +4,7 @@ import Link from 'next/link';
 
 export default function CookieBanner() {
   const [showBanner, setShowBanner] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false); // ΝΕΟ: Ελέγχει αν είναι ανοιχτό ή μπισκότο
+  const [isExpanded, setIsExpanded] = useState(false); // Ελέγχει αν είναι ανοιχτό ή απλό μπισκότο
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -29,7 +29,7 @@ export default function CookieBanner() {
     return (
       <button 
         onClick={() => setIsExpanded(true)}
-        className="fixed bottom-[130px] left-4 md:bottom-8 md:left-8 w-14 h-14 bg-slate-900 border-2 border-slate-700 rounded-full shadow-[0_0_20px_rgba(0,0,0,0.5)] z-[100] flex items-center justify-center text-2xl hover:scale-110 hover:border-[#38BDF8] transition-all animate-bounce"
+        className="fixed bottom-[130px] left-4 md:bottom-8 md:left-8 w-14 h-14 bg-slate-900 border-2 border-slate-700 rounded-full shadow-[0_0_20px_rgba(0,0,0,0.5)] z-[100] flex items-center justify-center text-3xl hover:scale-110 hover:border-[#38BDF8] transition-all animate-bounce"
         aria-label="Cookie Indstillinger"
       >
         🍪
@@ -49,7 +49,7 @@ export default function CookieBanner() {
         ✕
       </button>
 
-      <div className="text-xs sm:text-sm font-medium opacity-90 leading-relaxed max-w-4xl mb-4">
+      <div className="text-xs sm:text-sm font-medium opacity-90 leading-relaxed max-w-4xl mb-4 text-gray-200">
         Vi bruger udelukkende nødvendige cookies (lokal lagring) for at få din takeaway-bestilling og kurv til at fungere. Vi bruger ikke tracking eller marketing-cookies.{' '}
         <Link href="/privacy" className="underline text-[#38BDF8] font-bold hover:text-sky-300">
           Læs mere i vores Privatlivspolitik.
