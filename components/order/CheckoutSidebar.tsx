@@ -18,12 +18,15 @@ export default function CheckoutSidebar({
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-end">
       <div className="w-full md:max-w-md bg-[#0F172A] h-full flex flex-col shadow-2xl md:border-l border-white/10 animate-fade-in-up md:animate-slide-in-right">
-        <div className="p-5 border-b border-white/5 flex justify-between items-center bg-slate-900 shrink-0">
+        
+        {/* HEADER ΚΑΛΑΘΙΟΥ */}
+        <div className="p-4 md:p-5 border-b border-white/5 flex justify-between items-center bg-slate-900 shrink-0">
           <h2 className="text-lg font-bold text-white uppercase tracking-wide">{checkoutStep === 'profile' ? ui.profileTitle : ui.cartTitle}</h2>
           {checkoutStep !== 'success' && <button onClick={() => { setIsCartOpen(false); if(checkoutStep === 'review' || checkoutStep === 'profile') setCheckoutStep('cart'); }} className="text-gray-400 hover:text-white transition-colors p-1"><Icons.Close /></button>}
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 pb-24">
+        {/* ΣΩΜΑ ΚΑΛΑΘΙΟΥ (ΣΚΡΟΛΑΡΕΙ) */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-5 pb-8">
           {checkoutStep === 'profile' ? (
             <div className="flex flex-col gap-6 animate-fade-in">
               <div className="text-center mb-2"><div className="w-16 h-16 bg-slate-800 rounded-full mx-auto flex items-center justify-center text-gray-400 mb-3"><Icons.User /></div><h3 className="text-lg font-bold text-white">{auth.customerName || auth.user?.email}</h3><p className="text-sm text-gray-400">{auth.customerPhone}</p></div>
@@ -146,6 +149,27 @@ export default function CheckoutSidebar({
             <div className="text-center text-gray-500 mt-24 flex flex-col items-center"><div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center text-gray-400 mb-4"><Icons.Cart /></div><p className="font-medium text-lg">{ui.emptyCart}</p></div>
           ) : checkoutStep === 'cart' ? (
             <div className="flex flex-col gap-4">
+              
+              {/* ΤΟ ΚΑΡΟΥΖΕΛ ΜΠΑΙΝΕΙ ΠΡΩΤΟ-ΠΡΩΤΟ ΠΑΝΩ ΑΠΟ ΤΑ ΠΡΟΪΟΝΤΑ */}
+              <div className="mb-2 -mt-2">
+                <SmartUpsell 
+                  cart={cart} 
+                  menuItems={menuItems} 
+                  lang={lang} 
+                  onAdd={(item: any) => {
+                    if (item._directAdd) {
+                      addToCart(item.item, 1);
+                    } else if (onAddNewItem) {
+                      onAddNewItem(item);
+                    } else {
+                      setActiveProduct(item);
+                      setIsCartOpen(false);
+                    }
+                  }} 
+                />
+              </div>
+
+              {/* ΛΙΣΤΑ ΠΡΟΪΟΝΤΩΝ (Από κάτω) */}
               {cart.map((cartItem: any, idx: number) => (
                 <div key={idx} className="flex flex-col bg-slate-800/30 p-4 rounded-2xl border border-white/5">
                   <div className="flex justify-between items-center mb-3">
@@ -176,24 +200,6 @@ export default function CheckoutSidebar({
                   {cartItem.item.note && <p className="text-xs text-gray-400 italic mt-2">Note: {cartItem.item.note}</p>}
                 </div>
               ))}
-              
-              <div className="mt-4">
-                <SmartUpsell 
-                  cart={cart} 
-                  menuItems={menuItems} 
-                  lang={lang} 
-                  onAdd={(item: any) => {
-                    if (item._directAdd) {
-                      addToCart(item.item, 1);
-                    } else if (onAddNewItem) {
-                      onAddNewItem(item);
-                    } else {
-                      setActiveProduct(item);
-                      setIsCartOpen(false);
-                    }
-                  }} 
-                />
-              </div>
             </div>
           ) : (
             <form id="checkoutForm" onSubmit={submitOrder} className="flex flex-col gap-6">
@@ -217,15 +223,17 @@ export default function CheckoutSidebar({
           )}
         </div>
 
+        {/* FOOTER - ΣΤΑΘΕΡΟ ΚΑΤΩ ΜΕΡΟΣ */}
         {cart.length > 0 && checkoutStep !== 'success' && checkoutStep !== 'review' && checkoutStep !== 'profile' && (
-          <div className="p-5 bg-slate-900 border-t border-white/5 shrink-0">
+          <div className="p-4 md:p-5 bg-slate-900 border-t border-white/5 shrink-0 flex flex-col z-20 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+            
             <div className="flex justify-between items-center mb-2"><span className="text-gray-400 text-sm">{ui.subtotal}</span><span className="text-white font-bold">{subtotal} kr.</span></div>
             {loyaltyDiscount > 0 && <div className="flex justify-between items-center mb-2 text-[#38BDF8]"><span className="text-sm">{ui.loyaltyDiscount}</span><span className="font-bold">-{loyaltyDiscount.toFixed(2)} kr.</span></div>}
-            <div className="flex justify-between items-center mt-4 mb-6 border-t border-white/5 pt-4"><span className="text-white font-bold uppercase tracking-wide">{ui.totalPay}</span><span className="text-2xl font-bold text-[#38BDF8]">{finalTotal.toFixed(2)} kr.</span></div>
+            <div className="flex justify-between items-center mt-2 mb-5 border-t border-white/5 pt-3"><span className="text-white font-bold uppercase tracking-wide">{ui.totalPay}</span><span className="text-2xl font-bold text-[#38BDF8]">{finalTotal.toFixed(2)} kr.</span></div>
             
             {!storeOpen ? (
               <div className="flex flex-col gap-2 animate-fade-in-up">
-                 <button disabled className="w-full bg-red-900/50 text-red-300 font-black uppercase tracking-widest py-4 rounded-xl border border-red-500/30 cursor-not-allowed">
+                 <button disabled className="w-full bg-red-900/50 text-red-300 font-black uppercase tracking-widest py-3.5 rounded-xl border border-red-500/30 cursor-not-allowed">
                    {lang === 'da' ? 'MIDLERTIDIGT LUKKET' : lang === 'en' ? 'TEMPORARILY CLOSED' : 'ΠΡΟΣΩΡΙΝΑ ΚΛΕΙΣΤΟ'}
                  </button>
                  <p className="text-xs text-red-400 font-bold text-center italic">
@@ -235,13 +243,13 @@ export default function CheckoutSidebar({
                  </p>
               </div>
             ) : checkoutStep === 'cart' ? (
-              <button onClick={() => auth.user ? setCheckoutStep('checkout') : setCheckoutStep('auth')} className="w-full bg-[#38BDF8] text-[#0B1120] font-bold uppercase tracking-wide py-4 rounded-xl hover:bg-sky-400 transition-colors">{ui.toCheckout}</button>
+              <button onClick={() => auth.user ? setCheckoutStep('checkout') : setCheckoutStep('auth')} className="w-full bg-[#38BDF8] text-[#0B1120] font-bold uppercase tracking-wide py-3.5 rounded-xl hover:bg-sky-400 transition-colors">{ui.toCheckout}</button>
             ) : checkoutStep === 'auth' ? (
-              <button type="button" onClick={() => setCheckoutStep('cart')} className="w-full bg-slate-800 text-white font-bold py-4 rounded-xl hover:bg-slate-700 uppercase tracking-wide transition-colors">{ui.backToCart}</button>
+              <button type="button" onClick={() => setCheckoutStep('cart')} className="w-full bg-slate-800 text-white font-bold py-3.5 rounded-xl hover:bg-slate-700 uppercase tracking-wide transition-colors">{ui.backToCart}</button>
             ) : (
               <div className="flex gap-3">
-                <button type="button" onClick={() => setCheckoutStep('cart')} className="px-6 py-4 rounded-xl bg-slate-800 text-white font-bold uppercase tracking-wide hover:bg-slate-700 transition-colors">{ui.back}</button>
-                <button type="submit" form="checkoutForm" disabled={isSubmitting} className="flex-1 bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-bold py-4 rounded-xl disabled:opacity-50 uppercase tracking-wide transition-colors">{isSubmitting ? ui.sending : ui.confirm}</button>
+                <button type="button" onClick={() => setCheckoutStep('cart')} className="px-5 py-3.5 rounded-xl bg-slate-800 text-white font-bold uppercase tracking-wide hover:bg-slate-700 transition-colors">{ui.back}</button>
+                <button type="submit" form="checkoutForm" disabled={isSubmitting} className="flex-1 bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-bold py-3.5 rounded-xl disabled:opacity-50 uppercase tracking-wide transition-colors">{isSubmitting ? ui.sending : ui.confirm}</button>
               </div>
             )}
           </div>
