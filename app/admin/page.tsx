@@ -9,8 +9,8 @@ import SettingsPanel from '../../components/admin/SettingsPanel';
 import Link from 'next/link';
 
 // Ορίζουμε 2 διαφορετικούς ήχους
-const NOTIFICATION_SOUND = "/notification.mp3.wav"; // Για παραγγελίες
-const CHAT_SOUND = "/chat-alert.mp3.wav";           // ΝΕΟ: Για μηνύματα
+const NOTIFICATION_SOUND = "notification.mp3.wav"; // Για παραγγελίες
+const CHAT_SOUND = "chat-alert.mp3.wav";           // ΝΕΟ: Για μηνύματα
 
 export default function AdminDashboard() {
   const [orders, setOrders] = useState<any[]>([]);
