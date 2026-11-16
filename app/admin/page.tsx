@@ -292,7 +292,6 @@ export default function AdminDashboard() {
 
   // --- Υπολογισμοί Μηνυμάτων & Ταξινόμηση Παραγγελιών ---
   
-  // Βρίσκουμε τις παραγγελίες που έχουν Unread Μηνύματα (τελευταίο μήνυμα είναι από τον πελάτη)
   const activeChatOrders = Array.from(new Set(supportMessages.map(m => m.order_id)));
   const unreadChatCount = activeChatOrders.filter(id => {
      const msgs = supportMessages.filter(m => m.order_id === id);
@@ -316,6 +315,9 @@ export default function AdminDashboard() {
       return getDiff(a.requested_time) - getDiff(b.requested_time);
     });
   const completedOrders = orders.filter(o => o.status === 'completed' && o.is_delivered !== true && (new Date().getTime() - new Date(o.created_at).getTime() < 24 * 60 * 60 * 1000));
+
+  // Εύρεση της παραγγελίας για το Chat Panel
+  const currentChatOrder = orders.find(o => o.id === activeChatOrderId);
 
   return (
     <>
@@ -387,7 +389,7 @@ export default function AdminDashboard() {
 
             {/* ΚΟΥΜΠΙ ΓΙΑ ΤΟ CHAT (ΔΙΠΛΑ ΑΠΟ ΤΗΝ ΑΝΑΝΕΩΣΗ) */}
             <button 
-              onClick={() => setIsChatPanelOpen(true)} 
+              onClick={() => { setIsChatPanelOpen(true); setActiveChatOrderId(null); }} 
               className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/20 text-lg shadow-sm transition-colors" 
               title="Μηνύματα Πελατών"
             >
@@ -410,23 +412,6 @@ export default function AdminDashboard() {
             </button>
           </div>
         </header>
-
-        <div className="lg:hidden p-4 bg-[#0F172A] border-b border-white/10 flex flex-col gap-2">
-           <button 
-              onClick={toggleStoreStatus}
-              className={`w-full flex justify-center items-center gap-2 px-4 py-3 rounded-xl text-sm font-black uppercase tracking-wider transition-all border shadow-lg ${
-                isStoreOpen 
-                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50 hover:bg-emerald-500/30' 
-                  : 'bg-red-500 text-white border-red-600 hover:bg-red-600 animate-pulse'
-              }`}
-            >
-              <div className={`w-3 h-3 rounded-full ${isStoreOpen ? 'bg-emerald-400' : 'bg-white'}`}></div>
-              {isStoreOpen ? 'ΠΑΡΑΓΓΕΛΙΕΣ ΑΝΟΙΧΤΕΣ' : 'ΠΑΡΑΓΓΕΛΙΕΣ ΚΛΕΙΣΤΕΣ (STORE PAUSE)'}
-            </button>
-            <Link href="/admin/products" className="w-full flex justify-center items-center gap-1.5 bg-purple-600/20 text-purple-400 border border-purple-500/30 hover:bg-purple-600/30 px-4 py-3 rounded-xl text-sm font-black uppercase shadow-sm transition-colors">
-               📋 ΔΙΑΧΕΙΡΙΣΗ ΚΑΤΑΛΟΓΟΥ
-            </Link>
-        </div>
 
         {activeTab === 'live' ? (
           <main className="p-4 md:p-6 max-w-[1800px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
@@ -511,7 +496,9 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {/* ΣΥΡΤΑΡΙ ΓΙΑ ΤΑ CHAT ΤΟΥ ADMIN */}
+      {/* ======================================= */}
+      {/* ΣΥΡΤΑΡΙ ΓΙΑ ΤΑ CHAT ΤΟΥ ADMIN           */}
+      {/* ======================================= */}
       {isChatPanelOpen && (
         <div className="fixed inset-0 bg-black/80 z-[9999] flex justify-end animate-fade-in backdrop-blur-sm" onClick={() => setIsChatPanelOpen(false)}>
           <div className="w-full md:max-w-md bg-[#0F172A] h-full flex flex-col shadow-2xl border-l border-white/10" onClick={e => e.stopPropagation()}>
@@ -524,7 +511,7 @@ export default function AdminDashboard() {
             </div>
             
             {!activeChatOrderId ? (
-              // ΛΙΣΤΑ ΜΕ ΕΝΕΡΓΑ CHAT
+              // 1. ΛΙΣΤΑ ΜΕ ΕΝΕΡΓΑ CHAT
               <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
                 {activeChatOrders.length === 0 ? (
                   <p className="text-center text-gray-500 text-sm mt-10 font-bold uppercase">Κανένα ενεργό Chat</p>
@@ -533,7 +520,7 @@ export default function AdminDashboard() {
                     const msgs = supportMessages.filter(m => m.order_id === oid);
                     const lastMsg = msgs[msgs.length - 1];
                     const isUnread = !lastMsg.is_store;
-                    const order = orders.find(o => o.id === oid);
+                    const orderForList = orders.find(o => o.id === oid); // ΔΙΑΒΑΣΜΑ ΟΝΟΜΑΤΟΣ
                     return (
                       <div 
                         key={oid} 
@@ -541,7 +528,7 @@ export default function AdminDashboard() {
                         className={`p-4 rounded-2xl cursor-pointer border transition-colors shadow-sm ${isUnread ? 'bg-indigo-900/40 border-indigo-500/50' : 'bg-slate-800/50 border-white/5 hover:bg-slate-800'}`}
                       >
                         <div className="flex justify-between items-center mb-1">
-                          <span className="font-black text-white text-sm">Order #{order?.order_number || oid.toString().slice(-4)}</span>
+                          <span className="font-black text-white text-sm">Order #{orderForList?.order_number || oid.toString().slice(-4)} - {orderForList?.customer_name || 'ΠΕΛΑΤΗΣ'}</span>
                           <span className="text-[9px] font-bold text-gray-400">{new Date(lastMsg.created_at).toLocaleTimeString('el-GR', {hour:'2-digit', minute:'2-digit'})}</span>
                         </div>
                         <p className={`text-xs line-clamp-1 ${isUnread ? 'text-indigo-300 font-bold' : 'text-gray-500'}`}>
@@ -553,17 +540,20 @@ export default function AdminDashboard() {
                 )}
               </div>
             ) : (
-              // ΠΡΟΒΟΛΗ ΣΥΓΚΕΚΡΙΜΕΝΟΥ CHAT (ΑΠΑΝΤΗΣΗ)
+              // 2. ΠΡΟΒΟΛΗ ΣΥΓΚΕΚΡΙΜΕΝΟΥ CHAT (ΑΠΑΝΤΗΣΗ)
               <div className="flex-1 flex flex-col overflow-hidden bg-[#0F172A]">
                 <div className="p-3 bg-slate-800 border-b border-white/5 flex items-center gap-3 shrink-0">
                   <button onClick={() => setActiveChatOrderId(null)} className="w-8 h-8 flex items-center justify-center bg-slate-700 rounded-full text-white hover:bg-slate-600 transition-colors">←</button>
-                  <span className="font-black text-white text-sm uppercase">Order #{orders.find(o => o.id === activeChatOrderId)?.order_number || activeChatOrderId.toString().slice(-4)}</span>
+                  <div className="flex flex-col">
+                    <span className="font-black text-white text-sm uppercase">Order #{currentChatOrder?.order_number || activeChatOrderId.toString().slice(-4)} - {currentChatOrder?.customer_name || 'ΠΕΛΑΤΗΣ'}</span>
+                    <span className="text-[10px] text-gray-400 font-bold">{currentChatOrder?.customer_phone || ''}</span>
+                  </div>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
                   {supportMessages.filter(m => m.order_id === activeChatOrderId).map(msg => (
                     <div key={msg.id} className={`flex flex-col max-w-[85%] ${msg.is_store ? 'self-end' : 'self-start'}`}>
                       <span className={`text-[9px] font-bold uppercase tracking-widest mb-1 mx-1 ${msg.is_store ? 'text-[#38BDF8] text-right' : 'text-emerald-400'}`}>
-                        {msg.is_store ? 'Εσείς' : 'Πελάτης'}
+                        {msg.is_store ? 'Εσείς' : (currentChatOrder?.customer_name || 'Πελάτης')}
                       </span>
                       <div className={`px-4 py-3 rounded-2xl text-sm font-medium ${msg.is_store ? 'bg-[#38BDF8] text-[#0B1120] rounded-tr-sm' : 'bg-slate-800 text-white rounded-tl-sm'}`}>
                         {msg.message}
@@ -591,6 +581,9 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {/* ======================================= */}
+      {/* MODAL ΛΕΠΤΟΜΕΡΕΙΩΝ ΠΑΡΑΓΓΕΛΙΑΣ          */}
+      {/* ======================================= */}
       {selectedOrder && (
         <div className="fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center p-4 animate-fade-in backdrop-blur-sm" onClick={() => setSelectedOrder(null)}>
           <div className="bg-slate-800 border border-slate-600 w-full max-w-xl rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
@@ -641,15 +634,33 @@ export default function AdminDashboard() {
                 </div>
               )}
             </div>
-            <div className="p-6 border-t border-slate-700 bg-slate-900 flex justify-between items-center">
-              <div>
+
+            {/* ΚΟΥΜΠΙΑ ΔΡΑΣΗΣ - ΠΡΟΣΤΕΘΗΚΕ ΤΟ "ΜΗΝΥΜΑ" */}
+            <div className="p-6 border-t border-slate-700 bg-slate-900 flex flex-col md:flex-row justify-between items-center gap-4">
+              <div className="text-left w-full md:w-auto">
                 <p className="text-xs text-gray-400 font-bold uppercase">Πληρωμή: {selectedOrder.payment_method}</p>
                 <p className="text-2xl font-black text-white">{selectedOrder.total_price} kr.</p>
               </div>
-              <div className="flex gap-2">
-                <button onClick={() => { setActivePrintOrder(selectedOrder); setIsPrinting(true); }} className="bg-slate-700 text-white font-bold px-6 py-3 rounded-xl hover:bg-slate-600 transition-colors shadow-lg border border-slate-600">🖨️ ΕΚΤΥΠΩΣΗ</button>
+              <div className="flex w-full md:w-auto gap-2">
+                <button 
+                  onClick={() => {
+                    setIsChatPanelOpen(true);
+                    setActiveChatOrderId(selectedOrder.id);
+                    setSelectedOrder(null);
+                  }} 
+                  className="flex-1 md:flex-none bg-indigo-600 hover:bg-indigo-500 text-white font-black px-6 py-3 rounded-xl transition-colors shadow-lg border border-indigo-500"
+                >
+                  💬 ΜΗΝΥΜΑ
+                </button>
+                <button 
+                  onClick={() => { setActivePrintOrder(selectedOrder); setIsPrinting(true); }} 
+                  className="flex-1 md:flex-none bg-slate-700 text-white font-black px-6 py-3 rounded-xl hover:bg-slate-600 transition-colors shadow-lg border border-slate-600"
+                >
+                  🖨️ ΕΚΤΥΠΩΣΗ
+                </button>
               </div>
             </div>
+
           </div>
         </div>
       )}
