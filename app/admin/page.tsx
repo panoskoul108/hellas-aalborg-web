@@ -8,7 +8,9 @@ import HistoryPanel from '../../components/admin/HistoryPanel';
 import SettingsPanel from '../../components/admin/SettingsPanel';
 import Link from 'next/link';
 
-const NOTIFICATION_SOUND = "/notification.mp3.wav"; 
+// Ορίζουμε 2 διαφορετικούς ήχους
+const NOTIFICATION_SOUND = "/notification.mp3.wav"; // Για παραγγελίες
+const CHAT_SOUND = "/chat-alert.mp3.wav";           // ΝΕΟ: Για μηνύματα
 
 export default function AdminDashboard() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -71,8 +73,9 @@ export default function AdminDashboard() {
   };
 
   const fetchChats = async () => {
-    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const { data } = await supabase.from('support_chats').select('*').gte('created_at', yesterday).order('created_at', { ascending: true });
+    // Φέρνουμε τα μηνύματα των τελευταίων 3 ημερών για να μην "βαραίνει"
+    const threeDaysAgo = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
+    const { data } = await supabase.from('support_chats').select('*').gte('created_at', threeDaysAgo).order('created_at', { ascending: true });
     if (data) setSupportMessages(data);
   };
 
@@ -108,8 +111,17 @@ export default function AdminDashboard() {
     return () => { clearInterval(interval); document.removeEventListener("visibilitychange", handleVisibilityChange); };
   }, [audioUnlocked]);
 
+  // --- ΣΥΝΑΡΤΗΣΕΙΣ ΑΝΑΠΑΡΑΓΩΓΗΣ ΗΧΩΝ ---
   const playSound = () => {
     const audio = document.getElementById('order-alert-sound') as HTMLAudioElement;
+    if (audio) {
+      audio.currentTime = 0;
+      audio.play().catch(e => console.log("Audio Blocked:", e));
+    }
+  };
+
+  const playChatSound = () => {
+    const audio = document.getElementById('chat-alert-sound') as HTMLAudioElement;
     if (audio) {
       audio.currentTime = 0;
       audio.play().catch(e => console.log("Audio Blocked:", e));
@@ -128,11 +140,11 @@ export default function AdminDashboard() {
   // 2. Ήχος για ΝΕΑ ΜΗΝΥΜΑΤΑ (Από πελάτη)
   useEffect(() => {
     const unreadCount = supportMessages.filter(m => !m.is_store).length;
-    if (unreadCount > prevChatCountRef.current && audioUnlocked) playSound();
+    if (unreadCount > prevChatCountRef.current && audioUnlocked) playChatSound();
     prevChatCountRef.current = unreadCount;
   }, [supportMessages, audioUnlocked]);
 
-  // 3. Επαναλαμβανόμενος ήχος ΚΑΘΕ 5 ΔΕΥΤΕΡΟΛΕΠΤΑ όσο υπάρχουν "Pending"
+  // 3. Επαναλαμβανόμενος ήχος ΚΑΘΕ 5 ΔΕΥΤΕΡΟΛΕΠΤΑ όσο υπάρχουν "Pending" Orders
   useEffect(() => {
     if (!audioUnlocked) return;
     const pendingCount = orders.filter(o => o.status === 'pending').length;
@@ -264,6 +276,22 @@ export default function AdminDashboard() {
     }]);
   };
 
+  // ΝΕΟ: Διαγραφή όλου του ιστορικού μηνυμάτων για τη συγκεκριμένη παραγγελία
+  const handleDeleteChat = async () => {
+    if (!activeChatOrderId) return;
+    if (!window.confirm("Σίγουρα θέλετε να διαγράψετε όλο το ιστορικό μηνυμάτων γι' αυτή την παραγγελία;")) return;
+    
+    const { error } = await supabase.from('support_chats').delete().eq('order_id', activeChatOrderId);
+    if (error) {
+      alert("Σφάλμα κατά τη διαγραφή: " + error.message);
+      return;
+    }
+    
+    // Αφαιρούμε τα διεγραμμένα μηνύματα από το state και κλείνουμε την προβολή συνομιλίας
+    setSupportMessages(prev => prev.filter(m => m.order_id !== activeChatOrderId));
+    setActiveChatOrderId(null);
+  };
+
   if (isLoading) return <div className="min-h-screen bg-[#0B1120] flex items-center justify-center text-[#38BDF8] font-bold text-xl animate-pulse">Φόρτωση Ταμείου...</div>;
 
   if (!audioUnlocked) {
@@ -271,6 +299,7 @@ export default function AdminDashboard() {
       <div className="min-h-screen bg-[#0B1120] flex flex-col items-center justify-center p-6 text-center bg-[url('/bg.jpg')] bg-cover bg-fixed bg-center relative">
         <div className="absolute inset-0 bg-[#0B1120]/90 -z-10 backdrop-blur-sm"></div>
         <audio id="order-alert-sound" src={NOTIFICATION_SOUND} preload="auto" />
+        <audio id="chat-alert-sound" src={CHAT_SOUND} preload="auto" />
         <h1 className="text-3xl font-black text-white uppercase tracking-widest mb-2 shadow-black drop-shadow-md">HELLAS AALBORG</h1>
         <p className="text-[#38BDF8] font-black uppercase tracking-widest text-xs mb-8">ΚΛΕΙΔΩΜΑ ΟΘΟΝΗΣ</p>
         <div className={`bg-slate-800/80 p-8 rounded-[2.5rem] shadow-2xl border ${pinError ? 'border-red-500 animate-shake' : 'border-slate-600/50'} w-full max-w-xs backdrop-blur-md transition-colors duration-300`}>
@@ -322,6 +351,7 @@ export default function AdminDashboard() {
   return (
     <>
       <audio id="order-alert-sound" src={NOTIFICATION_SOUND} preload="auto" />
+      <audio id="chat-alert-sound" src={CHAT_SOUND} preload="auto" />
 
       {/* ΟΠΤΙΚΟ BANNER ΥΠΕΝΘΥΜΙΣΗΣ */}
       {reminderAlert.show && (
@@ -383,11 +413,10 @@ export default function AdminDashboard() {
                 📋 ΚΑΤΑΛΟΓΟΣ
             </Link>
             
-            <button onClick={playSound} className="hidden sm:flex items-center justify-center bg-slate-800 text-gray-300 border border-slate-600 w-10 h-10 rounded-xl hover:bg-slate-700 transition-colors shadow-sm" title="Δοκιμή Ήχου">
+            <button onClick={playSound} className="hidden sm:flex items-center justify-center bg-slate-800 text-gray-300 border border-slate-600 w-10 h-10 rounded-xl hover:bg-slate-700 transition-colors shadow-sm" title="Δοκιμή Ήχου Παραγγελίας">
               🔊
             </button>
 
-            {/* ΚΟΥΜΠΙ ΓΙΑ ΤΟ CHAT (ΔΙΠΛΑ ΑΠΟ ΤΗΝ ΑΝΑΝΕΩΣΗ) */}
             <button 
               onClick={() => { setIsChatPanelOpen(true); setActiveChatOrderId(null); }} 
               className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/20 text-lg shadow-sm transition-colors" 
@@ -413,6 +442,23 @@ export default function AdminDashboard() {
           </div>
         </header>
 
+        <div className="lg:hidden p-4 bg-[#0F172A] border-b border-white/10 flex flex-col gap-2">
+           <button 
+              onClick={toggleStoreStatus}
+              className={`w-full flex justify-center items-center gap-2 px-4 py-3 rounded-xl text-sm font-black uppercase tracking-wider transition-all border shadow-lg ${
+                isStoreOpen 
+                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50 hover:bg-emerald-500/30' 
+                  : 'bg-red-500 text-white border-red-600 hover:bg-red-600 animate-pulse'
+              }`}
+            >
+              <div className={`w-3 h-3 rounded-full ${isStoreOpen ? 'bg-emerald-400' : 'bg-white'}`}></div>
+              {isStoreOpen ? 'ΠΑΡΑΓΓΕΛΙΕΣ ΑΝΟΙΧΤΕΣ' : 'ΠΑΡΑΓΓΕΛΙΕΣ ΚΛΕΙΣΤΕΣ (STORE PAUSE)'}
+            </button>
+            <Link href="/admin/products" className="w-full flex justify-center items-center gap-1.5 bg-purple-600/20 text-purple-400 border border-purple-500/30 hover:bg-purple-600/30 px-4 py-3 rounded-xl text-sm font-black uppercase shadow-sm transition-colors">
+               📋 ΔΙΑΧΕΙΡΙΣΗ ΚΑΤΑΛΟΓΟΥ
+            </Link>
+        </div>
+
         {activeTab === 'live' ? (
           <main className="p-4 md:p-6 max-w-[1800px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
             
@@ -434,7 +480,6 @@ export default function AdminDashboard() {
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Ληψη: {new Date(order.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}</span>
                         
-                        {/* ΚΟΥΜΠΙ CHAT ΚΑΤΕΥΘΕΙΑΝ ΣΤΗΝ ΚΑΡΤΑ */}
                         <button 
                           onClick={() => { setIsChatPanelOpen(true); setActiveChatOrderId(order.id); }}
                           className="bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600/40 border border-indigo-500/30 px-2 py-0.5 rounded text-[10px] font-black uppercase transition-colors flex items-center gap-1"
@@ -464,7 +509,6 @@ export default function AdminDashboard() {
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Ληψη: {new Date(order.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}</span>
                         
-                        {/* ΚΟΥΜΠΙ CHAT ΚΑΤΕΥΘΕΙΑΝ ΣΤΗΝ ΚΑΡΤΑ */}
                         <button 
                           onClick={() => { setIsChatPanelOpen(true); setActiveChatOrderId(order.id); }}
                           className="bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600/40 border border-indigo-500/30 px-2 py-0.5 rounded text-[10px] font-black uppercase transition-colors flex items-center gap-1"
@@ -499,7 +543,6 @@ export default function AdminDashboard() {
                       <div className="flex items-center gap-2">
                         <OrderTimer createdAt={order.created_at} requestedTime={order.requested_time} status={order.status} />
                         
-                        {/* ΚΟΥΜΠΙ CHAT ΚΑΙ ΕΔΩ */}
                         <button onClick={() => { setIsChatPanelOpen(true); setActiveChatOrderId(order.id); }} className="text-[10px] bg-indigo-700 hover:bg-indigo-600 transition-colors px-2 py-1.5 rounded text-white font-bold border border-indigo-600 shadow-sm" title="Μήνυμα">💬</button>
                         
                         <button onClick={() => setSelectedOrder(order)} className="text-[10px] bg-gray-700 hover:bg-gray-600 transition-colors px-2 py-1.5 rounded text-white font-bold border border-gray-600 shadow-sm">👁️</button>
@@ -546,7 +589,7 @@ export default function AdminDashboard() {
                     const msgs = supportMessages.filter(m => m.order_id === oid);
                     const lastMsg = msgs[msgs.length - 1];
                     const isUnread = !lastMsg.is_store;
-                    const orderForList = orders.find(o => o.id === oid); // ΔΙΑΒΑΣΜΑ ΟΝΟΜΑΤΟΣ
+                    const orderForList = orders.find(o => o.id === oid);
                     return (
                       <div 
                         key={oid} 
@@ -566,15 +609,22 @@ export default function AdminDashboard() {
                 )}
               </div>
             ) : (
-              // 2. ΠΡΟΒΟΛΗ ΣΥΓΚΕΚΡΙΜΕΝΟΥ CHAT (ΑΠΑΝΤΗΣΗ)
+              // 2. ΠΡΟΒΟΛΗ ΣΥΓΚΕΚΡΙΜΕΝΟΥ CHAT (ΑΠΑΝΤΗΣΗ & ΔΙΑΓΡΑΦΗ)
               <div className="flex-1 flex flex-col overflow-hidden bg-[#0F172A]">
-                <div className="p-3 bg-slate-800 border-b border-white/5 flex items-center gap-3 shrink-0">
-                  <button onClick={() => setActiveChatOrderId(null)} className="w-8 h-8 flex items-center justify-center bg-slate-700 rounded-full text-white hover:bg-slate-600 transition-colors">←</button>
-                  <div className="flex flex-col">
-                    <span className="font-black text-white text-sm uppercase">Order #{currentChatOrder?.order_number || activeChatOrderId.toString().slice(-4)} - {currentChatOrder?.customer_name || 'ΠΕΛΑΤΗΣ'}</span>
-                    <span className="text-[10px] text-gray-400 font-bold">{currentChatOrder?.customer_phone || ''}</span>
+                <div className="p-3 bg-slate-800 border-b border-white/5 flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => setActiveChatOrderId(null)} className="w-8 h-8 flex items-center justify-center bg-slate-700 rounded-full text-white hover:bg-slate-600 transition-colors">←</button>
+                    <div className="flex flex-col">
+                      <span className="font-black text-white text-sm uppercase">Order #{currentChatOrder?.order_number || activeChatOrderId.toString().slice(-4)} - {currentChatOrder?.customer_name || 'ΠΕΛΑΤΗΣ'}</span>
+                      <span className="text-[10px] text-gray-400 font-bold">{currentChatOrder?.customer_phone || ''}</span>
+                    </div>
                   </div>
+                  {/* ΝΕΟ: ΚΟΥΜΠΙ ΔΙΑΓΡΑΦΗΣ ΙΣΤΟΡΙΚΟΥ CHAT */}
+                  <button onClick={handleDeleteChat} className="text-gray-500 hover:text-red-400 p-2 transition-colors" title="Διαγραφή Ιστορικού Μηνυμάτων">
+                    🗑️
+                  </button>
                 </div>
+                
                 <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
                   {supportMessages.filter(m => m.order_id === activeChatOrderId).map(msg => (
                     <div key={msg.id} className={`flex flex-col max-w-[85%] ${msg.is_store ? 'self-end' : 'self-start'}`}>
@@ -661,7 +711,6 @@ export default function AdminDashboard() {
               )}
             </div>
 
-            {/* ΚΟΥΜΠΙΑ ΔΡΑΣΗΣ - ΥΠΑΡΧΕΙ ΗΔΗ ΤΟ "ΜΗΝΥΜΑ" */}
             <div className="p-6 border-t border-slate-700 bg-slate-900 flex flex-col md:flex-row justify-between items-center gap-4">
               <div className="text-left w-full md:w-auto">
                 <p className="text-xs text-gray-400 font-bold uppercase">Πληρωμή: {selectedOrder.payment_method}</p>
