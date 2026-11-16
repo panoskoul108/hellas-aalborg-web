@@ -430,8 +430,19 @@ export default function AdminDashboard() {
               <div className="flex flex-col gap-4">
                 {pendingOrders.map(order => (
                   <div key={order.id} className="flex flex-col gap-2 bg-slate-800/40 p-2 rounded-2xl border border-white/10 shadow-sm backdrop-blur-md">
-                    <div className="flex justify-between items-center px-4 pt-2">
-                      <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Ληψη: {new Date(order.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}</span>
+                    <div className="flex justify-between items-center px-4 pt-2 mb-1">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Ληψη: {new Date(order.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}</span>
+                        
+                        {/* ΚΟΥΜΠΙ CHAT ΚΑΤΕΥΘΕΙΑΝ ΣΤΗΝ ΚΑΡΤΑ */}
+                        <button 
+                          onClick={() => { setIsChatPanelOpen(true); setActiveChatOrderId(order.id); }}
+                          className="bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600/40 border border-indigo-500/30 px-2 py-0.5 rounded text-[10px] font-black uppercase transition-colors flex items-center gap-1"
+                        >
+                          💬 Chat
+                        </button>
+                      </div>
+                      
                       <OrderTimer createdAt={order.created_at} requestedTime={order.requested_time} status={order.status} />
                     </div>
                     <OrderCard order={order} onCancel={handleCancelOrder} onAccept={(exactTime: string | null, mins: number) => handleAcceptOrder(order, exactTime, mins)} onView={() => setSelectedOrder(order)} />
@@ -449,8 +460,19 @@ export default function AdminDashboard() {
               <div className="flex flex-col gap-4">
                 {preparingOrders.map(order => (
                   <div key={order.id} className="flex flex-col gap-2 bg-slate-800/40 p-2 rounded-2xl border border-orange-500/20 shadow-sm backdrop-blur-md">
-                    <div className="flex justify-between items-center px-4 pt-2">
-                      <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Ληψη: {new Date(order.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}</span>
+                    <div className="flex justify-between items-center px-4 pt-2 mb-1">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Ληψη: {new Date(order.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}</span>
+                        
+                        {/* ΚΟΥΜΠΙ CHAT ΚΑΤΕΥΘΕΙΑΝ ΣΤΗΝ ΚΑΡΤΑ */}
+                        <button 
+                          onClick={() => { setIsChatPanelOpen(true); setActiveChatOrderId(order.id); }}
+                          className="bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600/40 border border-indigo-500/30 px-2 py-0.5 rounded text-[10px] font-black uppercase transition-colors flex items-center gap-1"
+                        >
+                          💬 Chat
+                        </button>
+                      </div>
+                      
                       <OrderTimer createdAt={order.created_at} requestedTime={order.requested_time} status={order.status} />
                     </div>
                     <OrderCard order={order} onComplete={() => handleCompleteOrder(order)} onPrint={() => { setActivePrintOrder(order); setIsPrinting(true); }} onView={() => setSelectedOrder(order)} />
@@ -476,6 +498,10 @@ export default function AdminDashboard() {
                       <p className="text-xs text-gray-400 font-bold">{order.total_price} kr. ({order.payment_method})</p>
                       <div className="flex items-center gap-2">
                         <OrderTimer createdAt={order.created_at} requestedTime={order.requested_time} status={order.status} />
+                        
+                        {/* ΚΟΥΜΠΙ CHAT ΚΑΙ ΕΔΩ */}
+                        <button onClick={() => { setIsChatPanelOpen(true); setActiveChatOrderId(order.id); }} className="text-[10px] bg-indigo-700 hover:bg-indigo-600 transition-colors px-2 py-1.5 rounded text-white font-bold border border-indigo-600 shadow-sm" title="Μήνυμα">💬</button>
+                        
                         <button onClick={() => setSelectedOrder(order)} className="text-[10px] bg-gray-700 hover:bg-gray-600 transition-colors px-2 py-1.5 rounded text-white font-bold border border-gray-600 shadow-sm">👁️</button>
                         <button onClick={() => handleDismissOrder(order.id)} title="Παραδόθηκε (Απόκρυψη)" className="text-[10px] bg-emerald-600 hover:bg-emerald-500 transition-colors px-2 py-1.5 rounded text-white font-black shadow-sm border border-emerald-500">✓</button>
                       </div>
@@ -635,7 +661,7 @@ export default function AdminDashboard() {
               )}
             </div>
 
-            {/* ΚΟΥΜΠΙΑ ΔΡΑΣΗΣ - ΠΡΟΣΤΕΘΗΚΕ ΤΟ "ΜΗΝΥΜΑ" */}
+            {/* ΚΟΥΜΠΙΑ ΔΡΑΣΗΣ - ΥΠΑΡΧΕΙ ΗΔΗ ΤΟ "ΜΗΝΥΜΑ" */}
             <div className="p-6 border-t border-slate-700 bg-slate-900 flex flex-col md:flex-row justify-between items-center gap-4">
               <div className="text-left w-full md:w-auto">
                 <p className="text-xs text-gray-400 font-bold uppercase">Πληρωμή: {selectedOrder.payment_method}</p>
