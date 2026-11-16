@@ -4,19 +4,30 @@ import React, { useEffect } from 'react';
 export const PrintTicket = ({ order, storeName, onPrintDone }: any) => {
   useEffect(() => {
     if (order) {
-      // Μικρή καθυστέρηση για να προλάβει ο browser να φορτώσει το HTML
+      // 1. Δίνουμε 500ms για να φορτώσει το DOM (το HTML) και το CSS
       const timer = setTimeout(() => {
         window.print();
-        if (onPrintDone) onPrintDone();
       }, 500);
-      return () => clearTimeout(timer);
+
+      // 2. Περιμένουμε τον browser να μας πει ότι ΤΕΛΕΙΩΣΕ (ή ακυρώθηκε) η εκτύπωση, πριν κλείσουμε το Modal
+      const handleAfterPrint = () => {
+        if (onPrintDone) onPrintDone();
+      };
+
+      window.addEventListener('afterprint', handleAfterPrint);
+
+      // Καθάρισμα αν κλείσει το component
+      return () => {
+        clearTimeout(timer);
+        window.removeEventListener('afterprint', handleAfterPrint);
+      };
     }
   }, [order, onPrintDone]);
 
   if (!order) return null;
 
   // Κόβουμε τα δευτερόλεπτα από την ώρα παραλαβής (π.χ. από 13:17:40 κρατάμε 13:17)
-  const formattedTime = order.requested_time ? order.requested_time.slice(0, 5) : '';
+  const formattedTime = order.requested_time ? order.requested_time.slice(0, 5) : 'ASAP';
 
   return (
     <>
@@ -50,11 +61,11 @@ export const PrintTicket = ({ order, storeName, onPrintDone }: any) => {
         <div className="pt-2"> {/* Ελάχιστο κενό πάνω για να μην κοπεί το όνομα του μαγαζιού */}
           
           {/* HEADER */}
-          <div className="text-center text-xl font-black mb-1 leading-none">{storeName}</div>
+          <div className="text-center text-xl font-black mb-1 leading-none uppercase">{storeName || 'HELLAS AALBORG'}</div>
           <div className="text-center text-sm mb-3 border-b-2 border-black pb-2 leading-tight">
-            Takeaway Order #{order.order_number || order.id.toString().slice(-4)}<br/>
+            Takeaway Order #{order.order_number || order.id?.toString().slice(-4)}<br/>
             {/* Ημερομηνία χωρίς δευτερόλεπτα */}
-            {new Date(order.created_at).toLocaleString('el-GR', { dateStyle: 'short', timeStyle: 'short' })}
+            {new Date(order.created_at).toLocaleString('da-DK', { dateStyle: 'short', timeStyle: 'short' })}
           </div>
           
           {/* ΠΕΛΑΤΗΣ */}
@@ -76,14 +87,14 @@ export const PrintTicket = ({ order, storeName, onPrintDone }: any) => {
                 </div>
                 {/* Extras / Υλικά */}
                 {it.selectedOptions?.length > 0 && (
-                  <div className="text-sm pl-3 mt-1 uppercase leading-tight font-bold">
+                  <div className="text-sm pl-3 mt-1 uppercase leading-tight font-bold text-gray-700">
                     + {it.selectedOptions.join(', ')}
                   </div>
                 )}
                 {/* Σχόλιο Προϊόντος */}
                 {it.note && (
-                  <div className="text-sm pl-3 mt-1 italic uppercase font-black">
-                    *** Note: {it.note} ***
+                  <div className="text-sm pl-3 mt-1 italic uppercase font-black border-l-2 border-black">
+                    * {it.note}
                   </div>
                 )}
               </div>
@@ -98,14 +109,15 @@ export const PrintTicket = ({ order, storeName, onPrintDone }: any) => {
           
           {/* ΓΕΝΙΚΟ ΣΧΟΛΙΟ ΠΑΡΑΓΓΕΛΙΑΣ */}
           {order.notes && (
-            <div className="mt-3 p-2 border-2 border-black text-base font-black uppercase leading-tight">
+            <div className="mt-3 p-2 border-2 border-black text-base font-black uppercase leading-tight text-center">
               GENERAL NOTE:<br/>{order.notes}
             </div>
           )}
           
           {/* FOOTER */}
           <div className="text-center text-sm mt-4 mb-2 font-bold pb-2">
-            Thank you for your order!
+            Thank you for your order!<br/>
+            Ved Stranden 21, 9000 Aalborg
           </div>
           
         </div>
