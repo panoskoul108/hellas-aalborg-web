@@ -14,6 +14,9 @@ export default function ProductsPage() {
   const [bulkCategory, setBulkCategory] = useState("");
   const [bulkPriceChange, setBulkPriceChange] = useState(0);
 
+  // ΝΕΟ STATE: Για άμεση αλλαγή του Sold Out χωρίς να κάνουμε reload τα products
+  const [availabilityOverrides, setAvailabilityOverrides] = useState<Record<string, boolean>>({});
+
   const { products, isUploading, setIsUploading, handleMoveProduct, handleBulkPriceUpdate, handleDuplicate, handleDelete } = useProducts();
   
   const {
@@ -39,6 +42,29 @@ export default function ProductsPage() {
     return matchCat && matchSearch;
   }).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
 
+  // Λειτουργία Γρήγορου Sold Out
+  const toggleAvailability = async (id: number, currentAvailability: boolean) => {
+    const isCurrentlyAvailable = availabilityOverrides[id] !== undefined ? availabilityOverrides[id] : currentAvailability !== false;
+    const newStatus = !isCurrentlyAvailable;
+
+    // 1. Άμεση (optimistic) αλλαγή στο UI
+    setAvailabilityOverrides(prev => ({ ...prev, [id]: newStatus }));
+
+    // 2. Ενημέρωση βάσης
+    const { error } = await supabase
+      .from('menu_items')
+      .update({ is_available: newStatus })
+      .eq('id', id);
+
+    if (error) {
+      alert("Σφάλμα κατά την αλλαγή διαθεσιμότητας: " + error.message);
+      // Επαναφορά σε περίπτωση λάθους
+      setAvailabilityOverrides(prev => ({ ...prev, [id]: isCurrentlyAvailable }));
+    }
+  };
+
+  const soldOutCount = products.filter(p => (availabilityOverrides[p.id] !== undefined ? availabilityOverrides[p.id] : p.is_available !== false) === false).length;
+
   return (
     <div className="min-h-screen bg-[#0B1120] text-gray-200 font-sans">
       
@@ -47,6 +73,7 @@ export default function ProductsPage() {
         <div>
           <h1 className="text-xl font-black text-white italic tracking-tight">HELLAS AALBORG</h1>
           <p className="text-xs text-[#38BDF8] uppercase tracking-widest font-bold">Διαχείριση Καταλόγου</p>
+          {soldOutCount > 0 && <p className="text-[10px] font-bold text-red-400 uppercase mt-0.5 animate-pulse">⚠️ {soldOutCount} SOLD OUT</p>}
         </div>
         <a href="/admin" className="bg-slate-800 border border-slate-700 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase hover:bg-slate-700 transition-colors shadow-sm">
           🔙 ΠΙΣΩ ΣΤΟ ΤΑΜΕΙΟ
@@ -117,54 +144,79 @@ export default function ProductsPage() {
           {filteredProducts.length === 0 ? (
             <div className="text-center text-gray-500 font-bold uppercase mt-10">Δεν βρέθηκαν προϊόντα.</div>
           ) : (
-            filteredProducts.map((p, index) => (
-              <div key={p.id} className="border border-slate-800 bg-slate-900/50 p-4 rounded-[2rem] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm hover:border-slate-700 transition-colors">
-                <div className="flex items-center gap-4 w-full sm:w-auto">
-                  
-                 {/* ΚΟΥΜΠΙΑ ΑΛΛΑΓΗΣ ΣΕΙΡΑΣ */}
-                  {activeCategory !== "ΠΡΟΤΕΙΝΟΜΕΝΑ" && !searchQuery && (
-                    <div className="flex flex-col gap-1 mr-2 shrink-0">
-                      <button 
-                        onClick={() => handleMoveProduct(index, -1, filteredProducts)} 
-                        disabled={index === 0 || isUploading} 
-                        className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-800 border border-gray-700 hover:bg-[#38BDF8]/20 hover:text-[#38BDF8] hover:border-[#38BDF8]/50 text-gray-400 font-black disabled:opacity-30 transition-colors"
-                        title="Μετακίνηση Πάνω"
-                      >
-                        ↑
-                      </button>
-                      <button 
-                        onClick={() => handleMoveProduct(index, 1, filteredProducts)} 
-                        disabled={index === filteredProducts.length - 1 || isUploading} 
-                        className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-800 border border-gray-700 hover:bg-[#38BDF8]/20 hover:text-[#38BDF8] hover:border-[#38BDF8]/50 text-gray-400 font-black disabled:opacity-30 transition-colors"
-                        title="Μετακίνηση Κάτω"
-                      >
-                        ↓
-                      </button>
-                    </div>
-                  )}
+            filteredProducts.map((p, index) => {
+              // Υπολογισμός διαθεσιμότητας
+              const isAvailable = availabilityOverrides[p.id] !== undefined ? availabilityOverrides[p.id] : p.is_available !== false;
 
-                  <div className="w-16 h-16 shrink-0 rounded-2xl bg-slate-800 bg-cover bg-center shadow-inner flex items-center justify-center text-2xl border border-white/5" style={p.image_path ? { backgroundImage: `url(${SUPABASE_IMAGE_URL}${p.image_path})` } : {}}>
-                    {!p.image_path && "🍽️"}
-                  </div>
-                  
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-black uppercase text-base text-gray-100">{p.title_da}</h3>
-                      {p.popular && <span className="text-yellow-500 text-xs" title="Popular">⭐</span>}
-                      {p.vegetarian && <span className="text-emerald-500 text-xs" title="Vegetarian">🥬</span>}
+              return (
+                <div key={p.id} className={`border border-slate-800 bg-slate-900/50 p-4 rounded-[2rem] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm hover:border-slate-700 transition-all duration-300 ${!isAvailable ? 'opacity-60 grayscale-[30%] bg-red-950/20' : ''}`}>
+                  <div className="flex items-center gap-4 w-full sm:w-auto">
+                    
+                   {/* ΚΟΥΜΠΙΑ ΑΛΛΑΓΗΣ ΣΕΙΡΑΣ */}
+                    {activeCategory !== "ΠΡΟΤΕΙΝΟΜΕΝΑ" && !searchQuery && (
+                      <div className="flex flex-col gap-1 mr-2 shrink-0">
+                        <button 
+                          onClick={() => handleMoveProduct(index, -1, filteredProducts)} 
+                          disabled={index === 0 || isUploading} 
+                          className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-800 border border-gray-700 hover:bg-[#38BDF8]/20 hover:text-[#38BDF8] hover:border-[#38BDF8]/50 text-gray-400 font-black disabled:opacity-30 transition-colors"
+                          title="Μετακίνηση Πάνω"
+                        >
+                          ↑
+                        </button>
+                        <button 
+                          onClick={() => handleMoveProduct(index, 1, filteredProducts)} 
+                          disabled={index === filteredProducts.length - 1 || isUploading} 
+                          className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-800 border border-gray-700 hover:bg-[#38BDF8]/20 hover:text-[#38BDF8] hover:border-[#38BDF8]/50 text-gray-400 font-black disabled:opacity-30 transition-colors"
+                          title="Μετακίνηση Κάτω"
+                        >
+                          ↓
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="w-16 h-16 shrink-0 rounded-2xl bg-slate-800 bg-cover bg-center shadow-inner flex items-center justify-center text-2xl border border-white/5" style={p.image_path ? { backgroundImage: `url(${SUPABASE_IMAGE_URL}${p.image_path})` } : {}}>
+                      {!p.image_path && "🍽️"}
                     </div>
-                    <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wide mb-1">{p.category}</p>
-                    <p className="text-[#38BDF8] font-black text-sm">TAKEAWAY: {p.price_takeaway} kr. <span className="text-gray-600 mx-1">•</span> WOLT: {p.price_delivery} kr.</p>
+                    
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className={`font-black uppercase text-base ${!isAvailable ? 'text-red-400 line-through' : 'text-gray-100'}`}>{p.title_da}</h3>
+                        {p.popular && <span className="text-yellow-500 text-xs" title="Popular">⭐</span>}
+                        {p.vegetarian && <span className="text-emerald-500 text-xs" title="Vegetarian">🥬</span>}
+                      </div>
+                      <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wide mb-1">{p.category}</p>
+                      <p className="text-[#38BDF8] font-black text-sm">TAKEAWAY: {p.price_takeaway} kr. <span className="text-gray-600 mx-1">•</span> WOLT: {p.price_delivery} kr.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4 w-full sm:w-auto justify-end border-t border-slate-800 sm:border-t-0 pt-3 sm:pt-0 items-center">
+                    
+                    {/* ΝΕΟ: ΔΙΑΚΟΠΤΗΣ SOLD OUT */}
+                    <div className="flex flex-col items-center gap-1 mr-2 border-r border-slate-700 pr-4">
+                      <div 
+                        onClick={() => toggleAvailability(p.id, p.is_available)}
+                        className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors duration-300 shadow-inner flex items-center relative ${
+                          isAvailable ? 'bg-emerald-500' : 'bg-red-500'
+                        }`}
+                      >
+                        <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 absolute ${
+                          isAvailable ? 'translate-x-6' : 'translate-x-0'
+                        }`}></div>
+                      </div>
+                      <span className={`text-[9px] font-black uppercase tracking-widest mt-0.5 ${isAvailable ? 'text-emerald-400' : 'text-red-500'}`}>
+                        {isAvailable ? 'ΔΙΑΘΕΣΙΜΟ' : 'SOLD OUT'}
+                      </span>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button onClick={() => handleDuplicate(p)} className="w-10 h-10 rounded-xl flex items-center justify-center text-lg bg-purple-900/30 text-purple-400 hover:bg-purple-900/50 transition-colors">📋</button>
+                      <button onClick={() => startEdit(p)} className="w-10 h-10 rounded-xl flex items-center justify-center text-lg bg-blue-900/30 text-blue-400 hover:bg-blue-900/50 transition-colors">✏️</button>
+                      <button onClick={() => handleDelete(p.id)} className="w-10 h-10 rounded-xl flex items-center justify-center text-lg bg-red-900/30 text-red-400 hover:bg-red-900/50 transition-colors">🗑️</button>
+                    </div>
                   </div>
                 </div>
-
-                <div className="flex gap-2 w-full sm:w-auto justify-end border-t border-slate-800 sm:border-t-0 pt-3 sm:pt-0 items-center">
-                  <button onClick={() => handleDuplicate(p)} className="w-12 h-12 rounded-xl flex items-center justify-center text-lg bg-purple-900/30 text-purple-400 hover:bg-purple-900/50 transition-colors">📋</button>
-                  <button onClick={() => startEdit(p)} className="w-12 h-12 rounded-xl flex items-center justify-center text-lg bg-blue-900/30 text-blue-400 hover:bg-blue-900/50 transition-colors">✏️</button>
-                  <button onClick={() => handleDelete(p.id)} className="w-12 h-12 rounded-xl flex items-center justify-center text-lg bg-red-900/30 text-red-400 hover:bg-red-900/50 transition-colors">🗑️</button>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
 
