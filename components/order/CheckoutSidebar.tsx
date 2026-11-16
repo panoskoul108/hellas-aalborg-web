@@ -25,12 +25,13 @@ export default function CheckoutSidebar({
   const [chatInput, setChatInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Λεξικό για το Chat
-  const chatUi = {
+  // ΔΙΟΡΘΩΣΗ TYPESCRIPT: Λεξικό για το Chat με ασφαλή τύπο (Record<string, any>)
+  const chatUiDict: Record<string, any> = {
     da: { needHelp: "Brug for hjælp?", support: "Kundeservice", typeMsg: "Skriv en besked...", send: "Send", you: "Dig", store: "Hellas Aalborg", empty: "Skriv dit problem her, så svarer vi hurtigst muligt!" },
     en: { needHelp: "Report a problem", support: "Support Chat", typeMsg: "Type a message...", send: "Send", you: "You", store: "Hellas Aalborg", empty: "Describe your issue here and we'll reply ASAP!" },
     el: { needHelp: "Αναφορά Προβλήματος", support: "Συνομιλία Υποστήριξης", typeMsg: "Γράψτε το μήνυμά σας...", send: "Αποστολή", you: "Εσείς", store: "Hellas Aalborg", empty: "Γράψτε μας το πρόβλημά σας και θα απαντήσουμε άμεσα!" }
-  }[lang];
+  };
+  const chatUi = chatUiDict[lang] || chatUiDict['da'];
 
   useEffect(() => {
     if (checkoutStep === 'auth') setShowAuthForm(false);
