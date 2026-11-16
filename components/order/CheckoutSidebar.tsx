@@ -79,8 +79,8 @@ export default function CheckoutSidebar({
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_chats', filter: `order_id=eq.${placedOrder.id}` }, (payload) => {
           if (payload.new.is_store) {
             setHasUnreadStoreMsg(true);
-            // Παίζουμε έναν διακριτικό ήχο στο κινητό του πελάτη
-            const audio = new Audio('/notification.mp3.wav');
+            // ΔΙΟΡΘΩΣΗ: Παίζουμε τον ήχο των μηνυμάτων αντί για τον ήχο της παραγγελίας
+            const audio = new Audio('/chat-alert.mp3.wav');
             audio.play().catch(e => console.log("Audio blocked by browser"));
           }
         }).subscribe();
@@ -435,7 +435,7 @@ export default function CheckoutSidebar({
                     </div>
                   ))}
                   
-                  {/* ΝΕΟ: ΕΠΙΚΟΙΝΩΝΙΑ ΠΡΙΝ ΤΗΝ ΠΑΡΑΓΓΕΛΙΑ (Κλήση) */}
+                  {/* ΕΠΙΚΟΙΝΩΝΙΑ ΠΡΙΝ ΤΗΝ ΠΑΡΑΓΓΕΛΙΑ (Κλήση) */}
                   <div className="mt-4 pt-4 border-t border-white/5 flex gap-3">
                     <a 
                       href="tel:+4542177754" 
