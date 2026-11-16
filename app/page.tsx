@@ -276,9 +276,20 @@ export default function Home() {
                   <span className="text-2xl font-bold text-white group-hover:text-[#38BDF8] transition-colors">
                     {menuType === 'takeaway' ? item.priceTakeaway : item.priceDelivery} <span className="text-base font-medium text-gray-500 ml-1">DKK</span>
                   </span>
-                  <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-widest mt-2">
+                  <span className="text-[10px] text-[#38BDF8] font-bold uppercase tracking-widest mt-1">
                     {menuType === 'takeaway' ? t.takeawayLabel : t.deliveryLabel}
                   </span>
+                  
+                  {/* ΝΕΟ: Αντίθετη τιμή (Σύγκριση) για Price Anchoring */}
+                  {item.priceTakeaway !== item.priceDelivery && (
+                    <span className="text-[9px] font-bold uppercase tracking-widest mt-1.5 text-gray-500">
+                      {menuType === 'takeaway' ? (
+                        <>WOLT: <span className="line-through decoration-red-500/70 ml-1">{item.priceDelivery} DKK</span></>
+                      ) : (
+                        <>TAKEAWAY: <span className="text-emerald-400 ml-1">{item.priceTakeaway} DKK</span></>
+                      )}
+                    </span>
+                  )}
                 </div>
               </div>
             ))}
@@ -380,7 +391,7 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* ΝΕΟ MOBILE ΣΤΑΘΕΡΟ ΜΕΝΟΥ (WOLT ΜΙΚΡΟ & TAKEAWAY ΜΕΓΑΛΟ ΜΕ ΤΑΜΠΕΛΑΚΙ) */}
+      {/* ΝΕΟ MOBILE ΣΤΑΘΕΡΟ ΜΕΝΟΥ */}
       <div className="md:hidden fixed bottom-0 left-0 w-full bg-[#0B1120]/95 backdrop-blur-xl border-t border-white/10 px-4 pt-6 pb-3 z-40 flex flex-col gap-2 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
         <div className="relative w-full">
           <span className="absolute -top-6 -right-2 bg-emerald-500 text-white text-[9px] font-black uppercase px-2 py-1 rounded-full shadow-lg rotate-3 border border-[#0B1120] z-10 animate-pulse text-center leading-tight">
@@ -444,6 +455,17 @@ export default function Home() {
                   <span className="text-2xl font-bold text-[#38BDF8]">
                     {menuType === 'takeaway' ? selectedItem.priceTakeaway : selectedItem.priceDelivery} <span className="text-lg text-white">DKK</span>
                   </span>
+
+                  {/* ΝΕΟ: Αντίθετη Τιμή Modal (Price Anchoring) */}
+                  {selectedItem.priceTakeaway !== selectedItem.priceDelivery && (
+                    <span className="text-[10px] font-bold uppercase tracking-widest mt-1.5 text-gray-400">
+                      {menuType === 'takeaway' ? (
+                        <>WOLT: <span className="line-through decoration-red-500/70 ml-1">{selectedItem.priceDelivery} DKK</span></>
+                      ) : (
+                        <>TAKEAWAY: <span className="text-emerald-400 ml-1">{selectedItem.priceTakeaway} DKK</span></>
+                      )}
+                    </span>
+                  )}
                 </div>
                 
                 {menuType === 'wolt' ? (
