@@ -24,12 +24,15 @@ export default function CheckoutSidebar({
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [chatInput, setChatInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // ΝΕΟ: Ειδοποίηση αν το μαγαζί έστειλε μήνυμα
+  const [hasUnreadStoreMsg, setHasUnreadStoreMsg] = useState(false);
 
-  // ΔΙΟΡΘΩΣΗ TYPESCRIPT: Λεξικό για το Chat με ασφαλή τύπο (Record<string, any>)
+  // Λεξικό για το Chat
   const chatUiDict: Record<string, any> = {
-    da: { needHelp: "Brug for hjælp?", support: "Kundeservice", typeMsg: "Skriv en besked...", send: "Send", you: "Dig", store: "Hellas Aalborg", empty: "Skriv dit problem her, så svarer vi hurtigst muligt!" },
-    en: { needHelp: "Report a problem", support: "Support Chat", typeMsg: "Type a message...", send: "Send", you: "You", store: "Hellas Aalborg", empty: "Describe your issue here and we'll reply ASAP!" },
-    el: { needHelp: "Αναφορά Προβλήματος", support: "Συνομιλία Υποστήριξης", typeMsg: "Γράψτε το μήνυμά σας...", send: "Αποστολή", you: "Εσείς", store: "Hellas Aalborg", empty: "Γράψτε μας το πρόβλημά σας και θα απαντήσουμε άμεσα!" }
+    da: { needHelp: "Brug for hjælp?", support: "Kundeservice", typeMsg: "Skriv en besked...", send: "Send", you: "Dig", store: "Hellas Aalborg", empty: "Skriv dit problem her, så svarer vi hurtigst muligt!", callUs: "RING TIL OS" },
+    en: { needHelp: "Report a problem", support: "Support Chat", typeMsg: "Type a message...", send: "Send", you: "You", store: "Hellas Aalborg", empty: "Describe your issue here and we'll reply ASAP!", callUs: "CALL STORE" },
+    el: { needHelp: "Αναφορά Προβλήματος", support: "Συνομιλία Υποστήριξης", typeMsg: "Γράψτε το μήνυμά σας...", send: "Αποστολή", you: "Εσείς", store: "Hellas Aalborg", empty: "Γράψτε μας το πρόβλημά σας και θα απαντήσουμε άμεσα!", callUs: "ΚΛΗΣΗ ΚΑΤΑΣΤΗΜΑΤΟΣ" }
   };
   const chatUi = chatUiDict[lang] || chatUiDict['da'];
 
@@ -52,10 +55,13 @@ export default function CheckoutSidebar({
     return () => clearInterval(interval);
   }, [isCartOpen, checkoutStep]);
 
-  // --- EFFECT ΓΙΑ ΦΟΡΤΩΣΗ & REALTIME CHAT ---
+  // --- EFFECT ΓΙΑ ΦΟΡΤΩΣΗ, REALTIME CHAT & ΕΙΔΟΠΟΙΗΣΕΙΣ ΑΠΟ ΤΟ ΜΑΓΑΖΙ ---
   useEffect(() => {
     let channel: any;
+    
+    // 1. Αν ο πελάτης έχει ανοιχτό το chat
     if (isChatOpen && activeChatOrderId) {
+      setHasUnreadStoreMsg(false); // Διαβάστηκαν
       const fetchMsgs = async () => {
         const { data } = await supabase.from('support_chats').select('*').eq('order_id', activeChatOrderId).order('created_at', { ascending: true });
         if (data) setChatMessages(data);
@@ -66,9 +72,22 @@ export default function CheckoutSidebar({
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_chats', filter: `order_id=eq.${activeChatOrderId}` }, (payload) => {
           setChatMessages(prev => [...prev, payload.new]);
         }).subscribe();
+    } 
+    // 2. Αν ΟΧΙ, αλλά υπάρχει ενεργή παραγγελία, ακούμε στο παρασκήνιο για μηνύματα του Admin!
+    else if (placedOrder?.id && !isChatOpen) {
+      channel = supabase.channel(`hidden_chat_${placedOrder.id}`)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_chats', filter: `order_id=eq.${placedOrder.id}` }, (payload) => {
+          if (payload.new.is_store) {
+            setHasUnreadStoreMsg(true);
+            // Παίζουμε έναν διακριτικό ήχο στο κινητό του πελάτη
+            const audio = new Audio('/notification.mp3.wav');
+            audio.play().catch(e => console.log("Audio blocked by browser"));
+          }
+        }).subscribe();
     }
+    
     return () => { if (channel) supabase.removeChannel(channel); };
-  }, [isChatOpen, activeChatOrderId]);
+  }, [isChatOpen, activeChatOrderId, placedOrder?.id]);
 
   // Auto-scroll όταν έρχεται νέο μήνυμα
   useEffect(() => {
@@ -90,6 +109,7 @@ export default function CheckoutSidebar({
 
   const openSupportChat = (orderId: number) => {
     setActiveChatOrderId(orderId);
+    setHasUnreadStoreMsg(false);
     setIsChatOpen(true);
   };
 
@@ -124,7 +144,7 @@ export default function CheckoutSidebar({
                   <span className={`text-[9px] font-bold uppercase tracking-widest mb-1 mx-1 ${msg.is_store ? 'text-emerald-400' : 'text-[#38BDF8] text-right'}`}>
                     {msg.is_store ? chatUi.store : chatUi.you}
                   </span>
-                  <div className={`px-4 py-3 rounded-2xl text-sm font-medium ${msg.is_store ? 'bg-slate-800 text-white rounded-tl-sm' : 'bg-[#38BDF8] text-[#0B1120] rounded-tr-sm'}`}>
+                  <div className={`px-4 py-3 rounded-2xl text-sm font-medium ${msg.is_store ? 'bg-slate-800 text-white rounded-tl-sm shadow-sm' : 'bg-[#38BDF8] text-[#0B1120] rounded-tr-sm shadow-md'}`}>
                     {msg.message}
                   </div>
                   <span className="text-[9px] text-gray-500 mt-1 mx-1 font-bold">
@@ -252,12 +272,17 @@ export default function CheckoutSidebar({
                     )}
                   </div>
                   
-                  {/* ΚΟΥΜΠΙ ΓΙΑ SUPPORT CHAT ΣΤΗΝ ΕΝΕΡΓΗ ΠΑΡΑΓΓΕΛΙΑ */}
+                  {/* ΚΟΥΜΠΙ ΓΙΑ SUPPORT CHAT ΣΤΗΝ ΕΝΕΡΓΗ ΠΑΡΑΓΓΕΛΙΑ - ΜΕ ΕΙΔΟΠΟΙΗΣΗ! */}
                   <button 
                     onClick={() => openSupportChat(placedOrder.id)}
-                    className="w-full bg-slate-800 hover:bg-slate-700 text-gray-300 border border-slate-700 font-bold uppercase tracking-widest text-xs py-4 rounded-2xl flex items-center justify-center gap-2 transition-colors"
+                    className={`w-full font-bold uppercase tracking-widest text-xs py-4 rounded-2xl flex items-center justify-center gap-2 transition-all relative ${
+                      hasUnreadStoreMsg ? 'bg-[#38BDF8] text-[#0B1120] shadow-lg animate-pulse' : 'bg-slate-800 hover:bg-slate-700 text-gray-300 border border-slate-700'
+                    }`}
                   >
                     💬 {chatUi.needHelp}
+                    {hasUnreadStoreMsg && (
+                      <span className="absolute top-0 right-0 -mt-2 -mr-2 bg-red-500 text-white w-5 h-5 flex items-center justify-center rounded-full shadow-lg border-2 border-[#0B1120]">!</span>
+                    )}
                   </button>
 
                 </div>
@@ -409,6 +434,17 @@ export default function CheckoutSidebar({
                       {cartItem.item.note && <p className="text-xs text-gray-400 italic mt-2">Note: {cartItem.item.note}</p>}
                     </div>
                   ))}
+                  
+                  {/* ΝΕΟ: ΕΠΙΚΟΙΝΩΝΙΑ ΠΡΙΝ ΤΗΝ ΠΑΡΑΓΓΕΛΙΑ (Κλήση) */}
+                  <div className="mt-4 pt-4 border-t border-white/5 flex gap-3">
+                    <a 
+                      href="tel:+4542177754" 
+                      className="flex-1 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/30 text-[10px] font-black uppercase tracking-widest py-3 rounded-xl flex items-center justify-center gap-2 transition-colors"
+                    >
+                      📞 {chatUi.callUs}
+                    </a>
+                  </div>
+
                 </div>
               ) : (
                 <form id="checkoutForm" onSubmit={submitOrder} className="flex flex-col gap-6">
