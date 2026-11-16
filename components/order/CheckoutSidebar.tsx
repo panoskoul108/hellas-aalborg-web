@@ -25,14 +25,13 @@ export default function CheckoutSidebar({
   const [chatInput, setChatInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  // ΝΕΟ: Ειδοποίηση αν το μαγαζί έστειλε μήνυμα
   const [hasUnreadStoreMsg, setHasUnreadStoreMsg] = useState(false);
 
   // Λεξικό για το Chat
   const chatUiDict: Record<string, any> = {
-    da: { needHelp: "Brug for hjælp?", support: "Kundeservice", typeMsg: "Skriv en besked...", send: "Send", you: "Dig", store: "Hellas Aalborg", empty: "Skriv dit problem her, så svarer vi hurtigst muligt!", callUs: "RING TIL OS" },
-    en: { needHelp: "Report a problem", support: "Support Chat", typeMsg: "Type a message...", send: "Send", you: "You", store: "Hellas Aalborg", empty: "Describe your issue here and we'll reply ASAP!", callUs: "CALL STORE" },
-    el: { needHelp: "Αναφορά Προβλήματος", support: "Συνομιλία Υποστήριξης", typeMsg: "Γράψτε το μήνυμά σας...", send: "Αποστολή", you: "Εσείς", store: "Hellas Aalborg", empty: "Γράψτε μας το πρόβλημά σας και θα απαντήσουμε άμεσα!", callUs: "ΚΛΗΣΗ ΚΑΤΑΣΤΗΜΑΤΟΣ" }
+    da: { needHelp: "Brug for hjælp?", support: "Kundeservice", typeMsg: "Skriv en besked...", send: "Send", you: "Dig", store: "Hellas Aalborg", empty: "Skriv dit problem her, så svarer vi hurtigst muligt!", callUs: "RING TIL OS", takeawayTag: "TAKEAWAY - AFHENT I BUTIK" },
+    en: { needHelp: "Report a problem", support: "Support Chat", typeMsg: "Type a message...", send: "Send", you: "You", store: "Hellas Aalborg", empty: "Describe your issue here and we'll reply ASAP!", callUs: "CALL STORE", takeawayTag: "TAKEAWAY - STORE PICKUP" },
+    el: { needHelp: "Αναφορά Προβλήματος", support: "Συνομιλία Υποστήριξης", typeMsg: "Γράψτε το μήνυμά σας...", send: "Αποστολή", you: "Εσείς", store: "Hellas Aalborg", empty: "Γράψτε μας το πρόβλημά σας και θα απαντήσουμε άμεσα!", callUs: "ΚΛΗΣΗ ΚΑΤΑΣΤΗΜΑΤΟΣ", takeawayTag: "TAKEAWAY - ΠΑΡΑΛΑΒΗ ΑΠΟ ΚΑΤΑΣΤΗΜΑ" }
   };
   const chatUi = chatUiDict[lang] || chatUiDict['da'];
 
@@ -59,9 +58,8 @@ export default function CheckoutSidebar({
   useEffect(() => {
     let channel: any;
     
-    // 1. Αν ο πελάτης έχει ανοιχτό το chat
     if (isChatOpen && activeChatOrderId) {
-      setHasUnreadStoreMsg(false); // Διαβάστηκαν
+      setHasUnreadStoreMsg(false);
       const fetchMsgs = async () => {
         const { data } = await supabase.from('support_chats').select('*').eq('order_id', activeChatOrderId).order('created_at', { ascending: true });
         if (data) setChatMessages(data);
@@ -73,13 +71,11 @@ export default function CheckoutSidebar({
           setChatMessages(prev => [...prev, payload.new]);
         }).subscribe();
     } 
-    // 2. Αν ΟΧΙ, αλλά υπάρχει ενεργή παραγγελία, ακούμε στο παρασκήνιο για μηνύματα του Admin!
     else if (placedOrder?.id && !isChatOpen) {
       channel = supabase.channel(`hidden_chat_${placedOrder.id}`)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_chats', filter: `order_id=eq.${placedOrder.id}` }, (payload) => {
           if (payload.new.is_store) {
             setHasUnreadStoreMsg(true);
-            // ΔΙΟΡΘΩΣΗ: Παίζουμε τον ήχο των μηνυμάτων αντί για τον ήχο της παραγγελίας
             const audio = new Audio('/chat-alert.mp3.wav');
             audio.play().catch(e => console.log("Audio blocked by browser"));
           }
@@ -89,7 +85,6 @@ export default function CheckoutSidebar({
     return () => { if (channel) supabase.removeChannel(channel); };
   }, [isChatOpen, activeChatOrderId, placedOrder?.id]);
 
-  // Auto-scroll όταν έρχεται νέο μήνυμα
   useEffect(() => {
     if (isChatOpen) messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages, isChatOpen]);
@@ -204,7 +199,6 @@ export default function CheckoutSidebar({
                                 <span className={`text-[10px] px-2.5 py-1 rounded font-bold uppercase tracking-wide ${o.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'}`}>{o.status}</span>
                                 
                                 <div className="flex items-center gap-1.5">
-                                  {/* ΚΟΥΜΠΙ ΓΙΑ SUPPORT CHAT ΣΤΟ ΙΣΤΟΡΙΚΟ */}
                                   <button onClick={() => openSupportChat(o.id)} className="bg-slate-700 hover:bg-slate-600 text-gray-300 w-8 h-8 rounded-lg flex items-center justify-center transition-colors border border-transparent hover:border-slate-500" title={chatUi.needHelp}>
                                     💬
                                   </button>
@@ -272,7 +266,6 @@ export default function CheckoutSidebar({
                     )}
                   </div>
                   
-                  {/* ΚΟΥΜΠΙ ΓΙΑ SUPPORT CHAT ΣΤΗΝ ΕΝΕΡΓΗ ΠΑΡΑΓΓΕΛΙΑ - ΜΕ ΕΙΔΟΠΟΙΗΣΗ! */}
                   <button 
                     onClick={() => openSupportChat(placedOrder.id)}
                     className={`w-full font-bold uppercase tracking-widest text-xs py-4 rounded-2xl flex items-center justify-center gap-2 transition-all relative ${
@@ -372,18 +365,11 @@ export default function CheckoutSidebar({
               ) : checkoutStep === 'cart' ? (
                 <div className="flex flex-col gap-4">
                   
-                  <div className="mb-2 flex flex-col sm:flex-row items-center justify-between gap-2 p-3 rounded-2xl bg-sky-900/20 border border-sky-800/50 -mt-2">
-                    <span className="font-black text-[10px] text-sky-400 tracking-wider flex items-center gap-1.5 uppercase">
-                      🛍️ {lang === 'da' ? 'KUN AFHENTNING I BUTIK' : lang === 'en' ? 'STORE PICKUP ONLY' : 'ΜΟΝΟ ΠΑΡΑΛΑΒΗ ΑΠΟ ΚΑΤΑΣΤΗΜΑ'}
+                  {/* ΝΕΟ: ΕΜΦΑΝΕΣ TAKEAWAY TAG (Αντικατέστησε τη Wolt) */}
+                  <div className="mb-2 flex items-center justify-center gap-2 p-3 rounded-2xl bg-sky-900/30 border border-sky-800/50 -mt-2">
+                    <span className="font-black text-[11px] text-sky-400 tracking-wider flex items-center gap-2 uppercase">
+                      🛍️ {chatUi.takeawayTag}
                     </span>
-                    <a
-                      href="https://www.wolt.com/el/dnk/aalborg/restaurant/hellas-aalborg"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[11px] font-black text-[#38BDF8] hover:underline flex items-center gap-1"
-                    >
-                      {lang === 'da' ? 'Ønsker du levering? Bestil via Wolt' : lang === 'en' ? 'Want delivery? Order via Wolt' : 'Θέλετε Delivery; Παραγγείλτε μέσω Wolt'} 🛵
-                    </a>
                   </div>
 
                   <div className="mb-2 -mt-2">
@@ -435,7 +421,6 @@ export default function CheckoutSidebar({
                     </div>
                   ))}
                   
-                  {/* ΕΠΙΚΟΙΝΩΝΙΑ ΠΡΙΝ ΤΗΝ ΠΑΡΑΓΓΕΛΙΑ (Κλήση) */}
                   <div className="mt-4 pt-4 border-t border-white/5 flex gap-3">
                     <a 
                       href="tel:+4542177754" 
