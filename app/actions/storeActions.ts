@@ -36,3 +36,15 @@ export async function updateStoreSettings(settingsData: any) {
   }
   return data;
 }
+export async function deleteSupportChat(orderId: number) {
+  const { data, error } = await supabaseAdmin
+    .from('support_chats')
+    .delete()
+    .eq('order_id', orderId);
+
+  if (error) {
+    console.error("Supabase Error (Delete Chat):", error);
+    throw new Error(error.message);
+  }
+  return data;
+}
