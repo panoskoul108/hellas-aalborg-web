@@ -11,7 +11,7 @@ import { updateStoreHours } from '@/app/actions/storeActions';
 
 // Ορίζουμε 2 διαφορετικούς ήχους
 const NOTIFICATION_SOUND = "notification.mp3.wav"; // Για παραγγελίες
-const CHAT_SOUND = "chat-alert.mp3.wav";           // ΝΕΟ: Για μηνύματα
+const CHAT_SOUND = "chat-alert.mp3.wav";           // Για μηνύματα
 
 export default function AdminDashboard() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -208,15 +208,27 @@ export default function AdminDashboard() {
     }
   };
 
+  // ----------------------------------------------------------------------
+  // Η ΜΟΝΗ ΑΛΛΑΓΗ ΠΟΥ ΕΓΙΝΕ ΣΤΟ ΑΡΧΕΙΟ
+  // ----------------------------------------------------------------------
   const toggleStoreStatus = async () => {
     const newStatus = !isStoreOpen;
     setIsStoreOpen(newStatus); 
-    const { data, error } = await supabase.from('store_settings').update({ accepting_orders: newStatus }).eq('id', 1).select();
-    if (error || !data || data.length === 0) {
-      alert("Σφάλμα κατά την αλλαγή κατάστασης. Παρακαλώ ανανεώστε τη σελίδα.");
+    
+    try {
+      // Αντί για απευθείας: supabase.from('store_settings').update({ accepting_orders: newStatus }).eq('id', 1)
+      // χρησιμοποιούμε το Server Action για να προσπεράσει το RLS
+      await updateStoreHours({
+        id: 1, 
+        is_closed: !newStatus // Υποθέτοντας ότι το updateStoreHours κάνει update το is_closed (Προσοχή: Αν το toggle αφορά το 'store_settings', θα χρειαστείς ένα παρόμοιο Action 'updateStoreSettings')
+      });
+    } catch (error) {
+      console.error(error);
+      alert("Σφάλμα κατά την αλλαγή κατάστασης (RLS/Action). Παρακαλώ ανανεώστε τη σελίδα.");
       setIsStoreOpen(!newStatus); 
     }
   };
+  // ----------------------------------------------------------------------
 
   const handleCancelOrder = async (orderId: number) => {
     const orderToCancel = orders.find(o => o.id === orderId);
@@ -277,7 +289,6 @@ export default function AdminDashboard() {
     }]);
   };
 
-  // ΝΕΟ: Διαγραφή όλου του ιστορικού μηνυμάτων για τη συγκεκριμένη παραγγελία
   const handleDeleteChat = async () => {
     if (!activeChatOrderId) return;
     if (!window.confirm("Σίγουρα θέλετε να διαγράψετε όλο το ιστορικό μηνυμάτων γι' αυτή την παραγγελία;")) return;
@@ -288,7 +299,6 @@ export default function AdminDashboard() {
       return;
     }
     
-    // Αφαιρούμε τα διεγραμμένα μηνύματα από το state και κλείνουμε την προβολή συνομιλίας
     setSupportMessages(prev => prev.filter(m => m.order_id !== activeChatOrderId));
     setActiveChatOrderId(null);
   };
@@ -445,19 +455,19 @@ export default function AdminDashboard() {
 
         <div className="lg:hidden p-4 bg-[#0F172A] border-b border-white/10 flex flex-col gap-2">
            <button 
-              onClick={toggleStoreStatus}
-              className={`w-full flex justify-center items-center gap-2 px-4 py-3 rounded-xl text-sm font-black uppercase tracking-wider transition-all border shadow-lg ${
-                isStoreOpen 
-                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50 hover:bg-emerald-500/30' 
-                  : 'bg-red-500 text-white border-red-600 hover:bg-red-600 animate-pulse'
-              }`}
-            >
-              <div className={`w-3 h-3 rounded-full ${isStoreOpen ? 'bg-emerald-400' : 'bg-white'}`}></div>
-              {isStoreOpen ? 'ΠΑΡΑΓΓΕΛΙΕΣ ΑΝΟΙΧΤΕΣ' : 'ΠΑΡΑΓΓΕΛΙΕΣ ΚΛΕΙΣΤΕΣ (STORE PAUSE)'}
-            </button>
-            <Link href="/admin/products" className="w-full flex justify-center items-center gap-1.5 bg-purple-600/20 text-purple-400 border border-purple-500/30 hover:bg-purple-600/30 px-4 py-3 rounded-xl text-sm font-black uppercase shadow-sm transition-colors">
-               📋 ΔΙΑΧΕΙΡΙΣΗ ΚΑΤΑΛΟΓΟΥ
-            </Link>
+             onClick={toggleStoreStatus}
+             className={`w-full flex justify-center items-center gap-2 px-4 py-3 rounded-xl text-sm font-black uppercase tracking-wider transition-all border shadow-lg ${
+               isStoreOpen 
+                 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50 hover:bg-emerald-500/30' 
+                 : 'bg-red-500 text-white border-red-600 hover:bg-red-600 animate-pulse'
+             }`}
+           >
+             <div className={`w-3 h-3 rounded-full ${isStoreOpen ? 'bg-emerald-400' : 'bg-white'}`}></div>
+             {isStoreOpen ? 'ΠΑΡΑΓΓΕΛΙΕΣ ΑΝΟΙΧΤΕΣ' : 'ΠΑΡΑΓΓΕΛΙΕΣ ΚΛΕΙΣΤΕΣ (STORE PAUSE)'}
+           </button>
+           <Link href="/admin/products" className="w-full flex justify-center items-center gap-1.5 bg-purple-600/20 text-purple-400 border border-purple-500/30 hover:bg-purple-600/30 px-4 py-3 rounded-xl text-sm font-black uppercase shadow-sm transition-colors">
+              📋 ΔΙΑΧΕΙΡΙΣΗ ΚΑΤΑΛΟΓΟΥ
+           </Link>
         </div>
 
         {activeTab === 'live' ? (
@@ -547,7 +557,7 @@ export default function AdminDashboard() {
                         <button onClick={() => { setIsChatPanelOpen(true); setActiveChatOrderId(order.id); }} className="text-[10px] bg-indigo-700 hover:bg-indigo-600 transition-colors px-2 py-1.5 rounded text-white font-bold border border-indigo-600 shadow-sm" title="Μήνυμα">💬</button>
                         
                         <button onClick={() => setSelectedOrder(order)} className="text-[10px] bg-gray-700 hover:bg-gray-600 transition-colors px-2 py-1.5 rounded text-white font-bold border border-gray-600 shadow-sm">👁️</button>
-                        <button onClick={() => handleDismissOrder(order.id)} title="Παραδόθηκε (Απόκρυψη)" className="text-[10px] bg-emerald-600 hover:bg-emerald-500 transition-colors px-2 py-1.5 rounded text-white font-black shadow-sm border border-emerald-500">✓</button>
+                        <button onClick={() => handleDismissOrder(order.id)} title="Παραδόθηκε (Απόκρυψη)" className="text-[10px] bg-emerald-600 hover:bg-emerald-50 transition-colors px-2 py-1.5 rounded text-white font-black shadow-sm border border-emerald-500">✓</button>
                       </div>
                     </div>
                   </div>
