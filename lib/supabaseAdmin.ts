@@ -1,6 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 
-export const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY! // Εδώ πρέπει να ταιριάζει απόλυτα με το Vercel
-);
+// Βάζουμε "καρφωτό" το URL όπως στο supabase.js για να το βρίσκει πάντα
+const supabaseUrl = 'https://keolpijcsvwsrzkjqtkc.supabase.co';
+
+// ΠΡΟΣΟΧΗ: Το Service Role Key ΠΡΕΠΕΙ να μείνει στο process.env για ασφάλεια! 
+// Διαβάζεται κατευθείαν από το Vercel.
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
