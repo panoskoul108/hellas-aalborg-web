@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../supabase';
+import { updateMenuItemAdmin, insertMenuItemAdmin } from '@/app/actions/storeActions';
 
 const defaultForm = {
   title_da: "", title_en: "", title_el: "", desc_da: "", desc_en: "", desc_el: "",
@@ -73,15 +74,18 @@ export function useProductForm(onSuccess: () => void, setIsUploading: (v: boolea
     const { id, created_at, addons, ...dbData } = editForm; 
     const finalData = { ...dbData, category: safeCategory, extras: buildExtrasForDB(addons) };
 
-    let error;
-    if (editingId) {
-      ({ error } = await supabase.from("menu_items").update(finalData).eq("id", editingId));
-    } else {
-      ({ error } = await supabase.from("menu_items").insert([finalData]));
+    try {
+      if (editingId) {
+        await updateMenuItemAdmin(editingId, finalData);
+      } else {
+        await insertMenuItemAdmin(finalData);
+      }
+      closeModal(); 
+      setIsCustomCategory(false); 
+      onSuccess();
+    } catch (error: any) {
+      alert("Σφάλμα Αποθήκευσης (Action): " + error.message);
     }
-
-    if (error) alert("Σφάλμα Αποθήκευσης: " + error.message);
-    else { closeModal(); setIsCustomCategory(false); onSuccess(); }
   };
 
   const uploadImage = async (event: any) => {
@@ -89,6 +93,8 @@ export function useProductForm(onSuccess: () => void, setIsUploading: (v: boolea
     if (!file) return;
     setIsUploading(true);
     const fileName = `${Date.now()}.${file.name.split(".").pop()}`;
+    // Η μεταφόρτωση εικόνων στο bucket "menu-images" παραμένει ανοιχτή προς το παρόν 
+    // αφού τα Storage Buckets δεν κλείδωσαν ακόμα. Αν έχεις θέμα εδώ, θα το δούμε.
     const { error } = await supabase.storage.from("menu-images").upload(fileName, file);
     if (!error) setEditForm({ ...editForm, image_path: fileName });
     else alert("Σφάλμα ανεβάσματος!");
