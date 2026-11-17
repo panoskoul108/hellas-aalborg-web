@@ -7,7 +7,7 @@ import { OrderCard } from '../../components/admin/OrderCard';
 import HistoryPanel from '../../components/admin/HistoryPanel'; 
 import SettingsPanel from '../../components/admin/SettingsPanel';
 import Link from 'next/link';
-import { updateStoreHours } from '@/app/actions/storeActions';
+import { updateStoreSettings } from '@/app/actions/storeActions';
 
 // Ορίζουμε 2 διαφορετικούς ήχους
 const NOTIFICATION_SOUND = "notification.mp3.wav"; // Για παραγγελίες
@@ -211,20 +211,17 @@ export default function AdminDashboard() {
   // ----------------------------------------------------------------------
   // Η ΜΟΝΗ ΑΛΛΑΓΗ ΠΟΥ ΕΓΙΝΕ ΣΤΟ ΑΡΧΕΙΟ
   // ----------------------------------------------------------------------
-  const toggleStoreStatus = async () => {
+ const toggleStoreStatus = async () => {
     const newStatus = !isStoreOpen;
     setIsStoreOpen(newStatus); 
     
     try {
-      // Αντί για απευθείας: supabase.from('store_settings').update({ accepting_orders: newStatus }).eq('id', 1)
-      // χρησιμοποιούμε το Server Action για να προσπεράσει το RLS
-      await updateStoreHours({
-        id: 1, 
-        is_closed: !newStatus // Υποθέτοντας ότι το updateStoreHours κάνει update το is_closed (Προσοχή: Αν το toggle αφορά το 'store_settings', θα χρειαστείς ένα παρόμοιο Action 'updateStoreSettings')
+      await updateStoreSettings({
+        accepting_orders: newStatus
       });
     } catch (error) {
       console.error(error);
-      alert("Σφάλμα κατά την αλλαγή κατάστασης (RLS/Action). Παρακαλώ ανανεώστε τη σελίδα.");
+      alert("Σφάλμα κατά την αλλαγή κατάστασης. Παρακαλώ ανανεώστε τη σελίδα.");
       setIsStoreOpen(!newStatus); 
     }
   };
