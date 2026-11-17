@@ -70,3 +70,16 @@ export async function insertSupportChatAdmin(chatData: any) {
   if (error) throw new Error(error.message);
   return data;
 }
+
+export async function updateProductAvailability(productId: number, isAvailable: boolean) {
+  const { data, error } = await supabaseAdmin
+    .from('menu_items') // Βάλε το σωστό όνομα του πίνακα αν διαφέρει (π.χ. 'products')
+    .update({ is_available: isAvailable })
+    .eq('id', productId);
+
+  if (error) {
+    console.error("Supabase Error (Update Product):", error);
+    throw new Error(error.message);
+  }
+  return data;
+}
