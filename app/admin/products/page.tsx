@@ -4,6 +4,7 @@ import { supabase } from '../../supabase';
 import Image from 'next/image';
 import { useProducts } from '../../hooks/useProducts'; 
 import { useProductForm, parseExtrasToUI, buildExtrasForDB } from '../../hooks/useProductForm';
+import { updateProductAvailability } from '@/app/actions/storeActions';
 
 const SUPABASE_IMAGE_URL = "https://keolpijcsvwsrzkjqtkc.supabase.co/storage/v1/object/public/menu-images/";
 
@@ -42,7 +43,7 @@ export default function ProductsPage() {
     return matchCat && matchSearch;
   }).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
 
-  // Λειτουργία Γρήγορου Sold Out
+  // Λειτουργία Γρήγορου Sold Out (ME SERVER ACTION)
   const toggleAvailability = async (id: number, currentAvailability: boolean) => {
     const isCurrentlyAvailable = availabilityOverrides[id] !== undefined ? availabilityOverrides[id] : currentAvailability !== false;
     const newStatus = !isCurrentlyAvailable;
@@ -50,14 +51,12 @@ export default function ProductsPage() {
     // 1. Άμεση (optimistic) αλλαγή στο UI
     setAvailabilityOverrides(prev => ({ ...prev, [id]: newStatus }));
 
-    // 2. Ενημέρωση βάσης
-    const { error } = await supabase
-      .from('menu_items')
-      .update({ is_available: newStatus })
-      .eq('id', id);
-
-    if (error) {
-      alert("Σφάλμα κατά την αλλαγή διαθεσιμότητας: " + error.message);
+    try {
+      // 2. Ενημέρωση βάσης με το Action για να προσπεράσει το RLS
+      await updateProductAvailability(id, newStatus);
+    } catch (error) {
+      alert("Σφάλμα κατά την αλλαγή διαθεσιμότητας (RLS/Action).");
+      console.error(error);
       // Επαναφορά σε περίπτωση λάθους
       setAvailabilityOverrides(prev => ({ ...prev, [id]: isCurrentlyAvailable }));
     }
