@@ -7,6 +7,7 @@ import { OrderCard } from '../../components/admin/OrderCard';
 import HistoryPanel from '../../components/admin/HistoryPanel'; 
 import SettingsPanel from '../../components/admin/SettingsPanel';
 import Link from 'next/link';
+import { updateStoreHours } from '@/app/actions/storeActions';
 
 // Ορίζουμε 2 διαφορετικούς ήχους
 const NOTIFICATION_SOUND = "notification.mp3.wav"; // Για παραγγελίες
