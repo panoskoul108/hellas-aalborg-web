@@ -7,7 +7,9 @@ import { OrderCard } from '../../components/admin/OrderCard';
 import HistoryPanel from '../../components/admin/HistoryPanel'; 
 import SettingsPanel from '../../components/admin/SettingsPanel';
 import Link from 'next/link';
-import { updateStoreSettings } from '@/app/actions/storeActions';
+
+// Εισάγουμε πλέον και τη διαγραφή του Chat μαζί με τα settings
+import { updateStoreSettings, deleteSupportChat } from '@/app/actions/storeActions';
 
 // Ορίζουμε 2 διαφορετικούς ήχους
 const NOTIFICATION_SOUND = "notification.mp3.wav"; // Για παραγγελίες
@@ -209,23 +211,20 @@ export default function AdminDashboard() {
   };
 
   // ----------------------------------------------------------------------
-  // Η ΜΟΝΗ ΑΛΛΑΓΗ ΠΟΥ ΕΓΙΝΕ ΣΤΟ ΑΡΧΕΙΟ
+  // Η ΣΩΣΤΗ ΑΛΛΑΓΗ ΓΙΑ ΤΟ STORE PAUSE ΜΕ SERVER ACTION
   // ----------------------------------------------------------------------
- const toggleStoreStatus = async () => {
+  const toggleStoreStatus = async () => {
     const newStatus = !isStoreOpen;
     setIsStoreOpen(newStatus); 
     
     try {
-      await updateStoreSettings({
-        accepting_orders: newStatus
-      });
+      await updateStoreSettings({ accepting_orders: newStatus });
     } catch (error) {
       console.error(error);
       alert("Σφάλμα κατά την αλλαγή κατάστασης. Παρακαλώ ανανεώστε τη σελίδα.");
       setIsStoreOpen(!newStatus); 
     }
   };
-  // ----------------------------------------------------------------------
 
   const handleCancelOrder = async (orderId: number) => {
     const orderToCancel = orders.find(o => o.id === orderId);
@@ -286,18 +285,24 @@ export default function AdminDashboard() {
     }]);
   };
 
+  // ----------------------------------------------------------------------
+  // Η ΣΩΣΤΗ ΑΛΛΑΓΗ ΓΙΑ ΤΗ ΔΙΑΓΡΑΦΗ ΤΟΥ CHAT ΜΕ SERVER ACTION
+  // ----------------------------------------------------------------------
   const handleDeleteChat = async () => {
     if (!activeChatOrderId) return;
     if (!window.confirm("Σίγουρα θέλετε να διαγράψετε όλο το ιστορικό μηνυμάτων γι' αυτή την παραγγελία;")) return;
     
-    const { error } = await supabase.from('support_chats').delete().eq('order_id', activeChatOrderId);
-    if (error) {
-      alert("Σφάλμα κατά τη διαγραφή: " + error.message);
-      return;
+    try {
+      // Χρησιμοποιούμε το Server Action για να παρακάμψουμε το RLS
+      await deleteSupportChat(activeChatOrderId);
+      
+      // Καθαρίζουμε την οθόνη
+      setSupportMessages(prev => prev.filter(m => m.order_id !== activeChatOrderId));
+      setActiveChatOrderId(null);
+    } catch (error) {
+      alert("Σφάλμα κατά τη διαγραφή (RLS/Action). Παρακαλώ δοκιμάστε ξανά.");
+      console.error(error);
     }
-    
-    setSupportMessages(prev => prev.filter(m => m.order_id !== activeChatOrderId));
-    setActiveChatOrderId(null);
   };
 
   if (isLoading) return <div className="min-h-screen bg-[#0B1120] flex items-center justify-center text-[#38BDF8] font-bold text-xl animate-pulse">Φόρτωση Ταμείου...</div>;
