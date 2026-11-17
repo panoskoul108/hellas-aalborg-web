@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'; // Βεβαιώσου ότι το path του supabase client είναι σωστό
+import { supabase } from '../app/supabase';// Βεβαιώσου ότι το path του supabase client είναι σωστό
 
 // Η συνάρτηση γίνεται async γιατί τραβάει δεδομένα από τη βάση
 export async function isStoreOpen(): Promise<boolean> {
