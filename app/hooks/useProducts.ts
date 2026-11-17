@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../supabase'; // Βεβαιώσου ότι το path είναι σωστό!
+import { supabase } from '../supabase'; 
+import { updateMenuItemAdmin, deleteMenuItemAdmin, insertMenuItemAdmin, bulkUpdateMenuSortOrderAdmin } from '@/app/actions/storeActions';
 
 export function useProducts() {
   const [products, setProducts] = useState<any[]>([]);
@@ -28,15 +29,27 @@ export function useProducts() {
     } else return;
 
     const newProducts = [...products];
+    const updatesForDb: {id: number, sort_order: number}[] = [];
+
     items.forEach((item, newSortOrder) => {
       const pIndex = newProducts.findIndex(p => p.id === item.id);
-      if(pIndex !== -1) newProducts[pIndex].sort_order = newSortOrder;
+      if(pIndex !== -1) {
+        newProducts[pIndex].sort_order = newSortOrder;
+        updatesForDb.push({ id: item.id, sort_order: newSortOrder });
+      }
     });
+    
+    // Αισιόδοξη ενημέρωση UI
     setProducts(newProducts);
 
     setIsUploading(true);
-    const updates = items.map((p, idx) => supabase.from("menu_items").update({ sort_order: idx }).eq("id", p.id));
-    await Promise.all(updates);
+    try {
+      await bulkUpdateMenuSortOrderAdmin(updatesForDb);
+    } catch (error: any) {
+      alert("Σφάλμα κατά την αλλαγή σειράς (RLS/Action).");
+      console.error(error);
+      fetchProducts(); // Επαναφορά
+    }
     setIsUploading(false);
   };
 
@@ -45,15 +58,20 @@ export function useProducts() {
     if (window.confirm(`Είστε σίγουροι ότι θέλετε να αλλάξετε τις τιμές στην κατηγορία "${bulkCategory}" κατά ${bulkPriceChange > 0 ? '+' : ''}${bulkPriceChange}kr;`)) {
       setIsUploading(true);
       const productsToUpdate = products.filter(p => p.category === bulkCategory);
-      const updates = productsToUpdate.map(p => 
-        supabase.from("menu_items").update({ 
-          price_takeaway: Math.max(0, (p.price_takeaway || 0) + bulkPriceChange),
-          price_delivery: Math.max(0, (p.price_delivery || 0) + bulkPriceChange)
-        }).eq("id", p.id)
-      );
-      await Promise.all(updates);
-      alert("Οι τιμές ενημερώθηκαν επιτυχώς!");
-      fetchProducts();
+      
+      try {
+        const updatePromises = productsToUpdate.map(p => 
+          updateMenuItemAdmin(p.id, { 
+            price_takeaway: Math.max(0, (p.price_takeaway || 0) + bulkPriceChange),
+            price_delivery: Math.max(0, (p.price_delivery || 0) + bulkPriceChange)
+          })
+        );
+        await Promise.all(updatePromises);
+        alert("Οι τιμές ενημερώθηκαν επιτυχώς!");
+        fetchProducts();
+      } catch (error: any) {
+        alert("Σφάλμα (Action): " + error.message);
+      }
       setIsUploading(false);
       onComplete();
     }
@@ -67,15 +85,24 @@ export function useProducts() {
         title_da: `${product.title_da} (Kopi)`,
         title_el: `${product.title_el} (Αντίγραφο)`,
       };
-      await supabase.from("menu_items").insert([clonedProduct]);
-      fetchProducts();
+      
+      try {
+        await insertMenuItemAdmin(clonedProduct);
+        fetchProducts();
+      } catch (error: any) {
+        alert("Σφάλμα Αντιγραφής: " + error.message);
+      }
     }
   };
 
   const handleDelete = async (id: number) => {
     if (window.confirm("ΠΡΟΣΟΧΗ: Θέλετε σίγουρα να διαγράψετε αυτό το προϊόν;")) {
-      await supabase.from("menu_items").delete().eq("id", id);
-      fetchProducts();
+      try {
+        await deleteMenuItemAdmin(id);
+        fetchProducts();
+      } catch (error: any) {
+        alert("Σφάλμα Διαγραφής: " + error.message);
+      }
     }
   };
 
