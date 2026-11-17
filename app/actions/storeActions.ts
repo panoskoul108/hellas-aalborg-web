@@ -83,3 +83,36 @@ export async function updateProductAvailability(productId: number, isAvailable: 
   }
   return data;
 }
+
+// ΝΕΑ ACTIONS ΓΙΑ ΤΑ ΠΡΟΪΟΝΤΑ ΚΑΙ ΤΟΝ ΚΑΤΑΛΟΓΟ
+export async function insertMenuItemAdmin(itemData: any) {
+  const { data, error } = await supabaseAdmin.from('menu_items').insert([itemData]).select();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function updateMenuItemAdmin(itemId: number, updateData: any) {
+  const { data, error } = await supabaseAdmin.from('menu_items').update(updateData).eq('id', itemId).select();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function deleteMenuItemAdmin(itemId: number) {
+  const { data, error } = await supabaseAdmin.from('menu_items').delete().eq('id', itemId);
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function bulkUpdateMenuSortOrderAdmin(updates: {id: number, sort_order: number}[]) {
+  // Εκτελούμε τα updates παράλληλα μέσω Promise.all
+  const updatePromises = updates.map(update => 
+    supabaseAdmin.from('menu_items').update({ sort_order: update.sort_order }).eq('id', update.id)
+  );
+  
+  const results = await Promise.all(updatePromises);
+  // Ελέγχουμε αν κάποιο απέτυχε
+  const failed = results.find(res => res.error);
+  if (failed && failed.error) throw new Error(failed.error.message);
+  
+  return true;
+}
