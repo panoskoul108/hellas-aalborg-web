@@ -1,6 +1,8 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/app/supabase'; // Βεβαιώσου ότι το path είναι σωστό για το project σου!
+// ΠΡΟΣΘΗΚΗ: Εισαγωγή των Server Actions
+import { updateStoreHours, updateStoreSettings } from '@/app/actions/storeActions';
 
 export default function SettingsPanel() {
   const [hours, setHours] = useState<any[]>([]);
@@ -30,8 +32,21 @@ export default function SettingsPanel() {
     const updatedHours = hours.map(h => h.day_of_week === day_of_week ? { ...h, [field]: value } : h);
     setHours(updatedHours);
     
-    // Ενημερώνουμε τη βάση
-    await supabase.from('store_hours').update({ [field]: value }).eq('day_of_week', day_of_week);
+    try {
+      // Ενημερώνουμε τη βάση χρησιμοποιώντας το Server Action για να προσπεράσει το RLS
+      const dayDataToUpdate = updatedHours.find(h => h.day_of_week === day_of_week);
+      if (dayDataToUpdate) {
+        await updateStoreHours({
+          id: dayDataToUpdate.id,
+          day_of_week: dayDataToUpdate.day_of_week, // Σε περίπτωση που δεν υπάρχει id
+          [field]: value 
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      alert('⚠️ Σφάλμα αποθήκευσης ωραρίου. Η αλλαγή ίσως μπλοκαρίστηκε.');
+      fetchData(); // Επαναφορά στην πραγματική κατάσταση
+    }
   };
 
   // --- ΧΕΙΡΙΣΜΟΣ ΡΥΘΜΙΣΕΩΝ ΚΑΤΑΣΤΗΜΑΤΟΣ (LOYALTY) ---
@@ -42,27 +57,26 @@ export default function SettingsPanel() {
 const saveSettings = async () => {
     setIsSavingSettings(true);
     
-    // ΠΡΟΣΘΗΚΗ: Βάλαμε το .select() στο τέλος της εντολής upsert
-    const { data, error } = await supabase.from('store_settings').upsert({ 
-      id: 1, 
-      loyalty_max_percentage: settings.loyalty_max_percentage,
-      loyalty_earn_percentage: settings.loyalty_earn_percentage
-    }).select();
-    
-    setIsSavingSettings(false);
-
-    // ΕΛΕΓΧΟΣ ΣΙΩΠΗΛΗΣ ΑΠΟΤΥΧΙΑΣ: 
-    if (error || !data || data.length === 0) {
-      alert('⚠️ Η αποθήκευση απορρίφθηκε! (Ίσως έληξε η σύνδεσή σας στο Supabase. Παρακαλώ κάντε Έξοδο και ξανά Είσοδο).');
-      fetchData(); 
-    } else {
+    try {
+      // ΠΡΟΣΘΗΚΗ: Χρήση του Server Action για το upsert
+      await updateStoreSettings({ 
+        id: 1, 
+        loyalty_max_percentage: settings.loyalty_max_percentage,
+        loyalty_earn_percentage: settings.loyalty_earn_percentage
+      });
+      
       alert('Οι ρυθμίσεις του προγράμματος επιβράβευσης αποθηκεύτηκαν!');
+    } catch (error) {
+      console.error(error);
+      alert('⚠️ Η αποθήκευση απορρίφθηκε! (Σφάλμα RLS/Action).');
+      fetchData(); 
+    } finally {
+      setIsSavingSettings(false);
     }
   };
 
   if (loading) return <div className="text-center text-[#38BDF8] animate-pulse py-10 font-bold">Φόρτωση Ρυθμίσεων...</div>;
 
-  // ΕΔΩ ΕΛΕΙΠΕ ΤΟ "return (" ΠΟΥ ΑΝΟΙΓΕΙ ΤΟ UI
   return (
     <div className="flex flex-col gap-8 max-w-4xl mx-auto">
       
