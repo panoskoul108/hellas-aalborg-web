@@ -48,3 +48,25 @@ export async function deleteSupportChat(orderId: number) {
   }
   return data;
 }
+
+export async function updateOrderAdmin(orderId: number, updateData: any) {
+  const { data, error } = await supabaseAdmin
+    .from('orders')
+    .update(updateData)
+    .eq('id', orderId);
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function rollbackOrderLoyaltyAdmin(payload: any) {
+  const { data, error } = await supabaseAdmin.rpc('rollback_order_loyalty', payload);
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function insertSupportChatAdmin(chatData: any) {
+  const { data, error } = await supabaseAdmin.from('support_chats').insert([chatData]);
+  if (error) throw new Error(error.message);
+  return data;
+}
