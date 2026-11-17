@@ -116,3 +116,37 @@ export async function bulkUpdateMenuSortOrderAdmin(updates: {id: number, sort_or
   
   return true;
 }
+
+export async function uploadReceiptAdmin(formData: FormData) {
+  const file = formData.get('file') as File;
+  const fileName = formData.get('fileName') as string;
+  
+  if (!file || !fileName) {
+    throw new Error("Missing file or fileName");
+  }
+
+  // Το Service Role Key επιτρέπει το ανέβασμα ακόμα και σε Private bucket
+  const { data, error } = await supabaseAdmin
+    .storage
+    .from('receipts')
+    .upload(fileName, file);
+
+  if (error) {
+    console.error("Supabase Error (Upload Receipt):", error);
+    throw new Error(error.message);
+  }
+  
+  return data;
+}
+
+// Server Action για δημιουργία "Προσωρινού" URL (για να βλέπεις την απόδειξη με ασφάλεια)
+export async function getReceiptUrlAdmin(fileName: string) {
+   // Δημιουργεί ένα link που λήγει σε 60 δευτερόλεπτα (μόνο εσύ προλαβαίνεις να το δεις)
+   const { data, error } = await supabaseAdmin
+    .storage
+    .from('receipts')
+    .createSignedUrl(fileName, 60);
+    
+   if (error) throw new Error(error.message);
+   return data.signedUrl;
+}
