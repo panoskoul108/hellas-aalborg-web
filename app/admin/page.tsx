@@ -8,8 +8,14 @@ import HistoryPanel from '../../components/admin/HistoryPanel';
 import SettingsPanel from '../../components/admin/SettingsPanel';
 import Link from 'next/link';
 
-// Εισάγουμε πλέον και τη διαγραφή του Chat μαζί με τα settings
-import { updateStoreSettings, deleteSupportChat } from '@/app/actions/storeActions';
+// Εισάγουμε ΟΛΑ τα ασφαλή Server Actions
+import { 
+  updateStoreSettings, 
+  deleteSupportChat,
+  updateOrderAdmin,
+  rollbackOrderLoyaltyAdmin,
+  insertSupportChatAdmin
+} from '@/app/actions/storeActions';
 
 // Ορίζουμε 2 διαφορετικούς ήχους
 const NOTIFICATION_SOUND = "notification.mp3.wav"; // Για παραγγελίες
@@ -210,9 +216,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // ----------------------------------------------------------------------
-  // Η ΣΩΣΤΗ ΑΛΛΑΓΗ ΓΙΑ ΤΟ STORE PAUSE ΜΕ SERVER ACTION
-  // ----------------------------------------------------------------------
   const toggleStoreStatus = async () => {
     const newStatus = !isStoreOpen;
     setIsStoreOpen(newStatus); 
@@ -226,20 +229,30 @@ export default function AdminDashboard() {
     }
   };
 
+  // --- ΜΕΤΑΤΡΟΠΗ ΟΛΩΝ ΤΩΝ ACTIONS ΣΕ SERVER ACTIONS ---
+  
   const handleCancelOrder = async (orderId: number) => {
     const orderToCancel = orders.find(o => o.id === orderId);
-    const { error } = await supabase.from('orders').update({ status: 'cancelled' }).eq('id', orderId);
-    if (error) { alert("Σφάλμα κατά την ακύρωση: " + error.message); return; } 
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' } : o));
+    
+    try {
+      await updateOrderAdmin(orderId, { status: 'cancelled' });
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' } : o));
 
-    if (orderToCancel?.user_id) {
-      try {
+      if (orderToCancel?.user_id) {
         const { data: settings } = await supabase.from('store_settings').select('loyalty_earn_percentage').eq('id', 1).single();
         const earnPct = settings ? settings.loyalty_earn_percentage : 5;
         const earnedCashback = Number((orderToCancel.total_price * (earnPct / 100)).toFixed(2));
         const usedDiscount = orderToCancel.discount_dkk || 0;
-        await supabase.rpc('rollback_order_loyalty', { p_user_id: orderToCancel.user_id, p_used_discount: usedDiscount, p_earned_cashback: earnedCashback, p_order_total: orderToCancel.total_price });
-      } catch (err) { console.error("Σφάλμα κατά το rollback:", err); }
+        
+        await rollbackOrderLoyaltyAdmin({ 
+          p_user_id: orderToCancel.user_id, 
+          p_used_discount: usedDiscount, 
+          p_earned_cashback: earnedCashback, 
+          p_order_total: orderToCancel.total_price 
+        });
+      }
+    } catch (error: any) {
+      alert("Σφάλμα κατά την ακύρωση (Action): " + error.message);
     }
   };
 
@@ -255,22 +268,38 @@ export default function AdminDashboard() {
     }
     const updatedOrder = { ...order, status: 'preparing', requested_time: confirmedTime };
     setOrders(prev => prev.map(o => o.id === order.id ? updatedOrder : o));
-    const { error } = await supabase.from('orders').update({ status: 'preparing', requested_time: confirmedTime }).eq('id', order.id);
-    if (error) { alert("Σφάλμα: " + error.message); fetchOrders(); return; }
-    setActivePrintOrder(updatedOrder); setIsPrinting(true); setSelectedOrder(null); 
+    
+    try {
+      await updateOrderAdmin(order.id, { status: 'preparing', requested_time: confirmedTime });
+      setActivePrintOrder(updatedOrder); 
+      setIsPrinting(true); 
+      setSelectedOrder(null); 
+    } catch (error: any) {
+      alert("Σφάλμα (Action): " + error.message);
+      fetchOrders();
+    }
   };
 
   const handleCompleteOrder = async (order: any) => {
     const completedAt = new Date().toISOString();
     const updatedOrder = { ...order, status: 'completed', completed_at: completedAt };
     setOrders(prev => prev.map(o => o.id === order.id ? updatedOrder : o));
-    await supabase.from('orders').update({ status: 'completed', completed_at: completedAt }).eq('id', order.id);
-    setSelectedOrder(null);
+    
+    try {
+      await updateOrderAdmin(order.id, { status: 'completed', completed_at: completedAt });
+      setSelectedOrder(null);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const handleDismissOrder = async (orderId: number) => {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, is_delivered: true } : o));
-    await supabase.from('orders').update({ is_delivered: true }).eq('id', orderId);
+    try {
+      await updateOrderAdmin(orderId, { is_delivered: true });
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const sendAdminMessage = async (e: React.FormEvent) => {
@@ -278,25 +307,24 @@ export default function AdminDashboard() {
     if(!chatInput.trim() || !activeChatOrderId) return;
     const msg = chatInput.trim();
     setChatInput('');
-    await supabase.from('support_chats').insert([{
-      order_id: activeChatOrderId,
-      message: msg,
-      is_store: true
-    }]);
+    
+    try {
+      await insertSupportChatAdmin({
+        order_id: activeChatOrderId,
+        message: msg,
+        is_store: true
+      });
+    } catch (error: any) {
+      alert("Σφάλμα αποστολής: " + error.message);
+    }
   };
 
-  // ----------------------------------------------------------------------
-  // Η ΣΩΣΤΗ ΑΛΛΑΓΗ ΓΙΑ ΤΗ ΔΙΑΓΡΑΦΗ ΤΟΥ CHAT ΜΕ SERVER ACTION
-  // ----------------------------------------------------------------------
   const handleDeleteChat = async () => {
     if (!activeChatOrderId) return;
     if (!window.confirm("Σίγουρα θέλετε να διαγράψετε όλο το ιστορικό μηνυμάτων γι' αυτή την παραγγελία;")) return;
     
     try {
-      // Χρησιμοποιούμε το Server Action για να παρακάμψουμε το RLS
       await deleteSupportChat(activeChatOrderId);
-      
-      // Καθαρίζουμε την οθόνη
       setSupportMessages(prev => prev.filter(m => m.order_id !== activeChatOrderId));
       setActiveChatOrderId(null);
     } catch (error) {
@@ -632,7 +660,6 @@ export default function AdminDashboard() {
                       <span className="text-[10px] text-gray-400 font-bold">{currentChatOrder?.customer_phone || ''}</span>
                     </div>
                   </div>
-                  {/* ΝΕΟ: ΚΟΥΜΠΙ ΔΙΑΓΡΑΦΗΣ ΙΣΤΟΡΙΚΟΥ CHAT */}
                   <button onClick={handleDeleteChat} className="text-gray-500 hover:text-red-400 p-2 transition-colors" title="Διαγραφή Ιστορικού Μηνυμάτων">
                     🗑️
                   </button>
