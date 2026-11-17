@@ -11,3 +11,12 @@ export async function updateStoreHours(hoursData: any) {
   if (error) throw new Error(error.message);
   return data;
 }
+export async function updateStoreSettings(settingsData: any) {
+  const { data, error } = await supabaseAdmin
+    .from('store_settings')
+    .upsert(settingsData)
+    .select();
+
+  if (error) throw new Error(error.message);
+  return data;
+}
