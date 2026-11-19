@@ -1,7 +1,6 @@
 'use client';
 import React, { useState } from 'react';
 
-// ΠΡΟΣΘΗΚΗ: Βάλαμε το onCancel στα props
 export const OrderCard = ({ order, onAccept, onPrint, onComplete, onView, onCancel }: any) => {
   const items = order.items || [];
   const isPending = order.status === 'pending';
@@ -10,7 +9,7 @@ export const OrderCard = ({ order, onAccept, onPrint, onComplete, onView, onCanc
   const isASAP = order.requested_time === 'ASAP' || order.requested_time?.includes('Hurtigst') || !order.requested_time;
   const displayTime = order.requested_time ? order.requested_time.slice(0, 5) : '';
 
-  // STATE ΓΙΑ ΤΟ "CUSTOM" ΚΟΥΜΠΙ
+  // STATE ΓΙΑ ΤΟ "CUSTOM" ΚΟΥΜΠΙ (μόνο για ASAP)
   const [showCustom, setShowCustom] = useState(false);
   const customMinutes = Array.from({ length: 30 }, (_, i) => i + 1); 
 
@@ -27,7 +26,6 @@ export const OrderCard = ({ order, onAccept, onPrint, onComplete, onView, onCanc
           </p>
         </div>
         
-        {/* ΠΡΟΣΘΗΚΗ: Κουμπί Ακύρωσης δίπλα στην Προβολή */}
         <div className="flex gap-1.5 shrink-0">
           <button 
             onClick={() => {
@@ -45,7 +43,7 @@ export const OrderCard = ({ order, onAccept, onPrint, onComplete, onView, onCanc
         </div>
       </div>
 
-      {/* ΛΙΣΤΑ ΠΡΟΪΟΝΤΩΝ: Χωρίς scroll, ψηλώνει φυσικά */}
+      {/* ΛΙΣΤΑ ΠΡΟΪΟΝΤΩΝ */}
       <ul className="space-y-1.5 mb-3 flex-1">
         {items.map((it: any, i: number) => (
           <li key={i} className="flex flex-col text-sm border-b border-white/5 pb-1.5 last:border-0 last:pb-0">
@@ -54,13 +52,11 @@ export const OrderCard = ({ order, onAccept, onPrint, onComplete, onView, onCanc
                 <span className="text-[#38BDF8] mr-1.5">{it.quantity || 1}x</span>{it.title_da || it.title_el || it.name}
               </span>
             </div>
-            {/* Options */}
             {it.selectedOptions?.length > 0 && (
               <span className="text-[10px] text-gray-400 ml-5 block leading-tight mt-0.5">
                 + {it.selectedOptions.map((o:any) => o.name || o).join(', ')}
               </span>
             )}
-            {/* Σχόλιο Είδους */}
             {it.note && (
               <span className="text-[10px] text-yellow-500 font-bold italic ml-5 mt-0.5 bg-yellow-500/10 px-1.5 py-0.5 rounded-md inline-block w-fit">
                 📝 {it.note}
@@ -70,7 +66,7 @@ export const OrderCard = ({ order, onAccept, onPrint, onComplete, onView, onCanc
         ))}
       </ul>
 
-      {/* Γενικό Σχόλιο Παραγγελίας (Αν υπάρχει) */}
+      {/* Γενικό Σχόλιο Παραγγελίας */}
       {order.notes && (
          <div className="text-[10px] font-bold italic text-indigo-300 bg-indigo-900/30 p-1.5 rounded-lg mb-3 shrink-0 border border-indigo-500/30">
            <span className="uppercase text-indigo-400 block mb-0.5 text-[9px]">ΣΧΟΛΙΟ ΠΕΛΑΤΗ:</span>
@@ -116,43 +112,12 @@ export const OrderCard = ({ order, onAccept, onPrint, onComplete, onView, onCanc
               )}
             </div>
           ) : (
-            <div className="flex flex-col gap-1.5">
-              <button onClick={() => onAccept(order.requested_time, 0)} className="w-full bg-emerald-500 hover:bg-emerald-400 text-[#0B1120] font-black text-xs uppercase rounded-lg py-2 shadow-sm active:scale-95 transition-transform">
-                ✅ ΑΠΟΔΟΧΗ ΓΙΑ {displayTime}
-              </button>
-              
-              <div className="flex flex-col mt-1 border-t border-slate-700 pt-1.5">
-                {!showCustom ? (
-                  <div className="flex justify-between items-center">
-                    <span className="text-[9px] text-gray-500 font-bold uppercase">ΑΛΛΑΓΗ:</span>
-                    <div className="flex gap-1">
-                      {[10, 15, 20].map(mins => (
-                        <button key={mins} onClick={() => onAccept(null, mins)} className="bg-slate-700 hover:bg-slate-600 text-gray-200 text-[10px] font-bold px-2.5 py-1.5 rounded-md">
-                          {mins}'
-                        </button>
-                      ))}
-                      <button onClick={() => setShowCustom(true)} className="bg-slate-800 text-[#38BDF8] border border-[#38BDF8]/30 hover:bg-slate-700 text-[9px] font-bold px-2 py-1.5 rounded-md">
-                        CUSTOM
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-1.5 animate-fade-in bg-slate-900/50 p-1.5 rounded-lg border border-slate-700">
-                    <div className="flex justify-between items-center px-1">
-                      <span className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">ΑΛΛΑΓΗ ΩΡΑΣ (👈👉):</span>
-                      <button onClick={() => setShowCustom(false)} className="text-red-400 hover:text-red-300 text-[9px] font-black px-1.5 py-0.5 rounded border border-red-500/30">✕ ΠΙΣΩ</button>
-                    </div>
-                    <div className="flex overflow-x-auto gap-1.5 pb-1 no-scrollbar snap-x touch-pan-x" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                      {customMinutes.map((mins) => (
-                        <button key={mins} onClick={() => onAccept(null, mins)} className="shrink-0 w-9 h-9 bg-slate-800 hover:bg-orange-500 text-gray-400 hover:text-black hover:border-orange-500 font-black text-xs rounded-lg shadow-sm active:scale-95 transition-all snap-center border border-slate-700 flex items-center justify-center">
-                          {mins}'
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+            <button
+              onClick={() => onAccept(order.requested_time, 0)}
+              className="w-full bg-emerald-500 hover:bg-emerald-400 text-[#0B1120] font-black text-xs uppercase rounded-lg py-2 shadow-sm active:scale-95 transition-transform"
+            >
+              ✅ ΑΠΟΔΟΧΗ ΓΙΑ {displayTime}
+            </button>
           )}
         </div>
       )}
