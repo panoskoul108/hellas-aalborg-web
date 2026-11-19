@@ -18,6 +18,13 @@ export default function CheckoutSidebar({
   const [showAuthForm, setShowAuthForm] = useState(false);
   const [cooldown, setCooldown] = useState(0);
 
+  // --- STATES ΓΙΑ ΤΟ "ΞΕΧΑΣΑ ΤΟΝ ΚΩΔΙΚΟ ΜΟΥ" ---
+  const [resetMode, setResetMode] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetSent, setResetSent] = useState(false);
+  const [resetError, setResetError] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+
   // --- STATES ΓΙΑ ΤΟ CHAT ΥΠΟΣΤΗΡΙΞΗΣ ---
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [activeChatOrderId, setActiveChatOrderId] = useState<number | null>(null);
@@ -27,16 +34,75 @@ export default function CheckoutSidebar({
   
   const [hasUnreadStoreMsg, setHasUnreadStoreMsg] = useState(false);
 
-  // Λεξικό για το Chat
+  // Λεξικό για το Chat & Password Reset
   const chatUiDict: Record<string, any> = {
-    da: { needHelp: "Brug for hjælp?", support: "Kundeservice", typeMsg: "Skriv en besked...", send: "Send", you: "Dig", store: "Hellas Aalborg", empty: "Skriv dit problem her, så svarer vi hurtigst muligt!", callUs: "RING TIL OS", takeawayTag: "TAKEAWAY - AFHENT I BUTIK" },
-    en: { needHelp: "Report a problem", support: "Support Chat", typeMsg: "Type a message...", send: "Send", you: "You", store: "Hellas Aalborg", empty: "Describe your issue here and we'll reply ASAP!", callUs: "CALL STORE", takeawayTag: "TAKEAWAY - STORE PICKUP" },
-    el: { needHelp: "Αναφορά Προβλήματος", support: "Συνομιλία Υποστήριξης", typeMsg: "Γράψτε το μήνυμά σας...", send: "Αποστολή", you: "Εσείς", store: "Hellas Aalborg", empty: "Γράψτε μας το πρόβλημά σας και θα απαντήσουμε άμεσα!", callUs: "ΚΛΗΣΗ ΚΑΤΑΣΤΗΜΑΤΟΣ", takeawayTag: "TAKEAWAY - ΠΑΡΑΛΑΒΗ ΑΠΟ ΚΑΤΑΣΤΗΜΑ" }
+    da: {
+      needHelp: "Brug for hjælp?",
+      support: "Kundeservice",
+      typeMsg: "Skriv en besked...",
+      send: "Send",
+      you: "Dig",
+      store: "Hellas Aalborg",
+      empty: "Skriv dit problem her, så svarer vi hurtigst muligt!",
+      callUs: "RING TIL OS",
+      takeawayTag: "TAKEAWAY - AFHENT I BUTIK",
+      forgotPass: "Glemt adgangskode?",
+      resetTitle: "Nulstil adgangskode",
+      resetDesc: "Indtast din e-mailadresse, så sender vi et link til at vælge en ny adgangskode.",
+      sendResetLink: "Send nulstillingslink",
+      sendingLink: "Sender...",
+      resetSuccess: "Hvis der findes en konto med denne e-mail, er der sendt et link til nulstilling af adgangskoden.",
+      backToLogin: "Tilbage til login",
+      missingEmail: "Indtast venligst din e-mailadresse."
+    },
+    en: {
+      needHelp: "Report a problem",
+      support: "Support Chat",
+      typeMsg: "Type a message...",
+      send: "Send",
+      you: "You",
+      store: "Hellas Aalborg",
+      empty: "Describe your issue here and we'll reply ASAP!",
+      callUs: "CALL STORE",
+      takeawayTag: "TAKEAWAY - STORE PICKUP",
+      forgotPass: "Forgot password?",
+      resetTitle: "Reset Password",
+      resetDesc: "Enter your email address and we will send you a link to set a new password.",
+      sendResetLink: "Send reset link",
+      sendingLink: "Sending...",
+      resetSuccess: "If an account exists for this email, a password reset link has been sent.",
+      backToLogin: "Back to login",
+      missingEmail: "Please enter your email address."
+    },
+    el: {
+      needHelp: "Αναφορά Προβλήματος",
+      support: "Συνομιλία Υποστήριξης",
+      typeMsg: "Γράψτε το μήνυμά σας...",
+      send: "Αποστολή",
+      you: "Εσείς",
+      store: "Hellas Aalborg",
+      empty: "Γράψτε μας το πρόβλημά σας και θα απαντήσουμε άμεσα!",
+      callUs: "ΚΛΗΣΗ ΚΑΤΑΣΤΗΜΑΤΟΣ",
+      takeawayTag: "TAKEAWAY - ΠΑΡΑΛΑΒΗ ΑΠΟ ΚΑΤΑΣΤΗΜΑ",
+      forgotPass: "Ξέχασα τον κωδικό μου",
+      resetTitle: "Επαναφορά Κωδικού",
+      resetDesc: "Γράψε το email του λογαριασμού σου για να σου στείλουμε σύνδεσμο ορισμού νέου κωδικού.",
+      sendResetLink: "Αποστολή συνδέσμου",
+      sendingLink: "Αποστολή...",
+      resetSuccess: "Αν υπάρχει λογαριασμός με αυτό το email, στάλθηκε σύνδεσμος επαναφοράς κωδικού.",
+      backToLogin: "Επιστροφή στη σύνδεση",
+      missingEmail: "Παρακαλώ εισάγετε το email σας."
+    }
   };
   const chatUi = chatUiDict[lang] || chatUiDict['da'];
 
   useEffect(() => {
-    if (checkoutStep === 'auth') setShowAuthForm(false);
+    if (checkoutStep === 'auth') {
+      setShowAuthForm(false);
+      setResetMode(false);
+      setResetSent(false);
+      setResetError('');
+    }
   }, [checkoutStep]);
 
   useEffect(() => {
@@ -88,6 +154,32 @@ export default function CheckoutSidebar({
   useEffect(() => {
     if (isChatOpen) messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages, isChatOpen]);
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetError('');
+    setResetSent(false);
+
+    const targetEmail = (resetEmail || auth.email || '').trim();
+    if (!targetEmail) {
+      setResetError(chatUi.missingEmail);
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      const redirectTo = `${window.location.origin}/reset-password`;
+      const { error } = await supabase.auth.resetPasswordForEmail(targetEmail, {
+        redirectTo,
+      });
+      if (error) throw error;
+      setResetSent(true);
+    } catch (err: any) {
+      setResetError(err?.message || 'Error');
+    } finally {
+      setResetLoading(false);
+    }
+  };
 
   const sendChatMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -314,6 +406,69 @@ export default function CheckoutSidebar({
                         <p className="text-gray-400 text-xs mt-4">{ui.guestDesc}</p>
                       </div>
                     </div>
+                  ) : resetMode ? (
+                    <div className="flex flex-col gap-4 animate-fade-in">
+                      <div className="bg-slate-800/30 p-6 rounded-2xl border border-white/5 relative">
+                        <button 
+                          onClick={() => { setShowAuthForm(false); setResetMode(false); }} 
+                          className="absolute top-4 right-4 text-gray-400 hover:text-white p-1"
+                        >
+                          <Icons.Close />
+                        </button>
+
+                        <h3 className="text-base font-bold text-white text-center mb-2 uppercase tracking-wide">{chatUi.resetTitle}</h3>
+                        <p className="text-xs text-gray-400 text-center mb-5 leading-relaxed">{chatUi.resetDesc}</p>
+
+                        {resetError && (
+                          <div className="bg-red-500/10 text-red-400 p-3 rounded-lg text-xs font-bold text-center border border-red-500/20 mb-4">
+                            {resetError}
+                          </div>
+                        )}
+
+                        {resetSent ? (
+                          <div className="space-y-4">
+                            <div className="bg-emerald-500/10 text-emerald-300 p-4 rounded-xl text-xs font-medium text-center border border-emerald-500/20 leading-relaxed">
+                              {chatUi.resetSuccess}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => { setResetMode(false); setResetSent(false); }}
+                              className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3.5 rounded-xl text-xs uppercase tracking-wide transition-colors"
+                            >
+                              {chatUi.backToLogin}
+                            </button>
+                          </div>
+                        ) : (
+                          <form onSubmit={handleForgotPassword} className="flex flex-col gap-4">
+                            <input
+                              type="email"
+                              placeholder={ui.emailPlh}
+                              value={resetEmail || auth.email || ''}
+                              onChange={(e) => {
+                                setResetEmail(e.target.value);
+                                if (auth.setEmail) auth.setEmail(e.target.value);
+                              }}
+                              required
+                              className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 transition-colors"
+                            />
+                            <button
+                              type="submit"
+                              disabled={resetLoading}
+                              className="w-full bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-bold py-4 rounded-xl uppercase tracking-wide transition-colors disabled:opacity-50"
+                            >
+                              {resetLoading ? chatUi.sendingLink : chatUi.sendResetLink}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setResetMode(false); setResetError(''); }}
+                              className="w-full text-xs text-gray-400 hover:text-white font-bold mt-1 transition-colors"
+                            >
+                              {chatUi.backToLogin}
+                            </button>
+                          </form>
+                        )}
+                      </div>
+                    </div>
                   ) : (
                     <div className="flex flex-col gap-4 animate-fade-in">
                       <div className="bg-slate-800/30 p-6 rounded-2xl border border-white/5 relative">
@@ -338,6 +493,24 @@ export default function CheckoutSidebar({
                           )}
                           <input type="email" placeholder={ui.emailPlh} value={auth.email} onChange={e => auth.setEmail(e.target.value)} required className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 transition-colors" />
                           <input type="password" placeholder={ui.passPlh} value={auth.password} onChange={e => auth.setPassword(e.target.value)} required className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 transition-colors" />
+
+                          {auth.authMode === 'login' && (
+                            <div className="flex justify-end -mt-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setResetEmail(auth.email || '');
+                                  setResetSent(false);
+                                  setResetError('');
+                                  setResetMode(true);
+                                }}
+                                className="text-xs text-gray-400 hover:text-[#38BDF8] font-bold transition-colors"
+                              >
+                                {chatUi.forgotPass}
+                              </button>
+                            </div>
+                          )}
+
                           <button type="submit" className="w-full bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-bold py-4 rounded-xl mt-2 uppercase tracking-wide transition-colors">{auth.authMode === 'signup' ? ui.regTitle : ui.loginTitle}</button>
                         </form>
                         
