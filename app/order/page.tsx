@@ -129,8 +129,16 @@ export default function OrderPage() {
       const savedOrderId = localStorage.getItem('hellas_active_order');
       if (savedOrderId) {
         const { data } = await supabase.from('orders').select('*').eq('id', savedOrderId).single();
-        if (data && data.is_delivered !== true) { setPlacedOrder(data); setCheckoutStep('success'); setIsCartOpen(true); }
-        else localStorage.removeItem('hellas_active_order');
+        if (data && data.is_delivered !== true) {
+          clearCart();
+          setPlacedOrder(data);
+          setCheckoutStep('success');
+          setIsCartOpen(true);
+        } else {
+          localStorage.removeItem('hellas_active_order');
+          clearCart();
+          setCheckoutStep('cart');
+        }
       }
     };
     checkSavedOrder();
@@ -150,6 +158,8 @@ export default function OrderPage() {
       const audio = new Audio('/notification.mp3.wav');
       audio.play().catch(e => console.log("Ο browser μπλόκαρε τον ήχο: ", e));
       setShowReadyAlert(true);
+      setCheckoutStep('success');
+      setIsCartOpen(true);
     }
   }, [placedOrder?.status, placedOrder?.is_delivered]);
 
@@ -239,6 +249,7 @@ export default function OrderPage() {
         await supabase.from('customers_loyalty').upsert({ user_id: auth.user.id, wallet_balance: currentBalance - loyaltyDiscount + earnedCashback, total_orders: (loyaltyData?.total_orders || 0) + 1, total_spent_dkk: Number(loyaltyData?.total_spent_dkk || 0) + finalTotal });
       }
       const newTotal = ordersPlaced + 1; setOrdersPlaced(newTotal); localStorage.setItem("servato_orders", newTotal.toString()); localStorage.setItem("servato_time", Date.now().toString());
+      clearCart();
       setCheckoutStep('success'); setOrderNote(''); 
     } catch (error: any) { alert('Σφάλμα: ' + error.message); } finally { setIsSubmitting(false); }
   };
@@ -671,7 +682,7 @@ export default function OrderPage() {
               {lang === 'da' ? 'Din ordre er klar til afhentning.' : lang === 'en' ? 'Your order is ready for pickup.' : 'Η παραγγελία σας είναι έτοιμη για παραλαβή.'}
             </p>
             <button 
-              onClick={() => setShowReadyAlert(false)}
+              onClick={() => { setShowReadyAlert(false); setCheckoutStep('success'); setIsCartOpen(true); }}
               className="bg-white text-emerald-700 w-full py-4 rounded-2xl font-black uppercase tracking-widest shadow-lg active:scale-95 transition-transform"
             >
               {lang === 'da' ? 'Jeg er på vej' : lang === 'en' ? 'I am on my way' : 'ΕΡΧΟΜΑΙ'}
