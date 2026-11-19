@@ -21,6 +21,21 @@ import {
 const NOTIFICATION_SOUND = "notification.mp3.wav"; // Για παραγγελίες
 const CHAT_SOUND = "chat-alert.mp3.wav";           // Για μηνύματα
 
+const isPreorderOrder = (order: any) => {
+  if (!order) return false;
+  if (order.is_preorder === true || order.order_type === 'preorder') return true;
+  if (order.is_asap_order === true || order.order_type === 'asap') return false;
+
+  const reqTime = order.requested_time;
+  if (!reqTime || typeof reqTime !== 'string') return false;
+
+  const normalized = reqTime.trim().toLowerCase();
+  if (normalized === 'asap' || normalized.includes('hurtigst')) return false;
+
+  // Υποστηρίζουμε μορφή ώρας HH:MM ή HH:MM:SS για προπαραγγελίες
+  return /^\d{1,2}:\d{2}(:\d{2})?$/.test(reqTime.trim());
+};
+
 export default function AdminDashboard() {
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -162,7 +177,7 @@ export default function AdminDashboard() {
     return () => { if (interval) clearInterval(interval); };
   }, [orders, audioUnlocked]);
 
-  // 4. Υπενθύμιση παραγγελιών στο 10λεπτο (ΜΟΝΟ ΠΡΟΓΡΑΜΜΑΤΙΣΜΕΝΕΣ)
+  // 4. Υπενθύμιση παραγγελιών στο 10λεπτο (ΜΟΝΟ ΠΡΟΠΑΡΑΓΓΕΛΙΕΣ)
   useEffect(() => {
     if (!audioUnlocked) return;
     const interval = setInterval(() => {
@@ -170,14 +185,12 @@ export default function AdminDashboard() {
       const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
 
       orders.forEach(order => {
-        if (order.status === 'preparing' && order.requested_time) {
+        if (order.status === 'preparing' && isPreorderOrder(order) && order.requested_time) {
           const [reqH, reqM] = order.requested_time.split(':').map(Number);
           let diff = (reqH * 60 + reqM) - currentTotalMinutes;
           if (diff < -720) diff += 1440; 
-          const minutesSinceCreation = (now.getTime() - new Date(order.created_at).getTime()) / 60000;
-          const isScheduled = minutesSinceCreation >= 20;
           
-          if (diff > 0 && diff <= 10 && !remindedOrdersRef.current.has(order.id) && isScheduled) {
+          if (diff > 0 && diff <= 10 && !remindedOrdersRef.current.has(order.id)) {
             playSound();
             setTimeout(() => playSound(), 1000);
             setReminderAlert({ show: true, orderId: order.order_number || order.id.toString().slice(-4), time: order.requested_time.slice(0, 5) });
@@ -258,6 +271,8 @@ export default function AdminDashboard() {
 
   const handleAcceptOrder = async (order: any, exactTime: string | null, addedMins: number = 0) => {
     let confirmedTime = exactTime;
+    const acceptedAsASAP = !exactTime;
+
     if (!confirmedTime) {
       const targetDate = new Date();
       targetDate.setMinutes(targetDate.getMinutes() + addedMins);
@@ -266,7 +281,12 @@ export default function AdminDashboard() {
       const ss = targetDate.getSeconds().toString().padStart(2, '0'); 
       confirmedTime = `${hh}:${mm}:${ss}`; 
     }
-    const updatedOrder = { ...order, status: 'preparing', requested_time: confirmedTime };
+    const updatedOrder = {
+      ...order,
+      status: 'preparing',
+      requested_time: confirmedTime,
+      ...(acceptedAsASAP ? { is_asap_order: true, is_preorder: false } : {}),
+    };
     setOrders(prev => prev.map(o => o.id === order.id ? updatedOrder : o));
     
     try {
