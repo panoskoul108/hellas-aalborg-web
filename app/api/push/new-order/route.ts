@@ -1,6 +1,19 @@
 import { NextResponse } from 'next/server';
 import webpush from 'web-push';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { createClient } from '@supabase/supabase-js';
+
+export const dynamic = 'force-dynamic';
+
+function getSupabaseAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !serviceKey) {
+    throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+  }
+
+  return createClient(url, serviceKey);
+}
 
 export async function POST(req: Request) {
   try {
@@ -21,6 +34,8 @@ export async function POST(req: Request) {
       vapidPublic,
       vapidPrivate
     );
+
+    const supabaseAdmin = getSupabaseAdmin();
 
     const body = await req.json();
     const order = body.record;
