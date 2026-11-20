@@ -20,7 +20,7 @@ export default function OrderPage() {
   const ui = dict[lang];
 
   // --- HOOKS ---
-  const { storeOpen, generateTimeSlots } = useStore(ui);
+  const { storeOpen, generateTimeSlots, getTimeBounds, isValidScheduledTime } = useStore(ui);
   const auth = useAuth();
   const [loyaltyDiscount, setLoyaltyDiscount] = useState(0); 
   
@@ -230,7 +230,16 @@ export default function OrderPage() {
 
   const submitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!storeOpen && requestedTime === 'ASAP') return alert(ui.closedStore);
+    if (requestedTime === 'ASAP' && !storeOpen) return alert(ui.closedStore);
+    if (requestedTime !== 'ASAP' && isValidScheduledTime && !isValidScheduledTime(requestedTime)) {
+      return alert(
+        lang === 'da'
+          ? 'Den valgte tid er uden for åbningstiden. Vælg venligst et gyldigt tidspunkt.'
+          : lang === 'en'
+          ? 'The selected time is outside opening hours. Please choose a valid time.'
+          : 'Η επιλεγμένη ώρα είναι εκτός ωραρίου λειτουργίας. Παρακαλώ επιλέξτε έγκυρη ώρα.'
+      );
+    }
     if (isLocked) return alert("Limit reached.");
     if (!auth.customerName || !auth.customerPhone) return alert('Missing details.');
     setIsSubmitting(true);
@@ -644,6 +653,8 @@ export default function OrderPage() {
         storeSettings={storeSettings}
         storeOpen={storeOpen}
         generateTimeSlots={generateTimeSlots}
+        getTimeBounds={getTimeBounds}
+        isValidScheduledTime={isValidScheduledTime}
         requestedTime={requestedTime}
         setRequestedTime={setRequestedTime}
         orderNote={orderNote}
