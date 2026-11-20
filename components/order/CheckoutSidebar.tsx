@@ -9,10 +9,10 @@ export default function CheckoutSidebar({
   isCartOpen, setIsCartOpen, checkoutStep, setCheckoutStep, lang, ui, t, auth, cart,
   updateQuantity, removeFromCart, addToCart, setActiveProduct, getItemPrice,
   subtotal, finalTotal, loyaltyDiscount, setLoyaltyDiscount, storeSettings,
-  storeOpen, generateTimeSlots, requestedTime, setRequestedTime, orderNote,
-  setOrderNote, paymentMethod, setPaymentMethod, submitOrder, isSubmitting,
-  placedOrder, handleCustomerPickup, handleRepeatOrder, getLocaleDateString, menuItems,
-  onEditItem, onAddNewItem
+  storeOpen, generateTimeSlots, getTimeBounds, isValidScheduledTime,
+  requestedTime, setRequestedTime, orderNote, setOrderNote, paymentMethod,
+  setPaymentMethod, submitOrder, isSubmitting, placedOrder, handleCustomerPickup,
+  handleRepeatOrder, getLocaleDateString, menuItems, onEditItem, onAddNewItem
 }: any) {
   
   const [showAuthForm, setShowAuthForm] = useState(false);
@@ -34,7 +34,7 @@ export default function CheckoutSidebar({
   
   const [hasUnreadStoreMsg, setHasUnreadStoreMsg] = useState(false);
 
-  // Λεξικό για το Chat & Password Reset
+  // Λεξικό για το Chat & Password Reset & Time Picker
   const chatUiDict: Record<string, any> = {
     da: {
       needHelp: "Brug for hjælp?",
@@ -53,7 +53,9 @@ export default function CheckoutSidebar({
       sendingLink: "Sender...",
       resetSuccess: "Hvis der findes en konto med denne e-mail, er der sendt et link til nulstilling af adgangskoden.",
       backToLogin: "Tilbage til login",
-      missingEmail: "Indtast venligst din e-mailadresse."
+      missingEmail: "Indtast venligst din e-mailadresse.",
+      chooseExactTime: "Vælg tidspunkt",
+      invalidTimeMsg: "Butikken er lukket på dette tidspunkt. Vælg et gyldigt tidspunkt inden for åbningstiden."
     },
     en: {
       needHelp: "Report a problem",
@@ -72,7 +74,9 @@ export default function CheckoutSidebar({
       sendingLink: "Sending...",
       resetSuccess: "If an account exists for this email, a password reset link has been sent.",
       backToLogin: "Back to login",
-      missingEmail: "Please enter your email address."
+      missingEmail: "Please enter your email address.",
+      chooseExactTime: "Choose exact time",
+      invalidTimeMsg: "Store is closed at this time. Please choose a valid time within opening hours."
     },
     el: {
       needHelp: "Αναφορά Προβλήματος",
@@ -91,7 +95,9 @@ export default function CheckoutSidebar({
       sendingLink: "Αποστολή...",
       resetSuccess: "Αν υπάρχει λογαριασμός με αυτό το email, στάλθηκε σύνδεσμος επαναφοράς κωδικού.",
       backToLogin: "Επιστροφή στη σύνδεση",
-      missingEmail: "Παρακαλώ εισάγετε το email σας."
+      missingEmail: "Παρακαλώ εισάγετε το email σας.",
+      chooseExactTime: "Ακριβής ώρα",
+      invalidTimeMsg: "Το κατάστημα είναι κλειστό αυτή την ώρα. Επιλέξτε έγκυρη ώρα εντός ωραρίου."
     }
   };
   const chatUi = chatUiDict[lang] || chatUiDict['da'];
@@ -201,6 +207,15 @@ export default function CheckoutSidebar({
   };
 
   if (!isCartOpen) return null;
+
+  const bounds = getTimeBounds
+    ? getTimeBounds()
+    : { canSchedule: storeOpen, minTime: '', maxTime: '', openDisplay: '', closeDisplay: '' };
+  const isCustomTime = requestedTime !== 'ASAP';
+  const isSelectedTimeValid = !isCustomTime
+    ? storeOpen
+    : (isValidScheduledTime ? isValidScheduledTime(requestedTime) : true);
+  const canSubmitWithTime = isCustomTime ? (bounds.canSchedule && isSelectedTimeValid) : storeOpen;
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-end">
@@ -611,8 +626,67 @@ export default function CheckoutSidebar({
                   <div><label className="text-xs text-gray-500 font-bold uppercase tracking-wider block mb-2">{ui.nameLabel}</label><input type="text" value={auth.customerName} onChange={e => auth.setCustomerName(e.target.value)} required className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 transition-colors" /></div>
                   <div><label className="text-xs text-gray-500 font-bold uppercase tracking-wider block mb-2">{ui.phoneLabel}</label><input type="tel" value={auth.customerPhone} onChange={e => auth.setCustomerPhone(e.target.value)} required className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 transition-colors" /></div>
                   
-                  {storeOpen && (
-                    <div><label className="text-xs text-gray-500 font-bold uppercase tracking-wider block mb-2">{ui.timeLabel}</label><select value={requestedTime} onChange={e => setRequestedTime(e.target.value)} className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white font-medium text-sm outline-none focus:border-[#38BDF8]/50 transition-colors">{generateTimeSlots().map((slot: any, i: number) => <option key={i} value={slot.value}>{slot.label}</option>)}</select></div>
+                  {(storeOpen || bounds.canSchedule) && (
+                    <div>
+                      <label className="text-xs text-gray-500 font-bold uppercase tracking-wider block mb-2">{ui.timeLabel}</label>
+                      <div className="grid grid-cols-2 gap-2.5 mb-3">
+                        <button
+                          type="button"
+                          disabled={!storeOpen}
+                          onClick={() => setRequestedTime('ASAP')}
+                          className={`p-3.5 rounded-xl border text-center transition-colors font-bold uppercase tracking-wide text-xs ${
+                            requestedTime === 'ASAP' && storeOpen
+                              ? 'bg-[#38BDF8]/15 border-[#38BDF8] text-[#38BDF8]'
+                              : 'bg-slate-900 border-white/5 text-gray-400 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed'
+                          }`}
+                        >
+                          ⚡ {ui?.asap || 'ASAP'}
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={!bounds.canSchedule}
+                          onClick={() => {
+                            if (requestedTime === 'ASAP') {
+                              setRequestedTime(bounds.minTime || '18:00');
+                            }
+                          }}
+                          className={`p-3.5 rounded-xl border text-center transition-colors font-bold uppercase tracking-wide text-xs ${
+                            isCustomTime
+                              ? 'bg-[#38BDF8]/15 border-[#38BDF8] text-[#38BDF8]'
+                              : 'bg-slate-900 border-white/5 text-gray-400 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed'
+                          }`}
+                        >
+                          🕒 {chatUi.chooseExactTime}
+                        </button>
+                      </div>
+
+                      {isCustomTime && bounds.canSchedule && (
+                        <div className="bg-slate-900/90 border border-white/10 rounded-xl p-3.5 flex flex-col gap-2 animate-fade-in">
+                          <div className="flex items-center justify-between gap-3">
+                            <input
+                              type="time"
+                              step={60}
+                              min={bounds.minTime}
+                              max={bounds.maxTime}
+                              value={requestedTime}
+                              onChange={(e) => setRequestedTime(e.target.value)}
+                              required
+                              className="flex-1 bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white font-bold text-base outline-none focus:border-[#38BDF8]"
+                            />
+                            <span className="text-[11px] font-bold text-gray-400 whitespace-nowrap">
+                              {bounds.openDisplay} - {bounds.closeDisplay}
+                            </span>
+                          </div>
+
+                          {!isSelectedTimeValid && (
+                            <p className="text-xs text-red-400 font-bold">
+                              {chatUi.invalidTimeMsg}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   )}
 
                   <div><label className="text-xs text-gray-500 font-bold uppercase tracking-wider block mb-2">{ui.orderNoteTitle}</label><textarea value={orderNote} onChange={e => setOrderNote(e.target.value)} placeholder={ui.orderNotePlh} rows={2} className="w-full bg-slate-900 border border-white/5 rounded-xl p-4 text-white text-sm outline-none focus:border-[#38BDF8]/50 resize-none transition-colors"></textarea></div>
@@ -634,7 +708,7 @@ export default function CheckoutSidebar({
                 {loyaltyDiscount > 0 && <div className="flex justify-between items-center mb-2 text-[#38BDF8]"><span className="text-sm">{ui.loyaltyDiscount}</span><span className="font-bold">-{loyaltyDiscount.toFixed(2)} kr.</span></div>}
                 <div className="flex justify-between items-center mt-2 mb-5 border-t border-white/5 pt-3"><span className="text-white font-bold uppercase tracking-wide">{ui.totalPay}</span><span className="text-2xl font-bold text-[#38BDF8]">{finalTotal.toFixed(2)} kr.</span></div>
                 
-                {!storeOpen ? (
+                {(!storeOpen && !bounds.canSchedule) ? (
                   <div className="flex flex-col gap-2 animate-fade-in-up">
                      <button disabled className="w-full bg-red-900/50 text-red-300 font-black uppercase tracking-widest py-3.5 rounded-xl border border-red-500/30 cursor-not-allowed">
                        {lang === 'da' ? 'MIDLERTIDIGT LUKKET' : lang === 'en' ? 'TEMPORARILY CLOSED' : 'ΠΡΟΣΩΡΙΝΑ ΚΛΕΙΣΤΟ'}
@@ -655,7 +729,7 @@ export default function CheckoutSidebar({
                     <button 
                       type="submit" 
                       form="checkoutForm" 
-                      disabled={isSubmitting || cooldown > 0} 
+                      disabled={isSubmitting || cooldown > 0 || !canSubmitWithTime} 
                       className="flex-1 bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] font-bold py-3.5 rounded-xl disabled:opacity-50 uppercase tracking-wide transition-colors"
                     >
                       {cooldown > 0 
