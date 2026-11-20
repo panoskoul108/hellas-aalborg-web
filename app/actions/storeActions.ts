@@ -150,3 +150,40 @@ export async function getReceiptUrlAdmin(fileName: string) {
    if (error) throw new Error(error.message);
    return data.signedUrl;
 }
+
+// === PUSH NOTIFICATIONS ΓΙΑ ΤΟ ΚΙΝΗΤΟ ΤΟΥ ΚΑΤΑΣΤΗΜΑΤΟΣ ===
+export async function saveAdminPushSubscription(sub: {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+}, deviceLabel = 'Shop Mobile') {
+  const { error } = await supabaseAdmin
+    .from('admin_push_subscriptions')
+    .upsert(
+      {
+        endpoint: sub.endpoint,
+        p256dh: sub.keys.p256dh,
+        auth: sub.keys.auth,
+        device_label: deviceLabel,
+      },
+      { onConflict: 'endpoint' }
+    );
+
+  if (error) {
+    console.error('Supabase Error (Save Push Sub):', error);
+    throw new Error(error.message);
+  }
+  return { success: true };
+}
+
+export async function removeAdminPushSubscription(endpoint: string) {
+  const { error } = await supabaseAdmin
+    .from('admin_push_subscriptions')
+    .delete()
+    .eq('endpoint', endpoint);
+
+  if (error) {
+    console.error('Supabase Error (Remove Push Sub):', error);
+    throw new Error(error.message);
+  }
+  return { success: true };
+}
