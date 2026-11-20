@@ -14,12 +14,25 @@ import {
   deleteSupportChat,
   updateOrderAdmin,
   rollbackOrderLoyaltyAdmin,
-  insertSupportChatAdmin
+  insertSupportChatAdmin,
+  saveAdminPushSubscription,
+  removeAdminPushSubscription
 } from '@/app/actions/storeActions';
 
 // Ορίζουμε 2 διαφορετικούς ήχους
 const NOTIFICATION_SOUND = "notification.mp3.wav"; // Για παραγγελίες
 const CHAT_SOUND = "chat-alert.mp3.wav";           // Για μηνύματα
+
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
 
 const isPreorderOrder = (order: any) => {
   if (!order) return false;
@@ -50,6 +63,10 @@ export default function AdminDashboard() {
   const [pinError, setPinError] = useState(false);
   
   const [reminderAlert, setReminderAlert] = useState({ show: false, orderId: '', time: '' });
+
+  // -- STATES ΓΙΑ PUSH NOTIFICATIONS ΣΤΟ ΚΙΝΗΤΟ ΤΟΥ ΜΑΓΑΖΙΟΥ --
+  const [pushStatus, setPushStatus] = useState<'checking' | 'enabled' | 'disabled' | 'unsupported'>('checking');
+  const [pushLoading, setPushLoading] = useState(false);
   
   // -- UI STATES --
   const [isPrinting, setIsPrinting] = useState(false);
@@ -74,6 +91,125 @@ export default function AdminDashboard() {
       }
     } catch (err) {
       console.log('Το Wake Lock απορρίφθηκε ή δεν υποστηρίζεται:', err);
+    }
+  };
+
+  // Δυναμικό admin manifest όσο είμαστε στο /admin
+  useEffect(() => {
+    const existingLink = document.querySelector('link[rel="manifest"]');
+    const prevHref = existingLink?.getAttribute('href') || '/manifest.json';
+
+    if (existingLink) {
+      existingLink.setAttribute('href', '/admin-manifest.json');
+    } else {
+      const link = document.createElement('link');
+      link.rel = 'manifest';
+      link.href = '/admin-manifest.json';
+      document.head.appendChild(link);
+    }
+
+    return () => {
+      const currentLink = document.querySelector('link[rel="manifest"]');
+      if (currentLink) {
+        currentLink.setAttribute('href', prevHref);
+      }
+    };
+  }, []);
+
+  // Έλεγχος κατάστασης Push Subscription στη συγκεκριμένη συσκευή
+  const checkPushSubscription = async () => {
+    if (
+      typeof window === 'undefined' ||
+      !('serviceWorker' in navigator) ||
+      !('PushManager' in window) ||
+      !('Notification' in window)
+    ) {
+      setPushStatus('unsupported');
+      return;
+    }
+
+    try {
+      const reg = await navigator.serviceWorker.register('/sw.js');
+      const sub = await reg.pushManager.getSubscription();
+      if (sub && Notification.permission === 'granted') {
+        setPushStatus('enabled');
+      } else {
+        setPushStatus('disabled');
+      }
+    } catch (err) {
+      console.error('Push check error:', err);
+      setPushStatus('disabled');
+    }
+  };
+
+  useEffect(() => {
+    checkPushSubscription();
+  }, []);
+
+  const handleTogglePushNotifications = async () => {
+    if (pushStatus === 'unsupported') {
+      alert('Αυτός ο browser δεν υποστηρίζει Web Push Notifications. Χρησιμοποίησε Chrome / Edge / PWA.');
+      return;
+    }
+
+    setPushLoading(true);
+    try {
+      const reg = await navigator.serviceWorker.register('/sw.js');
+      const existingSub = await reg.pushManager.getSubscription();
+
+      // Αν είναι ήδη ενεργό σε αυτή τη συσκευή, το απενεργοποιούμε
+      if (pushStatus === 'enabled' && existingSub) {
+        const endpoint = existingSub.endpoint;
+        await existingSub.unsubscribe();
+        await removeAdminPushSubscription(endpoint);
+        setPushStatus('disabled');
+        alert('Οι Push ειδοποιήσεις απενεργοποιήθηκαν σε αυτή τη συσκευή.');
+        return;
+      }
+
+      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!vapidPublicKey) {
+        alert('Λείπει το NEXT_PUBLIC_VAPID_PUBLIC_KEY από τις μεταβλητές περιβάλλοντος στο Vercel (και κάνε Redeploy).');
+        return;
+      }
+
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        setPushStatus('disabled');
+        alert('Δεν δόθηκε άδεια ειδοποιήσεων. Ενεργοποίησέ τις από τις ρυθμίσεις του browser/κινητού.');
+        return;
+      }
+
+      const subscription =
+        existingSub ||
+        (await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+        }));
+
+      const subJson = subscription.toJSON();
+      if (!subJson.endpoint || !subJson.keys?.p256dh || !subJson.keys?.auth) {
+        throw new Error('Μη έγκυρα δεδομένα Push Subscription.');
+      }
+
+      await saveAdminPushSubscription(
+        {
+          endpoint: subJson.endpoint,
+          keys: {
+            p256dh: subJson.keys.p256dh,
+            auth: subJson.keys.auth,
+          },
+        },
+        'Hellas Shop Mobile'
+      );
+
+      setPushStatus('enabled');
+      alert('Επιτυχία! Το κινητό του μαγαζιού θα λαμβάνει Push ειδοποιήσεις για νέες παραγγελίες.');
+    } catch (error: any) {
+      console.error('Push toggle error:', error);
+      alert('Σφάλμα Push: ' + (error?.message || 'Άγνωστο σφάλμα'));
+    } finally {
+      setPushLoading(false);
     }
   };
 
@@ -436,6 +572,18 @@ export default function AdminDashboard() {
 
             {/* Mobile-only compact icon strip */}
             <div className="flex md:hidden items-center gap-1.5">
+              <button
+                onClick={handleTogglePushNotifications}
+                disabled={pushLoading}
+                className={`flex items-center justify-center px-2 h-8 rounded-lg text-[9px] font-black uppercase border transition-colors ${
+                  pushStatus === 'enabled'
+                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                    : 'bg-amber-500/15 text-amber-300 border-amber-500/40'
+                }`}
+                title="Push Ειδοποιήσεις Κινητού"
+              >
+                {pushLoading ? '...' : pushStatus === 'enabled' ? '🔔 ON' : '🔔 PUSH'}
+              </button>
               <button onClick={playSound} className="flex items-center justify-center bg-slate-800 text-gray-300 border border-slate-600 w-8 h-8 rounded-lg hover:bg-slate-700 transition-colors text-sm" title="Δοκιμή Ήχου">
                 🔊
               </button>
@@ -482,8 +630,28 @@ export default function AdminDashboard() {
             </button>
           </div>
           
-          {/* Desktop Action Controls (Unchanged) */}
+          {/* Desktop Action Controls */}
           <div className="hidden md:flex items-center gap-2 md:gap-3 flex-wrap justify-center">
+            <button
+              onClick={handleTogglePushNotifications}
+              disabled={pushLoading}
+              className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border shadow-sm ${
+                pushStatus === 'enabled'
+                  ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/25'
+                  : 'bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25'
+              }`}
+              title="Ενεργοποίηση / Απενεργοποίηση Push Ειδοποιήσεων Κινητού"
+            >
+              <span>🔔</span>
+              <span>
+                {pushLoading
+                  ? 'PUSH...'
+                  : pushStatus === 'enabled'
+                  ? 'PUSH ON'
+                  : 'PUSH ΚΙΝΗΤΟΥ'}
+              </span>
+            </button>
+
             <button 
               onClick={toggleStoreStatus}
               className={`hidden lg:flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border shadow-sm ${
