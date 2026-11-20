@@ -1,38 +1,27 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase } from '../supabase'; 
-import { PrintTicket } from './PrintTicket'; 
-import OrderTimer from '@/components/admin/OrderTimer'; 
-import { OrderCard } from '../../components/admin/OrderCard'; 
-import HistoryPanel from '../../components/admin/HistoryPanel'; 
+import { supabase } from '../supabase';
+import { PrintTicket } from './PrintTicket';
+import OrderTimer from '@/components/admin/OrderTimer';
+import { OrderCard } from '../../components/admin/OrderCard';
+import HistoryPanel from '../../components/admin/HistoryPanel';
 import SettingsPanel from '../../components/admin/SettingsPanel';
+import PinLockScreen from '@/components/admin/PinLockScreen';
+import AdminChatDrawer from '@/components/admin/AdminChatDrawer';
+import OrderDetailsModal from '@/components/admin/OrderDetailsModal';
+import { useAdminPush } from '@/app/hooks/useAdminPush';
 import Link from 'next/link';
 
-// Εισάγουμε ΟΛΑ τα ασφαλή Server Actions
-import { 
-  updateStoreSettings, 
+import {
+  updateStoreSettings,
   deleteSupportChat,
   updateOrderAdmin,
   rollbackOrderLoyaltyAdmin,
   insertSupportChatAdmin,
-  saveAdminPushSubscription,
-  removeAdminPushSubscription
 } from '@/app/actions/storeActions';
 
-// Ορίζουμε 2 διαφορετικούς ήχους
-const NOTIFICATION_SOUND = "notification.mp3.wav"; // Για παραγγελίες
-const CHAT_SOUND = "chat-alert.mp3.wav";           // Για μηνύματα
-
-function urlBase64ToUint8Array(base64String: string) {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-}
+const NOTIFICATION_SOUND = "notification.mp3.wav";
+const CHAT_SOUND = "chat-alert.mp3.wav";
 
 const isPreorderOrder = (order: any) => {
   if (!order) return false;
@@ -45,29 +34,27 @@ const isPreorderOrder = (order: any) => {
   const normalized = reqTime.trim().toLowerCase();
   if (normalized === 'asap' || normalized.includes('hurtigst')) return false;
 
-  // Υποστηρίζουμε μορφή ώρας HH:MM ή HH:MM:SS για προπαραγγελίες
   return /^\d{1,2}:\d{2}(:\d{2})?$/.test(reqTime.trim());
 };
 
 export default function AdminDashboard() {
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
-  // -- STATES ΓΙΑ ΤΟ PIN PAD, ΗΧΟ ΚΑΙ ΥΠΕΝΘΥΜΙΣΕΙΣ --
-  const prevCountRef = useRef(0); 
-  const remindedOrdersRef = useRef<Set<number>>(new Set()); 
-  
+
+  // -- PIN, ΗΧΟΣ ΚΑΙ ΥΠΕΝΘΥΜΙΣΕΙΣ --
+  const prevCountRef = useRef(0);
+  const remindedOrdersRef = useRef<Set<number>>(new Set());
+
   const [audioUnlocked, setAudioUnlocked] = useState(false);
-  const [expectedPin, setExpectedPin] = useState('1234'); 
+  const [expectedPin, setExpectedPin] = useState('1234');
   const [enteredPin, setEnteredPin] = useState('');
   const [pinError, setPinError] = useState(false);
-  
+
   const [reminderAlert, setReminderAlert] = useState({ show: false, orderId: '', time: '' });
 
-  // -- STATES ΓΙΑ PUSH NOTIFICATIONS ΣΤΟ ΚΙΝΗΤΟ ΤΟΥ ΜΑΓΑΖΙΟΥ --
-  const [pushStatus, setPushStatus] = useState<'checking' | 'enabled' | 'disabled' | 'unsupported'>('checking');
-  const [pushLoading, setPushLoading] = useState(false);
-  
+  // -- PUSH ΚΙΝΗΤΟΥ --
+  const { pushStatus, pushLoading, handleTogglePushNotifications } = useAdminPush();
+
   // -- UI STATES --
   const [isPrinting, setIsPrinting] = useState(false);
   const [activePrintOrder, setActivePrintOrder] = useState<any>(null);
@@ -76,7 +63,7 @@ export default function AdminDashboard() {
   const [mobileColumn, setMobileColumn] = useState<'pending' | 'preparing' | 'completed'>('pending');
   const [isStoreOpen, setIsStoreOpen] = useState(true);
 
-  // -- STATES ΓΙΑ ΤΟ SUPPORT CHAT --
+  // -- SUPPORT CHAT --
   const [supportMessages, setSupportMessages] = useState<any[]>([]);
   const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
   const [activeChatOrderId, setActiveChatOrderId] = useState<number | null>(null);
@@ -94,130 +81,11 @@ export default function AdminDashboard() {
     }
   };
 
-  // Δυναμικό admin manifest όσο είμαστε στο /admin
-  useEffect(() => {
-    const existingLink = document.querySelector('link[rel="manifest"]');
-    const prevHref = existingLink?.getAttribute('href') || '/manifest.json';
-
-    if (existingLink) {
-      existingLink.setAttribute('href', '/admin-manifest.json');
-    } else {
-      const link = document.createElement('link');
-      link.rel = 'manifest';
-      link.href = '/admin-manifest.json';
-      document.head.appendChild(link);
-    }
-
-    return () => {
-      const currentLink = document.querySelector('link[rel="manifest"]');
-      if (currentLink) {
-        currentLink.setAttribute('href', prevHref);
-      }
-    };
-  }, []);
-
-  // Έλεγχος κατάστασης Push Subscription στη συγκεκριμένη συσκευή
-  const checkPushSubscription = async () => {
-    if (
-      typeof window === 'undefined' ||
-      !('serviceWorker' in navigator) ||
-      !('PushManager' in window) ||
-      !('Notification' in window)
-    ) {
-      setPushStatus('unsupported');
-      return;
-    }
-
-    try {
-      const reg = await navigator.serviceWorker.register('/sw.js');
-      const sub = await reg.pushManager.getSubscription();
-      if (sub && Notification.permission === 'granted') {
-        setPushStatus('enabled');
-      } else {
-        setPushStatus('disabled');
-      }
-    } catch (err) {
-      console.error('Push check error:', err);
-      setPushStatus('disabled');
-    }
-  };
-
-  useEffect(() => {
-    checkPushSubscription();
-  }, []);
-
-  const handleTogglePushNotifications = async () => {
-    if (pushStatus === 'unsupported') {
-      alert('Αυτός ο browser δεν υποστηρίζει Web Push Notifications. Χρησιμοποίησε Chrome / Edge / PWA.');
-      return;
-    }
-
-    setPushLoading(true);
-    try {
-      const reg = await navigator.serviceWorker.register('/sw.js');
-      const existingSub = await reg.pushManager.getSubscription();
-
-      // Αν είναι ήδη ενεργό σε αυτή τη συσκευή, το απενεργοποιούμε
-      if (pushStatus === 'enabled' && existingSub) {
-        const endpoint = existingSub.endpoint;
-        await existingSub.unsubscribe();
-        await removeAdminPushSubscription(endpoint);
-        setPushStatus('disabled');
-        alert('Οι Push ειδοποιήσεις απενεργοποιήθηκαν σε αυτή τη συσκευή.');
-        return;
-      }
-
-      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-      if (!vapidPublicKey) {
-        alert('Λείπει το NEXT_PUBLIC_VAPID_PUBLIC_KEY από τις μεταβλητές περιβάλλοντος στο Vercel (και κάνε Redeploy).');
-        return;
-      }
-
-      const permission = await Notification.requestPermission();
-      if (permission !== 'granted') {
-        setPushStatus('disabled');
-        alert('Δεν δόθηκε άδεια ειδοποιήσεων. Ενεργοποίησέ τις από τις ρυθμίσεις του browser/κινητού.');
-        return;
-      }
-
-      const subscription =
-        existingSub ||
-        (await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-        }));
-
-      const subJson = subscription.toJSON();
-      if (!subJson.endpoint || !subJson.keys?.p256dh || !subJson.keys?.auth) {
-        throw new Error('Μη έγκυρα δεδομένα Push Subscription.');
-      }
-
-      await saveAdminPushSubscription(
-        {
-          endpoint: subJson.endpoint,
-          keys: {
-            p256dh: subJson.keys.p256dh,
-            auth: subJson.keys.auth,
-          },
-        },
-        'Hellas Shop Mobile'
-      );
-
-      setPushStatus('enabled');
-      alert('Επιτυχία! Το κινητό του μαγαζιού θα λαμβάνει Push ειδοποιήσεις για νέες παραγγελίες.');
-    } catch (error: any) {
-      console.error('Push toggle error:', error);
-      alert('Σφάλμα Push: ' + (error?.message || 'Άγνωστο σφάλμα'));
-    } finally {
-      setPushLoading(false);
-    }
-  };
-
   useEffect(() => {
     const initDash = async () => {
       const { data: pinData } = await supabase.from('pos_settings').select('pin_code').eq('id', 1).single();
-      if (pinData) setExpectedPin(pinData.pin_code.trim()); 
-      
+      if (pinData) setExpectedPin(pinData.pin_code.trim());
+
       const { data: storeSettings } = await supabase.from('store_settings').select('accepting_orders').eq('id', 1).single();
       if (storeSettings) setIsStoreOpen(storeSettings.accepting_orders);
 
@@ -239,7 +107,6 @@ export default function AdminDashboard() {
     if (data) setSupportMessages(data);
   };
 
-  // --- REALTIME SUBSCRIPTIONS (ΟRDERS & CHATS) ---
   useEffect(() => {
     const orderChannel = supabase.channel('admin-orders-channel')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
@@ -255,9 +122,9 @@ export default function AdminDashboard() {
       })
       .subscribe();
 
-    return () => { 
-      supabase.removeChannel(orderChannel); 
-      supabase.removeChannel(chatChannel); 
+    return () => {
+      supabase.removeChannel(orderChannel);
+      supabase.removeChannel(chatChannel);
     };
   }, []);
 
@@ -271,7 +138,6 @@ export default function AdminDashboard() {
     return () => { clearInterval(interval); document.removeEventListener("visibilitychange", handleVisibilityChange); };
   }, [audioUnlocked]);
 
-  // --- ΣΥΝΑΡΤΗΣΕΙΣ ΑΝΑΠΑΡΑΓΩΓΗΣ ΗΧΩΝ ---
   const playSound = () => {
     const audio = document.getElementById('order-alert-sound') as HTMLAudioElement;
     if (audio) {
@@ -288,23 +154,18 @@ export default function AdminDashboard() {
     }
   };
 
-  // --- ΜΗΧΑΝΙΣΜΟΙ ΗΧΩΝ & ΥΠΕΝΘΥΜΙΣΕΩΝ ---
-
-  // 1. Ήχος για ΝΕΕΣ ΠΑΡΑΓΓΕΛΙΕΣ
   useEffect(() => {
     const pendingCount = orders.filter(o => o.status === 'pending').length;
     if (pendingCount > prevCountRef.current && audioUnlocked) playSound();
     prevCountRef.current = pendingCount;
   }, [orders, audioUnlocked]);
 
-  // 2. Ήχος για ΝΕΑ ΜΗΝΥΜΑΤΑ (Από πελάτη)
   useEffect(() => {
     const unreadCount = supportMessages.filter(m => !m.is_store).length;
     if (unreadCount > prevChatCountRef.current && audioUnlocked) playChatSound();
     prevChatCountRef.current = unreadCount;
   }, [supportMessages, audioUnlocked]);
 
-  // 3. Επαναλαμβανόμενος ήχος ΚΑΘΕ 5 ΔΕΥΤΕΡΟΛΕΠΤΑ όσο υπάρχουν "Pending" Orders
   useEffect(() => {
     if (!audioUnlocked) return;
     const pendingCount = orders.filter(o => o.status === 'pending').length;
@@ -313,7 +174,6 @@ export default function AdminDashboard() {
     return () => { if (interval) clearInterval(interval); };
   }, [orders, audioUnlocked]);
 
-  // 4. Υπενθύμιση παραγγελιών στο 10λεπτο (ΜΟΝΟ ΠΡΟΠΑΡΑΓΓΕΛΙΕΣ)
   useEffect(() => {
     if (!audioUnlocked) return;
     const interval = setInterval(() => {
@@ -324,8 +184,8 @@ export default function AdminDashboard() {
         if (order.status === 'preparing' && isPreorderOrder(order) && order.requested_time) {
           const [reqH, reqM] = order.requested_time.split(':').map(Number);
           let diff = (reqH * 60 + reqM) - currentTotalMinutes;
-          if (diff < -720) diff += 1440; 
-          
+          if (diff < -720) diff += 1440;
+
           if (diff > 0 && diff <= 10 && !remindedOrdersRef.current.has(order.id)) {
             playSound();
             setTimeout(() => playSound(), 1000);
@@ -339,7 +199,6 @@ export default function AdminDashboard() {
     return () => clearInterval(interval);
   }, [orders, audioUnlocked]);
 
-  // Auto-scroll όταν ανοίγει ένα chat ή έρχεται νέο μήνυμα
   useEffect(() => {
     if (isChatPanelOpen && activeChatOrderId) {
       chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -358,7 +217,7 @@ export default function AdminDashboard() {
       const audio = document.getElementById('order-alert-sound') as HTMLAudioElement;
       if (audio) {
         audio.muted = true;
-        audio.play().then(() => { audio.muted = false; setAudioUnlocked(true); requestWakeLock(); }).catch(e => { setAudioUnlocked(true); requestWakeLock(); });
+        audio.play().then(() => { audio.muted = false; setAudioUnlocked(true); requestWakeLock(); }).catch(() => { setAudioUnlocked(true); requestWakeLock(); });
       } else { setAudioUnlocked(true); requestWakeLock(); }
     } else {
       setPinError(true); setEnteredPin(''); setTimeout(() => setPinError(false), 800);
@@ -367,22 +226,18 @@ export default function AdminDashboard() {
 
   const toggleStoreStatus = async () => {
     const newStatus = !isStoreOpen;
-    setIsStoreOpen(newStatus); 
-    
+    setIsStoreOpen(newStatus);
     try {
       await updateStoreSettings({ accepting_orders: newStatus });
     } catch (error) {
       console.error(error);
       alert("Σφάλμα κατά την αλλαγή κατάστασης. Παρακαλώ ανανεώστε τη σελίδα.");
-      setIsStoreOpen(!newStatus); 
+      setIsStoreOpen(!newStatus);
     }
   };
 
-  // --- ΜΕΤΑΤΡΟΠΗ ΟΛΩΝ ΤΩΝ ACTIONS ΣΕ SERVER ACTIONS ---
-  
   const handleCancelOrder = async (orderId: number) => {
     const orderToCancel = orders.find(o => o.id === orderId);
-    
     try {
       await updateOrderAdmin(orderId, { status: 'cancelled' });
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' } : o));
@@ -392,12 +247,12 @@ export default function AdminDashboard() {
         const earnPct = settings ? settings.loyalty_earn_percentage : 5;
         const earnedCashback = Number((orderToCancel.total_price * (earnPct / 100)).toFixed(2));
         const usedDiscount = orderToCancel.discount_dkk || 0;
-        
-        await rollbackOrderLoyaltyAdmin({ 
-          p_user_id: orderToCancel.user_id, 
-          p_used_discount: usedDiscount, 
-          p_earned_cashback: earnedCashback, 
-          p_order_total: orderToCancel.total_price 
+
+        await rollbackOrderLoyaltyAdmin({
+          p_user_id: orderToCancel.user_id,
+          p_used_discount: usedDiscount,
+          p_earned_cashback: earnedCashback,
+          p_order_total: orderToCancel.total_price
         });
       }
     } catch (error: any) {
@@ -414,8 +269,8 @@ export default function AdminDashboard() {
       targetDate.setMinutes(targetDate.getMinutes() + addedMins);
       const hh = targetDate.getHours().toString().padStart(2, '0');
       const mm = targetDate.getMinutes().toString().padStart(2, '0');
-      const ss = targetDate.getSeconds().toString().padStart(2, '0'); 
-      confirmedTime = `${hh}:${mm}:${ss}`; 
+      const ss = targetDate.getSeconds().toString().padStart(2, '0');
+      confirmedTime = `${hh}:${mm}:${ss}`;
     }
     const updatedOrder = {
       ...order,
@@ -424,12 +279,12 @@ export default function AdminDashboard() {
       ...(acceptedAsASAP ? { is_asap_order: true, is_preorder: false } : {}),
     };
     setOrders(prev => prev.map(o => o.id === order.id ? updatedOrder : o));
-    
+
     try {
       await updateOrderAdmin(order.id, { status: 'preparing', requested_time: confirmedTime });
-      setActivePrintOrder(updatedOrder); 
-      setIsPrinting(true); 
-      setSelectedOrder(null); 
+      setActivePrintOrder(updatedOrder);
+      setIsPrinting(true);
+      setSelectedOrder(null);
     } catch (error: any) {
       alert("Σφάλμα (Action): " + error.message);
       fetchOrders();
@@ -440,7 +295,6 @@ export default function AdminDashboard() {
     const completedAt = new Date().toISOString();
     const updatedOrder = { ...order, status: 'completed', completed_at: completedAt };
     setOrders(prev => prev.map(o => o.id === order.id ? updatedOrder : o));
-    
     try {
       await updateOrderAdmin(order.id, { status: 'completed', completed_at: completedAt });
       setSelectedOrder(null);
@@ -460,10 +314,9 @@ export default function AdminDashboard() {
 
   const sendAdminMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if(!chatInput.trim() || !activeChatOrderId) return;
+    if (!chatInput.trim() || !activeChatOrderId) return;
     const msg = chatInput.trim();
     setChatInput('');
-    
     try {
       await insertSupportChatAdmin({
         order_id: activeChatOrderId,
@@ -478,7 +331,6 @@ export default function AdminDashboard() {
   const handleDeleteChat = async () => {
     if (!activeChatOrderId) return;
     if (!window.confirm("Σίγουρα θέλετε να διαγράψετε όλο το ιστορικό μηνυμάτων γι' αυτή την παραγγελία;")) return;
-    
     try {
       await deleteSupportChat(activeChatOrderId);
       setSupportMessages(prev => prev.filter(m => m.order_id !== activeChatOrderId));
@@ -489,39 +341,31 @@ export default function AdminDashboard() {
     }
   };
 
-  if (isLoading) return <div className="min-h-screen bg-[#0B1120] flex items-center justify-center text-[#38BDF8] font-bold text-xl animate-pulse">Φόρτωση Ταμείου...</div>;
-
-  if (!audioUnlocked) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0B1120] flex flex-col items-center justify-center p-4 md:p-6 text-center bg-[url('/bg.jpg')] bg-cover bg-fixed bg-center relative">
-        <div className="absolute inset-0 bg-[#0B1120]/90 -z-10 backdrop-blur-sm"></div>
-        <audio id="order-alert-sound" src={NOTIFICATION_SOUND} preload="auto" />
-        <audio id="chat-alert-sound" src={CHAT_SOUND} preload="auto" />
-        <h1 className="text-2xl md:text-3xl font-black text-white uppercase tracking-widest mb-2 shadow-black drop-shadow-md">HELLAS AALBORG</h1>
-        <p className="text-[#38BDF8] font-black uppercase tracking-widest text-xs mb-6 md:mb-8">ΚΛΕΙΔΩΜΑ ΟΘΟΝΗΣ</p>
-        <div className={`bg-slate-800/80 p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] shadow-2xl border ${pinError ? 'border-red-500 animate-shake' : 'border-slate-600/50'} w-full max-w-xs backdrop-blur-md transition-colors duration-300`}>
-          <div className={`mb-6 md:mb-8 h-12 md:h-14 bg-slate-900 rounded-2xl flex items-center justify-center tracking-[0.5em] text-2xl md:text-3xl font-black border shadow-inner transition-colors ${pinError ? 'text-red-500 border-red-500/50' : 'text-[#38BDF8] border-slate-700'}`}>
-             {enteredPin.length > 0 ? enteredPin.replace(/./g, '•') : <span className="text-slate-700 tracking-normal text-sm">PIN CODE</span>}
-          </div>
-          <div className="grid grid-cols-3 gap-2.5 md:gap-3">
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
-              <button key={num} onClick={() => { if(enteredPin.length < 8) setEnteredPin(prev => prev + num); }} className="bg-slate-700 hover:bg-slate-600 text-white text-xl md:text-2xl font-black rounded-2xl aspect-square active:scale-90 transition-all shadow-md border border-slate-600">{num}</button>
-            ))}
-            <button onClick={() => setEnteredPin('')} className="bg-red-900/40 hover:bg-red-500 text-red-400 hover:text-white text-base md:text-lg font-black rounded-2xl aspect-square active:scale-90 transition-all shadow-md border border-red-900/50">C</button>
-            <button onClick={() => { if(enteredPin.length < 8) setEnteredPin(prev => prev + '0'); }} className="bg-slate-700 hover:bg-slate-600 text-white text-xl md:text-2xl font-black rounded-2xl aspect-square active:scale-90 transition-all shadow-md border border-slate-600">0</button>
-            <button onClick={handlePinSubmit} className="bg-[#38BDF8] hover:bg-sky-400 text-[#0B1120] text-xl md:text-2xl font-black rounded-2xl aspect-square active:scale-90 transition-all shadow-md border border-sky-400">✓</button>
-          </div>
-        </div>
+      <div className="min-h-screen bg-[#0B1120] flex items-center justify-center text-[#38BDF8] font-bold text-xl animate-pulse">
+        Φόρτωση Ταμείου...
       </div>
     );
   }
 
-  // --- Υπολογισμοί Μηνυμάτων & Ταξινόμηση Παραγγελιών ---
-  
+  if (!audioUnlocked) {
+    return (
+      <PinLockScreen
+        notificationSound={NOTIFICATION_SOUND}
+        chatSound={CHAT_SOUND}
+        enteredPin={enteredPin}
+        setEnteredPin={setEnteredPin}
+        pinError={pinError}
+        onPinSubmit={handlePinSubmit}
+      />
+    );
+  }
+
   const activeChatOrders = Array.from(new Set(supportMessages.map(m => m.order_id)));
   const unreadChatCount = activeChatOrders.filter(id => {
-     const msgs = supportMessages.filter(m => m.order_id === id);
-     return msgs.length > 0 && !msgs[msgs.length - 1].is_store;
+    const msgs = supportMessages.filter(m => m.order_id === id);
+    return msgs.length > 0 && !msgs[msgs.length - 1].is_store;
   }).length;
 
   const pendingOrders = orders.filter(o => o.status === 'pending');
@@ -535,21 +379,18 @@ export default function AdminDashboard() {
       const getDiff = (timeStr: string) => {
         const [h, m] = timeStr.split(':').map(Number);
         let diff = (h * 60 + m) - currentTotalMins;
-        if (diff < -720) diff += 1440; 
+        if (diff < -720) diff += 1440;
         return diff;
       };
       return getDiff(a.requested_time) - getDiff(b.requested_time);
     });
   const completedOrders = orders.filter(o => o.status === 'completed' && o.is_delivered !== true && (new Date().getTime() - new Date(o.created_at).getTime() < 24 * 60 * 60 * 1000));
 
-  const currentChatOrder = orders.find(o => o.id === activeChatOrderId);
-
   return (
     <>
       <audio id="order-alert-sound" src={NOTIFICATION_SOUND} preload="auto" />
       <audio id="chat-alert-sound" src={CHAT_SOUND} preload="auto" />
 
-      {/* ΟΠΤΙΚΟ BANNER ΥΠΕΝΘΥΜΙΣΗΣ */}
       {reminderAlert.show && (
         <div className="fixed top-16 md:top-10 left-1/2 -translate-x-1/2 bg-red-600 text-white px-5 py-4 md:px-8 md:py-5 rounded-2xl md:rounded-3xl shadow-[0_20px_50px_rgba(220,38,38,0.7)] z-[9999] animate-bounce border-2 md:border-4 border-white flex flex-col items-center w-[92vw] max-w-md md:min-w-[320px]">
           <span className="text-3xl md:text-5xl mb-1 md:mb-2">⚠️</span>
@@ -564,13 +405,11 @@ export default function AdminDashboard() {
         <div className="absolute inset-0 bg-[#0B1120]/85 -z-10"></div>
 
         <header className="bg-[#0F172A]/95 border-b border-white/10 px-3 py-2.5 md:p-4 sticky top-0 z-40 flex flex-col md:flex-row justify-between items-center gap-2.5 md:gap-4 shadow-lg backdrop-blur-md transition-all">
-          {/* Top row on mobile: Title + Quick Action Icons */}
           <div className="w-full md:w-auto flex justify-between items-center">
             <h1 className="text-base md:text-xl font-black text-white italic tracking-tight">
               HELLAS AALBORG <span className="text-[#38BDF8]">ADMIN</span>
             </h1>
 
-            {/* Mobile-only compact icon strip */}
             <div className="flex md:hidden items-center gap-1.5">
               <button
                 onClick={handleTogglePushNotifications}
@@ -587,9 +426,9 @@ export default function AdminDashboard() {
               <button onClick={playSound} className="flex items-center justify-center bg-slate-800 text-gray-300 border border-slate-600 w-8 h-8 rounded-lg hover:bg-slate-700 transition-colors text-sm" title="Δοκιμή Ήχου">
                 🔊
               </button>
-              <button 
-                onClick={() => { setIsChatPanelOpen(true); setActiveChatOrderId(null); }} 
-                className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 text-sm" 
+              <button
+                onClick={() => { setIsChatPanelOpen(true); setActiveChatOrderId(null); }}
+                className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 text-sm"
                 title="Μηνύματα"
               >
                 💬
@@ -607,30 +446,28 @@ export default function AdminDashboard() {
               </button>
             </div>
           </div>
-          
-          {/* Main Navigation Tabs */}
+
           <div className="w-full md:w-auto grid grid-cols-3 md:flex bg-slate-900/80 rounded-xl p-1 border border-slate-700/50 shadow-inner">
-            <button 
-              onClick={() => setActiveTab('live')} 
+            <button
+              onClick={() => setActiveTab('live')}
               className={`px-2 md:px-6 py-1.5 md:py-2 rounded-lg text-[10px] md:text-xs font-black uppercase transition-all duration-300 ${activeTab === 'live' ? 'bg-[#38BDF8] text-[#0B1120] shadow-md' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
             >
               LIVE ΤΑΜΕΙΟ
             </button>
-            <button 
-              onClick={() => setActiveTab('history')} 
+            <button
+              onClick={() => setActiveTab('history')}
               className={`px-2 md:px-6 py-1.5 md:py-2 rounded-lg text-[10px] md:text-xs font-black uppercase transition-all duration-300 ${activeTab === 'history' ? 'bg-[#38BDF8] text-[#0B1120] shadow-md' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
             >
               ΙΣΤΟΡΙΚΟ & Z
             </button>
-            <button 
-              onClick={() => setActiveTab('settings')} 
+            <button
+              onClick={() => setActiveTab('settings')}
               className={`px-2 md:px-6 py-1.5 md:py-2 rounded-lg text-[10px] md:text-xs font-black uppercase transition-all duration-300 ${activeTab === 'settings' ? 'bg-[#38BDF8] text-[#0B1120] shadow-md' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
             >
               ΡΥΘΜΙΣΕΙΣ
             </button>
           </div>
-          
-          {/* Desktop Action Controls */}
+
           <div className="hidden md:flex items-center gap-2 md:gap-3 flex-wrap justify-center">
             <button
               onClick={handleTogglePushNotifications}
@@ -652,11 +489,11 @@ export default function AdminDashboard() {
               </span>
             </button>
 
-            <button 
+            <button
               onClick={toggleStoreStatus}
               className={`hidden lg:flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border shadow-sm ${
-                isStoreOpen 
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20' 
+                isStoreOpen
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
                   : 'bg-red-500 text-white border-red-600 hover:bg-red-600 animate-pulse'
               }`}
             >
@@ -665,16 +502,16 @@ export default function AdminDashboard() {
             </button>
 
             <Link href="/admin/products" className="hidden lg:flex items-center gap-1.5 bg-purple-600/20 text-purple-400 border border-purple-500/30 hover:bg-purple-600/30 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase shadow-sm transition-colors">
-                📋 ΚΑΤΑΛΟΓΟΣ
+              📋 ΚΑΤΑΛΟΓΟΣ
             </Link>
-            
+
             <button onClick={playSound} className="hidden sm:flex items-center justify-center bg-slate-800 text-gray-300 border border-slate-600 w-10 h-10 rounded-xl hover:bg-slate-700 transition-colors shadow-sm" title="Δοκιμή Ήχου Παραγγελίας">
               🔊
             </button>
 
-            <button 
-              onClick={() => { setIsChatPanelOpen(true); setActiveChatOrderId(null); }} 
-              className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/20 text-lg shadow-sm transition-colors" 
+            <button
+              onClick={() => { setIsChatPanelOpen(true); setActiveChatOrderId(null); }}
+              className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/20 text-lg shadow-sm transition-colors"
               title="Μηνύματα Πελατών"
             >
               💬
@@ -688,7 +525,7 @@ export default function AdminDashboard() {
             <button onClick={fetchOrders} className="flex items-center justify-center w-10 h-10 rounded-xl bg-[#38BDF8]/10 text-[#38BDF8] border border-[#38BDF8]/30 hover:bg-[#38BDF8]/20 text-lg shadow-sm transition-colors" title="Ανανέωση">
               🔄
             </button>
-            
+
             <div className="h-6 w-px bg-slate-700 hidden sm:block mx-1"></div>
 
             <button onClick={() => { setAudioUnlocked(false); setEnteredPin(''); sessionStorage.removeItem('admin_unlocked'); }} className="text-[10px] text-orange-400 hover:text-white bg-orange-500/10 hover:bg-orange-500/30 border border-orange-500/30 font-black uppercase px-6 py-2.5 rounded-xl transition-colors shadow-sm">
@@ -697,27 +534,25 @@ export default function AdminDashboard() {
           </div>
         </header>
 
-        {/* Compact Mobile Secondary Controls (Store Status + Products) */}
         <div className="lg:hidden px-3 py-2 bg-[#0F172A]/90 border-b border-white/10 grid grid-cols-2 gap-2">
-           <button 
-             onClick={toggleStoreStatus}
-             className={`w-full flex justify-center items-center gap-1.5 px-2.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border shadow-sm ${
-               isStoreOpen 
-                 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50' 
-                 : 'bg-red-500 text-white border-red-600 animate-pulse'
-             }`}
-           >
-             <div className={`w-2 h-2 rounded-full shrink-0 ${isStoreOpen ? 'bg-emerald-400' : 'bg-white'}`}></div>
-             <span className="truncate">{isStoreOpen ? 'ΑΝΟΙΧΤΟ' : 'ΚΛΕΙΣΤΟ (PAUSE)'}</span>
-           </button>
-           <Link href="/admin/products" className="w-full flex justify-center items-center gap-1 bg-purple-600/20 text-purple-400 border border-purple-500/30 px-2.5 py-2 rounded-xl text-[10px] font-black uppercase shadow-sm transition-colors">
-              📋 ΚΑΤΑΛΟΓΟΣ
-           </Link>
+          <button
+            onClick={toggleStoreStatus}
+            className={`w-full flex justify-center items-center gap-1.5 px-2.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border shadow-sm ${
+              isStoreOpen
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50'
+                : 'bg-red-500 text-white border-red-600 animate-pulse'
+            }`}
+          >
+            <div className={`w-2 h-2 rounded-full shrink-0 ${isStoreOpen ? 'bg-emerald-400' : 'bg-white'}`}></div>
+            <span className="truncate">{isStoreOpen ? 'ΑΝΟΙΧΤΟ' : 'ΚΛΕΙΣΤΟ (PAUSE)'}</span>
+          </button>
+          <Link href="/admin/products" className="w-full flex justify-center items-center gap-1 bg-purple-600/20 text-purple-400 border border-purple-500/30 px-2.5 py-2 rounded-xl text-[10px] font-black uppercase shadow-sm transition-colors">
+            📋 ΚΑΤΑΛΟΓΟΣ
+          </Link>
         </div>
 
         {activeTab === 'live' ? (
           <>
-            {/* Mobile-only Column Switcher so you don't scroll 3 endless vertical lists */}
             <div className="lg:hidden sticky top-[93px] md:top-[69px] z-30 bg-[#0B1120]/95 backdrop-blur-md px-3 py-2 border-b border-white/10 grid grid-cols-3 gap-1.5">
               <button
                 onClick={() => setMobileColumn('pending')}
@@ -763,7 +598,6 @@ export default function AdminDashboard() {
             </div>
 
             <main className="p-3 md:p-6 max-w-[1800px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 animate-fade-in">
-              
               {/* ΝΕΕΣ */}
               <div className={`${mobileColumn === 'pending' ? 'block' : 'hidden'} lg:block bg-[#0F172A]/80 border border-[#38BDF8]/30 rounded-2xl md:rounded-[2rem] p-3 md:p-5 shadow-2xl min-h-[70vh] lg:min-h-[80vh] backdrop-blur-sm`}>
                 <div className="hidden lg:flex justify-between items-center mb-6 border-b border-white/10 pb-4">
@@ -784,15 +618,13 @@ export default function AdminDashboard() {
                       <div className="flex justify-between items-center px-2 md:px-4 pt-1.5 md:pt-2 mb-0.5 md:mb-1">
                         <div className="flex items-center gap-2 md:gap-3">
                           <span className="text-[10px] md:text-xs text-gray-400 font-bold uppercase tracking-wider md:tracking-widest">Ληψη: {new Date(order.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}</span>
-                          
-                          <button 
+                          <button
                             onClick={() => { setIsChatPanelOpen(true); setActiveChatOrderId(order.id); }}
                             className="bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600/40 border border-indigo-500/30 px-2 py-0.5 rounded text-[10px] font-black uppercase transition-colors flex items-center gap-1"
                           >
                             💬 Chat
                           </button>
                         </div>
-                        
                         <OrderTimer createdAt={order.created_at} requestedTime={order.requested_time} status={order.status} />
                       </div>
                       <OrderCard order={order} onCancel={handleCancelOrder} onAccept={(exactTime: string | null, mins: number) => handleAcceptOrder(order, exactTime, mins)} onView={() => setSelectedOrder(order)} />
@@ -816,15 +648,13 @@ export default function AdminDashboard() {
                       <div className="flex justify-between items-center px-2 md:px-4 pt-1.5 md:pt-2 mb-0.5 md:mb-1">
                         <div className="flex items-center gap-2 md:gap-3">
                           <span className="text-[10px] md:text-xs text-gray-400 font-bold uppercase tracking-wider md:tracking-widest">Ληψη: {new Date(order.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}</span>
-                          
-                          <button 
+                          <button
                             onClick={() => { setIsChatPanelOpen(true); setActiveChatOrderId(order.id); }}
                             className="bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600/40 border border-indigo-500/30 px-2 py-0.5 rounded text-[10px] font-black uppercase transition-colors flex items-center gap-1"
                           >
                             💬 Chat
                           </button>
                         </div>
-                        
                         <OrderTimer createdAt={order.created_at} requestedTime={order.requested_time} status={order.status} />
                       </div>
                       <OrderCard order={order} onComplete={() => handleCompleteOrder(order)} onPrint={() => { setActivePrintOrder(order); setIsPrinting(true); }} onView={() => setSelectedOrder(order)} />
@@ -853,9 +683,7 @@ export default function AdminDashboard() {
                         <p className="text-xs text-gray-400 font-bold">{order.total_price} kr. ({order.payment_method})</p>
                         <div className="flex items-center gap-1.5 md:gap-2">
                           <OrderTimer createdAt={order.created_at} requestedTime={order.requested_time} status={order.status} />
-                          
                           <button onClick={() => { setIsChatPanelOpen(true); setActiveChatOrderId(order.id); }} className="text-[10px] bg-indigo-700 hover:bg-indigo-600 transition-colors px-2 py-1.5 rounded text-white font-bold border border-indigo-600 shadow-sm" title="Μήνυμα">💬</button>
-                          
                           <button onClick={() => setSelectedOrder(order)} className="text-[10px] bg-gray-700 hover:bg-gray-600 transition-colors px-2 py-1.5 rounded text-white font-bold border border-gray-600 shadow-sm">👁️</button>
                           <button onClick={() => handleDismissOrder(order.id)} title="Παραδόθηκε (Απόκρυψη)" className="text-[10px] bg-emerald-600 hover:bg-emerald-500 transition-colors px-2.5 py-1.5 rounded text-white font-black shadow-sm border border-emerald-500">✓</button>
                         </div>
@@ -877,88 +705,19 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {/* ======================================= */}
-      {/* ΣΥΡΤΑΡΙ ΓΙΑ ΤΑ CHAT ΤΟΥ ADMIN           */}
-      {/* ======================================= */}
-      {isChatPanelOpen && (
-        <div className="fixed inset-0 bg-black/80 z-[9999] flex justify-end animate-fade-in backdrop-blur-sm" onClick={() => setIsChatPanelOpen(false)}>
-          <div className="w-full md:max-w-md bg-[#0F172A] h-full flex flex-col shadow-2xl border-l border-white/10" onClick={e => e.stopPropagation()}>
-            
-            <div className="p-4 md:p-5 border-b border-white/10 bg-slate-900 flex justify-between items-center shrink-0">
-              <h2 className="text-base md:text-lg font-black text-white uppercase tracking-widest flex items-center gap-2">
-                💬 Υποστήριξη
-              </h2>
-              <button onClick={() => setIsChatPanelOpen(false)} className="text-gray-400 hover:text-white p-1">✕</button>
-            </div>
-            
-            {!activeChatOrderId ? (
-              <div className="flex-1 overflow-y-auto p-3 md:p-4 flex flex-col gap-2.5 md:gap-3">
-                {activeChatOrders.length === 0 ? (
-                  <p className="text-center text-gray-500 text-sm mt-10 font-bold uppercase">Κανένα ενεργό Chat</p>
-                ) : (
-                  activeChatOrders.map(oid => {
-                    const msgs = supportMessages.filter(m => m.order_id === oid);
-                    const lastMsg = msgs[msgs.length - 1];
-                    const isUnread = !lastMsg.is_store;
-                    const orderForList = orders.find(o => o.id === oid);
-                    return (
-                      <div 
-                        key={oid} 
-                        onClick={() => setActiveChatOrderId(oid)} 
-                        className={`p-3.5 md:p-4 rounded-2xl cursor-pointer border transition-colors shadow-sm ${isUnread ? 'bg-indigo-900/40 border-indigo-500/50' : 'bg-slate-800/50 border-white/5 hover:bg-slate-800'}`}
-                      >
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="font-black text-white text-sm">Order #{orderForList?.order_number || oid.toString().slice(-4)} - {orderForList?.customer_name || 'ΠΕΛΑΤΗΣ'}</span>
-                          <span className="text-[9px] font-bold text-gray-400">{new Date(lastMsg.created_at).toLocaleTimeString('el-GR', {hour:'2-digit', minute:'2-digit'})}</span>
-                        </div>
-                        <p className={`text-xs line-clamp-1 ${isUnread ? 'text-indigo-300 font-bold' : 'text-gray-500'}`}>
-                          {lastMsg.is_store ? 'Εσείς: ' : 'Πελάτης: '} {lastMsg.message}
-                        </p>
-                      </div>
-                    )
-                  })
-                )}
-              </div>
-            ) : (
-              <div className="flex-1 flex flex-col overflow-hidden bg-[#0F172A]">
-                <div className="p-3 bg-slate-800 border-b border-white/5 flex items-center justify-between shrink-0">
-                  <div className="flex items-center gap-3">
-                    <button onClick={() => setActiveChatOrderId(null)} className="w-8 h-8 flex items-center justify-center bg-slate-700 rounded-full text-white hover:bg-slate-600 transition-colors">←</button>
-                    <div className="flex flex-col">
-                      <span className="font-black text-white text-sm uppercase">Order #{currentChatOrder?.order_number || activeChatOrderId.toString().slice(-4)} - {currentChatOrder?.customer_name || 'ΠΕΛΑΤΗΣ'}</span>
-                      <span className="text-[10px] text-gray-400 font-bold">{currentChatOrder?.customer_phone || ''}</span>
-                    </div>
-                  </div>
-                  <button onClick={handleDeleteChat} className="text-gray-500 hover:text-red-400 p-2 transition-colors" title="Διαγραφή Ιστορικού Μηνυμάτων">
-                    🗑️
-                  </button>
-                </div>
-                
-                <div className="flex-1 overflow-y-auto p-3 md:p-4 flex flex-col gap-3 md:gap-4">
-                  {supportMessages.filter(m => m.order_id === activeChatOrderId).map(msg => (
-                    <div key={msg.id} className={`flex flex-col max-w-[85%] ${msg.is_store ? 'self-end' : 'self-start'}`}>
-                      <span className={`text-[9px] font-bold uppercase tracking-widest mb-1 mx-1 ${msg.is_store ? 'text-[#38BDF8] text-right' : 'text-emerald-400'}`}>
-                        {msg.is_store ? 'Εσείς' : (currentChatOrder?.customer_name || 'Πελάτης')}
-                      </span>
-                      <div className={`px-3.5 py-2.5 md:px-4 md:py-3 rounded-2xl text-sm font-medium ${msg.is_store ? 'bg-[#38BDF8] text-[#0B1120] rounded-tr-sm' : 'bg-slate-800 text-white rounded-tl-sm'}`}>
-                        {msg.message}
-                      </div>
-                      <span className={`text-[9px] text-gray-500 mt-1 mx-1 font-bold ${msg.is_store ? 'text-right' : 'text-left'}`}>
-                        {new Date(msg.created_at).toLocaleTimeString('el-GR', {hour:'2-digit', minute:'2-digit'})}
-                      </span>
-                    </div>
-                  ))}
-                  <div ref={chatMessagesEndRef} />
-                </div>
-                <form onSubmit={sendAdminMessage} className="p-3 md:p-4 bg-slate-900 border-t border-white/5 flex gap-2 shrink-0 pb-6 md:pb-4">
-                  <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Απάντηση..." className="flex-1 bg-slate-800 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 md:px-4 md:py-3 text-sm focus:outline-none focus:border-[#38BDF8] transition-colors" />
-                  <button type="submit" disabled={!chatInput.trim()} className="bg-[#38BDF8] text-[#0B1120] font-black uppercase text-xs px-4 md:px-5 rounded-xl disabled:opacity-50 transition-colors">SEND</button>
-                </form>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      <AdminChatDrawer
+        isOpen={isChatPanelOpen}
+        onClose={() => setIsChatPanelOpen(false)}
+        orders={orders}
+        supportMessages={supportMessages}
+        activeChatOrderId={activeChatOrderId}
+        setActiveChatOrderId={setActiveChatOrderId}
+        chatInput={chatInput}
+        setChatInput={setChatInput}
+        onSendMessage={sendAdminMessage}
+        onDeleteChat={handleDeleteChat}
+        chatMessagesEndRef={chatMessagesEndRef}
+      />
 
       {isPrinting && (
         <div className="bg-white text-black w-full m-0 p-0">
@@ -966,89 +725,19 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* ======================================= */}
-      {/* MODAL ΛΕΠΤΟΜΕΡΕΙΩΝ ΠΑΡΑΓΓΕΛΙΑΣ          */}
-      {/* ======================================= */}
-      {selectedOrder && (
-        <div className="fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center p-3 md:p-4 animate-fade-in backdrop-blur-sm" onClick={() => setSelectedOrder(null)}>
-          <div className="bg-slate-800 border border-slate-600 w-full max-w-xl rounded-2xl md:rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[92vh] md:max-h-[90vh]" onClick={e => e.stopPropagation()}>
-            <div className="p-4 md:p-6 border-b border-slate-700 flex justify-between items-center bg-slate-900">
-              <div>
-                <h2 className="text-xl md:text-2xl font-black text-white italic">#{selectedOrder.order_number || selectedOrder.id.toString().slice(-4)}</h2>
-                <span className={`text-[10px] md:text-xs font-bold uppercase tracking-widest px-2 py-0.5 md:py-1 rounded-md mt-1 inline-block ${selectedOrder.status === 'pending' ? 'bg-[#38BDF8]/20 text-[#38BDF8]' : selectedOrder.status === 'preparing' ? 'bg-orange-500/20 text-orange-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
-                  {selectedOrder.status}
-                </span>
-              </div>
-              <button onClick={() => setSelectedOrder(null)} className="w-9 h-9 md:w-10 md:h-10 bg-slate-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white transition-colors border border-slate-700 shadow-sm">✕</button>
-            </div>
-            
-            <div className="p-4 md:p-6 overflow-y-auto flex-1">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5 md:mb-6 border-b border-slate-700 pb-5 md:pb-6">
-                <div>
-                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Πελατης</p>
-                  <p className="text-base md:text-lg font-black text-white">{selectedOrder.customer_name}</p>
-                  <a href={`tel:${selectedOrder.customer_phone}`} className="text-sm font-bold text-[#38BDF8] underline">{selectedOrder.customer_phone}</a>
-                </div>
-                <div>
-                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Χρονος (Ζητηθηκε)</p>
-                  <div className="flex items-center gap-3">
-                    <p className="text-xl md:text-2xl font-black text-[#38BDF8]">{selectedOrder.requested_time?.slice(0, 5)}</p>
-                    <OrderTimer createdAt={selectedOrder.created_at} requestedTime={selectedOrder.requested_time} status={selectedOrder.status} />
-                  </div>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase mt-1.5 md:mt-2">Λήψη: {new Date(selectedOrder.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}</p>
-                </div>
-              </div>
+      <OrderDetailsModal
+        order={selectedOrder}
+        onClose={() => setSelectedOrder(null)}
+        onOpenChat={(orderId) => {
+          setIsChatPanelOpen(true);
+          setActiveChatOrderId(orderId);
+        }}
+        onPrintOrder={(order) => {
+          setActivePrintOrder(order);
+          setIsPrinting(true);
+        }}
+      />
 
-              <h4 className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-3">Προϊοντα</h4>
-              <ul className="space-y-3 md:space-y-4">
-                {(selectedOrder.items || []).map((it: any, i: number) => (
-                  <li key={i} className="flex flex-col bg-slate-900/50 p-3 md:p-4 rounded-xl border border-white/5 shadow-sm">
-                    <div className="flex justify-between font-bold text-base md:text-lg text-white gap-2">
-                      <span><span className="text-[#38BDF8] mr-1.5 md:mr-2">{it.quantity || 1}x</span>{it.title_da || it.title_el || it.name}</span>
-                      <span className="shrink-0">{(it.unit_price_dkk * (it.quantity || 1)).toFixed(0)} kr.</span>
-                    </div>
-                    {it.selectedOptions?.length > 0 && <span className="text-xs md:text-sm text-gray-400 mt-1">+ {it.selectedOptions.map((o:any) => o.name || o).join(', ')}</span>}
-                    {it.note && <span className="text-xs md:text-sm bg-yellow-900/40 text-yellow-500 border border-yellow-700/50 px-2.5 py-1 md:px-3 md:py-1.5 rounded-lg mt-2 inline-block w-fit font-bold italic">📝 {it.note}</span>}
-                  </li>
-                ))}
-              </ul>
-              {selectedOrder.notes && (
-                <div className="bg-indigo-900/30 border border-indigo-800/50 p-3.5 md:p-4 rounded-xl mt-5 md:mt-6 shadow-sm">
-                  <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block mb-1">ΓΕΝΙΚΟ ΣΧΟΛΙΟ:</span>
-                  <p className="text-sm md:text-base text-indigo-100 font-bold italic">{selectedOrder.notes}</p>
-                </div>
-              )}
-            </div>
-
-            <div className="p-4 md:p-6 border-t border-slate-700 bg-slate-900 flex flex-col md:flex-row justify-between items-center gap-3 md:gap-4">
-              <div className="text-left w-full md:w-auto flex md:block justify-between items-center">
-                <p className="text-xs text-gray-400 font-bold uppercase">Πληρωμή: {selectedOrder.payment_method}</p>
-                <p className="text-xl md:text-2xl font-black text-white">{selectedOrder.total_price} kr.</p>
-              </div>
-              <div className="flex w-full md:w-auto gap-2">
-                <button 
-                  onClick={() => {
-                    setIsChatPanelOpen(true);
-                    setActiveChatOrderId(selectedOrder.id);
-                    setSelectedOrder(null);
-                  }} 
-                  className="flex-1 md:flex-none bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs md:text-sm px-4 md:px-6 py-2.5 md:py-3 rounded-xl transition-colors shadow-lg border border-indigo-500"
-                >
-                  💬 ΜΗΝΥΜΑ
-                </button>
-                <button 
-                  onClick={() => { setActivePrintOrder(selectedOrder); setIsPrinting(true); }} 
-                  className="flex-1 md:flex-none bg-slate-700 text-white font-black text-xs md:text-sm px-4 md:px-6 py-2.5 md:py-3 rounded-xl hover:bg-slate-600 transition-colors shadow-lg border border-slate-600"
-                >
-                  🖨️ ΕΚΤΥΠΩΣΗ
-                </button>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      )}
-      
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes shake {
           0%, 100% { transform: translateX(0); }
