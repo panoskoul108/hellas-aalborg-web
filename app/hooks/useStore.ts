@@ -1,120 +1,186 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../supabase'; // Βεβαιώσου ότι το path είναι σωστό
+import { supabase } from '../supabase';
 
 export function useStore(ui: any) {
-  // Ξεκινάμε με το μαγαζί κλειστό (για ασφάλεια) μέχρι να φορτώσει η βάση
   const [storeOpen, setStoreOpen] = useState(false);
+  const [todayOpenTime, setTodayOpenTime] = useState('16:00');
   const [todayCloseTime, setTodayCloseTime] = useState('22:00');
+  const [isClosedToday, setIsClosedToday] = useState(false);
+  const [isAcceptingOrders, setIsAcceptingOrders] = useState(true);
 
-  const generateTimeSlots = () => {
-    // Ασφαλής κλήση στο ui dict, αντικαθιστά τυχόν undefined με "ASAP"
-    const slots = [{ value: 'ASAP', label: ui?.asap || 'ASAP' }];
-    
-    // Πάντα υπολογίζουμε την ώρα Δανίας
-    const nowStr = new Date().toLocaleString("en-US", { timeZone: "Europe/Copenhagen" });
-    const now = new Date(nowStr);
-    
-    let current = new Date(now.getTime() + 30 * 60000); 
-    current.setMinutes(Math.ceil(current.getMinutes() / 15) * 15);
-    
-    const [closeH, closeM] = todayCloseTime.split(':').map(Number);
-    const closeDate = new Date(now);
-    closeDate.setHours(closeH, closeM, 0, 0);
-    
-    // Night shift λογική για τα Time Slots
-    if (closeH < 12 && now.getHours() >= 12) {
-      closeDate.setDate(closeDate.getDate() + 1);
+  const getCopenhagenNow = () => {
+    const nowStr = new Date().toLocaleString('en-US', { timeZone: 'Europe/Copenhagen' });
+    return new Date(nowStr);
+  };
+
+  const toMinutes = (hhmm: string) => {
+    const [h, m] = hhmm.split(':').map(Number);
+    return h * 60 + m;
+  };
+
+  const fromMinutes = (totalMins: number) => {
+    const normalized = ((totalMins % 1440) + 1440) % 1440;
+    const h = Math.floor(normalized / 60).toString().padStart(2, '0');
+    const m = (normalized % 60).toString().padStart(2, '0');
+    return `${h}:${m}`;
+  };
+
+  // Υπολογίζει το επιτρεπτό εύρος ωρών (ακριβές λεπτό) για προγραμματισμένη παραγγελία
+  const getTimeBounds = () => {
+    if (isClosedToday || !isAcceptingOrders) {
+      return {
+        canSchedule: false,
+        minTime: '',
+        maxTime: '',
+        openDisplay: todayOpenTime.slice(0, 5),
+        closeDisplay: todayCloseTime.slice(0, 5),
+      };
     }
-    
-    while (current <= closeDate) {
-      const timeString = current.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
-      slots.push({ value: timeString, label: timeString });
-      current = new Date(current.getTime() + 15 * 60000);
+
+    const now = getCopenhagenNow();
+    const currentMins = now.getHours() * 60 + now.getMinutes();
+
+    const openMins = toMinutes(todayOpenTime);
+    let closeMins = toMinutes(todayCloseTime);
+    const isNightShift = closeMins < openMins; // π.χ. 17:00 - 05:00
+
+    if (isNightShift) {
+      closeMins += 1440;
+    }
+
+    let adjustedCurrent = currentMins;
+    if (currentMins < openMins && isNightShift) {
+      adjustedCurrent += 1440;
+    }
+
+    // Ελάχιστη ώρα: είτε το άνοιγμα + 15', είτε τώρα + 20' (όποιο είναι μεγαλύτερο)
+    const earliestOrderMins = Math.max(openMins + 15, adjustedCurrent + 20);
+
+    if (earliestOrderMins > closeMins) {
+      return {
+        canSchedule: false,
+        minTime: '',
+        maxTime: '',
+        openDisplay: todayOpenTime.slice(0, 5),
+        closeDisplay: todayCloseTime.slice(0, 5),
+      };
+    }
+
+    return {
+      canSchedule: true,
+      minTime: fromMinutes(earliestOrderMins),
+      maxTime: fromMinutes(closeMins),
+      openDisplay: fromMinutes(earliestOrderMins),
+      closeDisplay: todayCloseTime.slice(0, 5),
+    };
+  };
+
+  // Ελέγχει αν η ώρα (π.χ. "20:37") που διάλεξε ο πελάτης είναι έγκυρη & εντός ωραρίου
+  const isValidScheduledTime = (selectedTime: string) => {
+    if (!selectedTime || selectedTime === 'ASAP') return storeOpen;
+    if (!/^\d{2}:\d{2}$/.test(selectedTime)) return false;
+
+    const bounds = getTimeBounds();
+    if (!bounds.canSchedule) return false;
+
+    const openMins = toMinutes(todayOpenTime);
+    let closeMins = toMinutes(todayCloseTime);
+    const isNightShift = closeMins < openMins;
+    if (isNightShift) closeMins += 1440;
+
+    let selMins = toMinutes(selectedTime);
+    if (isNightShift && selMins < openMins) {
+      selMins += 1440;
+    }
+
+    const now = getCopenhagenNow();
+    let adjustedCurrent = now.getHours() * 60 + now.getMinutes();
+    if (isNightShift && adjustedCurrent < openMins) {
+      adjustedCurrent += 1440;
+    }
+
+    const minAllowed = Math.max(openMins + 15, adjustedCurrent + 20);
+    return selMins >= minAllowed && selMins <= closeMins;
+  };
+
+  // Κρατάμε και το generateTimeSlots για συμβατότητα αν καλείται κάπου αλλού
+  const generateTimeSlots = () => {
+    const slots = [{ value: 'ASAP', label: ui?.asap || 'ASAP' }];
+    const bounds = getTimeBounds();
+    if (bounds.canSchedule && bounds.minTime) {
+      slots.push({ value: bounds.minTime, label: bounds.minTime });
     }
     return slots;
   };
 
   useEffect(() => {
-    let isMounted = true; // Flag για αποφυγή memory leaks
+    let isMounted = true;
 
     const checkStoreStatus = async () => {
       try {
-        // Κλειδώνουμε τον χρόνο στη ζώνη της Δανίας
-        const nowStr = new Date().toLocaleString("en-US", { timeZone: "Europe/Copenhagen" });
-        const now = new Date(nowStr);
+        const now = getCopenhagenNow();
         const currentHour = now.getHours();
-        
         let jsDay = now.getDay();
-        
-        // NIGHT SHIFT FIX: 
-        // Αν η ώρα είναι ανάμεσα στα μεσάνυχτα (00:00) και τις 06:00 το πρωί,
-        // πρακτικά ανήκουμε στην "βάρδια" της χθεσινής μέρας.
+
+        // Night shift: 00:00 - 05:59 ανήκει στη βάρδια της προηγούμενης ημέρας
         if (currentHour >= 0 && currentHour < 6) {
           jsDay = jsDay - 1;
-          if (jsDay < 0) jsDay = 6; 
+          if (jsDay < 0) jsDay = 6;
         }
-        
-        // Μετατροπή JS day (0=Κυρ, 1=Δευτ) σε DB day (1=Δευτ, 7=Κυρ)
-        const dbDay = jsDay === 0 ? 7 : jsDay; 
-        
+
+        const dbDay = jsDay === 0 ? 7 : jsDay;
+
         const [hoursRes, settingsRes] = await Promise.all([
           supabase.from('store_hours').select('*').eq('day_of_week', dbDay).single(),
           supabase.from('store_settings').select('accepting_orders').eq('id', 1).single()
         ]);
-        
-        if (!isMounted) return; // Αν ο χρήστης έφυγε από τη σελίδα, σταματάμε εδώ
+
+        if (!isMounted) return;
 
         const hoursData = hoursRes.data;
         const settingsData = settingsRes.data;
-        
+        const accepting = settingsData?.accepting_orders ?? true;
+        setIsAcceptingOrders(accepting);
+
         if (hoursData) {
-          setTodayCloseTime(hoursData.close_time); 
-          
+          setTodayOpenTime(hoursData.open_time);
+          setTodayCloseTime(hoursData.close_time);
+          setIsClosedToday(Boolean(hoursData.is_closed));
+
           let isTimeOpen = false;
 
           if (!hoursData.is_closed) {
             const currentTimeMins = now.getHours() * 60 + now.getMinutes();
-            
-            const [openH, openM] = hoursData.open_time.split(':').map(Number);
-            const [closeH, closeM] = hoursData.close_time.split(':').map(Number);
-            
-            const openMins = openH * 60 + openM;
-            let closeMins = closeH * 60 + closeM;
-            
-            // Αν το μαγαζί κλείνει μετά τα μεσάνυχτα (π.χ. 05:00), 
-            // προσθέτουμε 24 ώρες στο κλείσιμο για τα μαθηματικά
+            const openMins = toMinutes(hoursData.open_time);
+            let closeMins = toMinutes(hoursData.close_time);
+
             if (closeMins < openMins) {
-              closeMins += 24 * 60; 
-            }
-            
-            let currentAdjusted = currentTimeMins;
-            
-            // Αν η τωρινή ώρα είναι περασμένα μεσάνυχτα (π.χ. 01:00)
-            if (currentTimeMins < openMins && closeMins > 24 * 60) {
-              currentAdjusted += 24 * 60; 
+              closeMins += 24 * 60;
             }
 
-            isTimeOpen = (currentAdjusted >= openMins && currentAdjusted <= closeMins);
+            let currentAdjusted = currentTimeMins;
+            if (currentTimeMins < openMins && closeMins > 24 * 60) {
+              currentAdjusted += 24 * 60;
+            }
+
+            isTimeOpen = currentAdjusted >= openMins && currentAdjusted <= closeMins;
           }
 
-          const isAcceptingOrders = settingsData?.accepting_orders ?? true;
-          setStoreOpen(isTimeOpen && isAcceptingOrders);
+          setStoreOpen(isTimeOpen && accepting);
         }
       } catch (error) {
-        console.error("Σφάλμα κατά τον έλεγχο ωραρίου:", error);
-        if (isMounted) setStoreOpen(false); // Αν υπάρξει σφάλμα δικτύου, το θεωρούμε κλειστό
+        console.error('Σφάλμα κατά τον έλεγχο ωραρίου:', error);
+        if (isMounted) setStoreOpen(false);
       }
     };
 
     checkStoreStatus();
-    
-    // Έλεγχος κάθε 15 δευτερόλεπτα
     const interval = setInterval(checkStoreStatus, 15000);
 
-    // Realtime Listener για να κλείνει άμεσα από το Admin
-    const channel = supabase.channel('public:store_settings:listener')
+    const channel = supabase
+      .channel('public:store_settings:listener')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'store_settings', filter: 'id=eq.1' }, () => {
-        checkStoreStatus(); 
+        checkStoreStatus();
       })
       .subscribe();
 
@@ -125,5 +191,10 @@ export function useStore(ui: any) {
     };
   }, []);
 
-  return { storeOpen, generateTimeSlots };
+  return {
+    storeOpen,
+    generateTimeSlots,
+    getTimeBounds,
+    isValidScheduledTime,
+  };
 }
