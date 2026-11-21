@@ -1,13 +1,16 @@
 import type { Metadata, Viewport } from 'next';
+import Script from 'next/script';
 import './globals.css';
-import CookieBanner from '@/components/CookieBanner'; 
+import CookieBanner from '@/components/CookieBanner';
+
+const GA_MEASUREMENT_ID = 'G-EFN50N7T3X';
 
 export const viewport: Viewport = {
   themeColor: '#0B1120',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
-  userScalable: false, 
+  userScalable: false,
 };
 
 export const metadata: Metadata = {
@@ -20,13 +23,13 @@ export const metadata: Metadata = {
     title: 'Hellas',
   },
   icons: {
-    icon: '/logo.png', 
-    apple: '/apple-icon.png', 
+    icon: '/logo.png',
+    apple: '/apple-icon.png',
   },
   openGraph: {
     title: 'Hellas Aalborg | Smagen af Grækenland',
     description: 'Autentisk græsk mad i hjertet af Aalborg. Bestil Takeaway eller via Wolt.',
-    url: 'https://helasaalborg.dk', 
+    url: 'https://helasaalborg.dk',
     siteName: 'Hellas Aalborg',
     images: [{ url: '/foto1.jpg', width: 1200, height: 630, alt: 'Hellas Aalborg Authentic Greek Food' }],
     locale: 'da_DK',
@@ -42,7 +45,25 @@ export default function RootLayout({
   return (
     <html lang="da" className="scroll-smooth" suppressHydrationWarning>
       <body className="bg-[#0B1120] text-gray-200 antialiased selection:bg-[#38BDF8] selection:text-[#0B1120]" suppressHydrationWarning>
-        
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script
+          id="google-analytics"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', '${GA_MEASUREMENT_ID}', {
+                page_path: window.location.pathname,
+              });
+            `,
+          }}
+        />
+
         {children}
         <CookieBanner />
 
@@ -61,7 +82,6 @@ export default function RootLayout({
             `,
           }}
         />
-        
       </body>
     </html>
   );
