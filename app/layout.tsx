@@ -3,7 +3,7 @@ import Script from 'next/script';
 import './globals.css';
 import CookieBanner from '@/components/CookieBanner';
 
-const GA_MEASUREMENT_ID = 'G-EFN50N7T3X';
+const GA_MEASUREMENT_ID = 'G-QX0S5XEP3Y';
 
 export const viewport: Viewport = {
   themeColor: '#0B1120',
